@@ -1,8 +1,10 @@
+// apps/api/tsconfig.json
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "../../",
+    "outDir": "./dist",
+    "composite": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../../packages/shared/src/**/*"]
 }
