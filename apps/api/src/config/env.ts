@@ -1,4 +1,4 @@
-//apps/api/src/config/env.ts
+// apps/api/src/config/env.ts
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -28,7 +28,10 @@ const envSchema = z.object({
   S3_PUBLIC_URL: z.string().url().optional(),
   S3_BUCKET: z.string().min(1),
   S3_KEY: z.string().min(1),
-  S3_SECRET: z.string().min(1)
+  S3_SECRET: z.string().min(1),
+  SUPER_ADMIN_SECRET: z.string().min(10),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -64,5 +67,8 @@ export const env = {
   s3PublicUrl: parsed.data.S3_PUBLIC_URL,
   s3Bucket: parsed.data.S3_BUCKET,
   s3Key: parsed.data.S3_KEY,
-  s3Secret: parsed.data.S3_SECRET
+  s3Secret: parsed.data.S3_SECRET,
+  superAdminSecret: parsed.data.SUPER_ADMIN_SECRET,
+  supabaseUrl: parsed.data.SUPABASE_URL,
+  supabaseServiceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY
 };
