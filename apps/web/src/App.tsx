@@ -1,3 +1,4 @@
+// apps/web/src/App.tsx
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { AdminLayout } from './components/Layout';
@@ -10,6 +11,7 @@ import { PublicMenuPage } from './pages/PublicMenuPage';
 import { QrPage } from './pages/QrPage';
 import { ResetPage } from './pages/ResetPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
 
 export function App() {
   return (
@@ -19,7 +21,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset" element={<ResetPage />} />
           <Route path="/m/:slug" element={<PublicMenuPage />} />
-
+          <Route path="/superadmin" element={<SuperAdminPage />} />
           <Route
             path="/admin"
             element={
@@ -34,7 +36,6 @@ export function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="qr" element={<QrPage />} />
           </Route>
-
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
