@@ -1,0 +1,5 @@
+[build]
+buildCommand = "pnpm --filter @menu/web build"
+
+[deploy]
+startCommand = "pnpm --filter @menu/web start"
