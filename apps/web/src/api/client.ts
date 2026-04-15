@@ -1,12 +1,4 @@
-// apps/web/vite.config.ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+// apps/web/src/api/client.ts
+import type { RefreshResponse } from '@menu/shared';
 
-export default defineConfig({
-  plugins: [react()],
-  preview: {
-    host: '0.0.0.0',
-    port: 3000,
-    allowedHosts: ['menuweb-production.up.railway.app', 'atlasqrmenu.com', 'www.atlasqrmenu.com']
-  }
-});
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://menuapi-production-3a61.up.railway.app/api';
