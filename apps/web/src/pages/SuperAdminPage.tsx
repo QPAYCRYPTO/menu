@@ -67,7 +67,11 @@ export function SuperAdminPage() {
         body: JSON.stringify(newForm)
       });
       const data = await res.json();
-      if (!res.ok) { showToast(data.message ?? 'Hata.', 'error'); return; }
+      if (!res.ok) { 
+        console.log('Hata detayı:', data);
+        showToast(data.message ?? JSON.stringify(data), 'error'); 
+        return; 
+      }
       showToast(`✅ ${newForm.business_name} oluşturuldu!`, 'success');
       setNewForm({ business_name: '', slug: '', email: '', password: '' });
       setShowNewForm(false);
