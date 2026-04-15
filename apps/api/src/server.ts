@@ -10,8 +10,12 @@ const execAsync = promisify(exec);
 const app = createApp();
 
 async function bootstrap(): Promise<void> {
-  logger.info({ message: 'Prisma migrate deploy başlatılıyor.' });
-  await execAsync('npx prisma migrate deploy', { cwd: process.cwd() });
+    if (env.nodeEnv === 'production') {
+    logger.info({ message: 'Prisma migrate deploy başlatılıyor.' });
+    await execAsync('npx prisma migrate deploy', { cwd: process.cwd() });
+  } else {
+    logger.info({ message: 'Development mod: migrate deploy atlandı.' });
+  }
 
   logger.info({ message: 'Redis bağlantısı doğrulanıyor.' });
   await redis.ping();
@@ -19,7 +23,7 @@ async function bootstrap(): Promise<void> {
 
 bootstrap()
   .then(() => {
-    app.listen(env.port, () => {
+    app.listen(env.port, '0.0.0.0', () => {
       logger.info({ message: `Sunucu çalışıyor: http://localhost:${env.port}` });
     });
   })

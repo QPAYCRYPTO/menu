@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: menu
     ports:
-      - '5432:5432'
+      - '5436:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - '6379:6379'
+      - '6381:6379'
     command: ['redis-server', '--appendonly', 'yes']
     volumes:
       - redis_data:/data
@@ -41,18 +41,6 @@ services:
       - '9001:9001'
     volumes:
       - minio_data:/data
-
-  minio-init:
-    image: minio/mc:RELEASE.2024-07-15T23-46-56Z
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until /usr/bin/mc alias set local http://minio:9000 minio minio123; do sleep 1; done;
-      /usr/bin/mc mb -p local/menu-assets;
-      /usr/bin/mc anonymous set download local/menu-assets;
-      exit 0;
-      "
 
 volumes:
   postgres_data:

@@ -1,3 +1,4 @@
+//apps/api/src/config/env.ts
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -24,15 +25,18 @@ const envSchema = z.object({
   SMTP_PASS: z.string().default(''),
   SMTP_SECURE: z.coerce.boolean().default(false),
   S3_ENDPOINT: z.string().url(),
+  S3_PUBLIC_URL: z.string().url().optional(),
   S3_BUCKET: z.string().min(1),
   S3_KEY: z.string().min(1),
   S3_SECRET: z.string().min(1)
-);
+});
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  const issues = parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
+  const issues = parsed.error.issues
+    .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+    .join('; ');
   throw new Error(`Geçersiz ortam değişkenleri: ${issues}`);
 }
 
@@ -57,6 +61,7 @@ export const env = {
   smtpPass: parsed.data.SMTP_PASS,
   smtpSecure: parsed.data.SMTP_SECURE,
   s3Endpoint: parsed.data.S3_ENDPOINT,
+  s3PublicUrl: parsed.data.S3_PUBLIC_URL,
   s3Bucket: parsed.data.S3_BUCKET,
   s3Key: parsed.data.S3_KEY,
   s3Secret: parsed.data.S3_SECRET

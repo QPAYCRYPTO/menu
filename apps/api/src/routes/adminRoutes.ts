@@ -229,13 +229,15 @@ adminRoutes.post('/categories', async (req, res) => {
   const name = sanitizeText(parsed.data.name);
 
   const result = await pool.query(
-    `INSERT INTO categories (id, business_id, name, sort_order, is_active)
+    `INSERT INTO categories (id, business_id, name, sort_order, is_active, created_at, updated_at)
      VALUES (
-      gen_random_uuid(),
-      $1,
-      $2,
-      COALESCE((SELECT MAX(sort_order) + 1 FROM categories WHERE business_id = $1), 1),
-      TRUE
+       gen_random_uuid(),
+       $1,
+       $2,
+       COALESCE((SELECT MAX(sort_order) + 1 FROM categories WHERE business_id = $1), 1),
+       TRUE,
+       NOW(),
+       NOW()
      )
      RETURNING id, business_id, name, is_active, sort_order`,
     [businessId, name]
@@ -383,7 +385,7 @@ adminRoutes.post('/products', async (req, res) => {
   const isActive = parsed.data.is_active ?? true;
 
   const result = await pool.query(
-    `INSERT INTO products (id, business_id, category_id, name, price_int, description, image_url, sort_order, is_active)
+    `INSERT INTO products (id, business_id, category_id, name, price_int, description, image_url, sort_order, is_active, created_at, updated_at)
      VALUES (
       gen_random_uuid(),
       $1,
@@ -393,7 +395,9 @@ adminRoutes.post('/products', async (req, res) => {
       $5,
       $6,
       COALESCE($7, (SELECT COALESCE(MAX(sort_order) + 1, 1) FROM products WHERE business_id = $1)),
-      $8
+      $8,
+      NOW(),
+      NOW()
      )
      RETURNING id, business_id, category_id, name, price_int, description, image_url, thumb_url, sort_order, is_active, created_at, updated_at`,
     [businessId, parsed.data.category_id, name, parsed.data.price_int, description, imageUrl, parsed.data.sort_order ?? null, isActive]

@@ -1,3 +1,4 @@
+// apps/api/src/services/storageService.ts
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { env } from '../config/env.js';
 
@@ -11,10 +12,6 @@ const s3 = new S3Client({
   forcePathStyle: true
 });
 
-function normalizeEndpoint(endpoint: string): string {
-  return endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
-}
-
 export async function uploadToS3(key: string, body: Buffer, contentType: string): Promise<string> {
   await s3.send(
     new PutObjectCommand({
@@ -25,5 +22,6 @@ export async function uploadToS3(key: string, body: Buffer, contentType: string)
     })
   );
 
-  return `${normalizeEndpoint(env.s3Endpoint)}/${env.s3Bucket}/${key}`;
+  const baseUrl = env.s3PublicUrl ?? `${env.s3Endpoint}/${env.s3Bucket}`;
+  return `${baseUrl}/${key}`;
 }
