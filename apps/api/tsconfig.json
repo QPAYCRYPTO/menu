@@ -2,9 +2,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "../../",
+    "jsx": "react-jsx",
     "outDir": "./dist",
-    "composite": true
+    "rootDir": "../../",
+    "skipLibCheck": true,
+    "noImplicitAny": false
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*"]
+  "include": [
+    "src/**/*",
+    "../../packages/shared/src/**/*"
+  ]
 }
