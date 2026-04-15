@@ -1,3 +1,4 @@
+// apps/web/src/pages/LoginPage.tsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -24,13 +25,7 @@ export function LoginPage() {
       <h1>Yönetici Girişi</h1>
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 10 }}>
         <input placeholder="E-posta" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input
-          placeholder="Şifre"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <input placeholder="Şifre" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         <button type="submit">Giriş Yap</button>
       </form>
       {error && <p style={{ color: 'crimson' }}>{error}</p>}

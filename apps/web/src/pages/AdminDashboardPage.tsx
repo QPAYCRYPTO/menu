@@ -1,3 +1,4 @@
+// apps/web/src/pages/AdminDashboardPage.tsx
 export function AdminDashboardPage() {
   return (
     <section>
