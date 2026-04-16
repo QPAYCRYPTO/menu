@@ -10,6 +10,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { PublicMenuPage } from './pages/PublicMenuPage';
 import { QrPage } from './pages/QrPage';
 import { ResetPage } from './pages/ResetPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 
@@ -20,6 +21,7 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset" element={<ResetPage />} />
+          <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
           <Route path="/m/:slug" element={<PublicMenuPage />} />
           <Route path="/superadmin" element={<SuperAdminPage />} />
           <Route
