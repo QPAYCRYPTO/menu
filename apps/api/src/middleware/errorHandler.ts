@@ -1,3 +1,4 @@
+// apps/api/src/middleware/errorHandler.ts
 import type { NextFunction, Request, Response } from 'express';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import { logger } from '../logger/logger.js';
@@ -15,7 +16,9 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     business_id: req.ctx?.businessId,
     code: appError.code,
     status_code: appError.statusCode,
-    details: appError.details
+    details: appError.details,
+    original_error: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined
   });
 
   res.status(appError.statusCode).json({
