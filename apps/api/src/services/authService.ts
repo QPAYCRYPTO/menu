@@ -1,3 +1,4 @@
+// apps/api/src/services/authService.ts
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { createHash, randomBytes, randomUUID } from 'crypto';
@@ -7,6 +8,7 @@ import { env } from '../config/env.js';
 type TokenPair = {
   access_token: string;
   refresh_token: string;
+  role: 'admin' | 'superadmin';
 };
 
 function hashToken(token: string): string {
@@ -17,68 +19,65 @@ function generateOpaqueToken(): string {
   return randomBytes(48).toString('base64url');
 }
 
-function createAccessToken(payload: { user_id: string; business_id: string; email: string }): string {
+function createAccessToken(payload: { user_id: string; business_id: string | null; email: string; role: string; password_version: number }): string {
   return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtAccessExpiresIn as any });
 }
 
 export async function login(email: string, password: string): Promise<TokenPair | null> {
   const result = await pool.query(
-    `SELECT id, business_id, email, password_hash
+    `SELECT id, business_id, email, password_hash, role, password_version
      FROM users
      WHERE email = $1 AND is_active = TRUE`,
     [email.toLowerCase()]
   );
 
-  if (result.rowCount !== 1) {
-    return null;
-  }
+  if (result.rowCount !== 1) return null;
 
   const user = result.rows[0];
   const passwordValid = await argon2.verify(user.password_hash, password);
-  if (!passwordValid) {
-    return null;
-  }
+  if (!passwordValid) return null;
+
+  const role = user.role ?? 'admin';
 
   const access_token = createAccessToken({
     user_id: user.id,
     business_id: user.business_id,
-    email: user.email
+    email: user.email,
+    role,
+    password_version: user.password_version ?? 1
   });
 
   const refresh_token = generateOpaqueToken();
   const refresh_token_hash = hashToken(refresh_token);
 
   await pool.query(
-    `UPDATE users
-     SET refresh_token_hash = $1,
-         updated_at = NOW()
-     WHERE id = $2 AND business_id = $3`,
-    [refresh_token_hash, user.id, user.business_id]
+    `UPDATE users SET refresh_token_hash = $1, updated_at = NOW() WHERE id = $2`,
+    [refresh_token_hash, user.id]
   );
 
-  return { access_token, refresh_token };
+  return { access_token, refresh_token, role };
 }
 
 export async function refresh(refreshToken: string): Promise<string | null> {
   const refreshTokenHash = hashToken(refreshToken);
 
   const result = await pool.query(
-    `SELECT id, business_id, email
+    `SELECT id, business_id, email, role, password_version
      FROM users
      WHERE refresh_token_hash = $1 AND is_active = TRUE`,
     [refreshTokenHash]
   );
 
-  if (result.rowCount !== 1) {
-    return null;
-  }
+  if (result.rowCount !== 1) return null;
 
   const user = result.rows[0];
 
   return createAccessToken({
     user_id: user.id,
     business_id: user.business_id,
-    email: user.email
+    email: user.email,
+    role: user.role ?? 'admin',
+    password_version: user.password_version ?? 1
   });
 }
 
@@ -90,9 +89,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
     [email.toLowerCase()]
   );
 
-  if (result.rowCount !== 1) {
-    return null;
-  }
+  if (result.rowCount !== 1) return null;
 
   const user = result.rows[0];
   const token = generateOpaqueToken();
@@ -100,7 +97,7 @@ export async function createPasswordResetToken(email: string): Promise<string | 
 
   await pool.query(
     `INSERT INTO password_resets (id, business_id, user_id, email, token_hash, expires_at, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 minutes', NOW(), NOW())`,
+     VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 minutes', NOW(), NOW())`,
     [randomUUID(), user.business_id, user.id, user.email, token_hash]
   );
 
@@ -117,9 +114,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
     const resetResult = await client.query(
       `SELECT id, business_id, user_id
        FROM password_resets
-       WHERE token_hash = $1
-         AND used_at IS NULL
-         AND expires_at > NOW()
+       WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()
        FOR UPDATE`,
       [tokenHash]
     );
@@ -136,16 +131,14 @@ export async function resetPassword(token: string, newPassword: string): Promise
       `UPDATE users
        SET password_hash = $1,
            refresh_token_hash = NULL,
+           password_version = password_version + 1,
            updated_at = NOW()
-       WHERE id = $2 AND business_id = $3`,
-      [passwordHash, resetRow.user_id, resetRow.business_id]
+       WHERE id = $2`,
+      [passwordHash, resetRow.user_id]
     );
 
     await client.query(
-      `UPDATE password_resets
-       SET used_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $1`,
+      `UPDATE password_resets SET used_at = NOW(), updated_at = NOW() WHERE id = $1`,
       [resetRow.id]
     );
 

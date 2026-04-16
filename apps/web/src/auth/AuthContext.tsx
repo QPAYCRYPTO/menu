@@ -1,3 +1,4 @@
+// apps/web/src/auth/AuthContext.tsx
 import type { LoginResponse } from '@menu/shared';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { apiRequest, configureAuthClient } from '../api/client';
@@ -5,7 +6,8 @@ import { apiRequest, configureAuthClient } from '../api/client';
 type AuthContextValue = {
   accessToken: string | null;
   refreshToken: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  role: 'admin' | 'superadmin' | null;
+  login: (email: string, password: string) => Promise<'admin' | 'superadmin'>;
   logout: () => void;
   isAuthenticated: boolean;
 };
@@ -14,10 +16,12 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const ACCESS_TOKEN_KEY = 'menu_access_token';
 const REFRESH_TOKEN_KEY = 'menu_refresh_token';
+const ROLE_KEY = 'menu_role';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(REFRESH_TOKEN_KEY));
+  const [role, setRole] = useState<'admin' | 'superadmin' | null>(() => localStorage.getItem(ROLE_KEY) as 'admin' | 'superadmin' | null);
 
   useEffect(() => {
     if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
@@ -30,16 +34,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshToken]);
 
   useEffect(() => {
-    configureAuthClient({
-      getRefreshToken: () => refreshToken,
-      setAccessToken
-    });
+    if (role) localStorage.setItem(ROLE_KEY, role);
+    else localStorage.removeItem(ROLE_KEY);
+  }, [role]);
+
+  useEffect(() => {
+    configureAuthClient({ getRefreshToken: () => refreshToken, setAccessToken });
   }, [refreshToken]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       accessToken,
       refreshToken,
+      role,
       isAuthenticated: Boolean(accessToken),
       login: async (email: string, password: string) => {
         const response = await apiRequest<LoginResponse>('/auth/login', {
@@ -49,13 +56,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setAccessToken(response.access_token);
         setRefreshToken(response.refresh_token);
+        setRole(response.role);
+        return response.role;
       },
       logout: () => {
         setAccessToken(null);
         setRefreshToken(null);
+        setRole(null);
       }
     }),
-    [accessToken, refreshToken]
+    [accessToken, refreshToken, role]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

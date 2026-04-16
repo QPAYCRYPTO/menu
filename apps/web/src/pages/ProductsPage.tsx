@@ -1,3 +1,4 @@
+// apps/web/src/pages/ProductsPage.tsx
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
@@ -5,39 +6,19 @@ import { useAuth } from '../auth/AuthContext';
 
 const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 
-type ToastState = {
-  message: string;
-  type: 'error' | 'success';
-} | null;
-
+type ToastState = { message: string; type: 'error' | 'success' } | null;
 type ProductFormState = {
-  category_id: string;
-  name: string;
-  description: string;
-  priceTl: string;
-  image_url: string;
-  sort_order: string;
-  is_active: boolean;
+  category_id: string; name: string; description: string;
+  priceTl: string; image_url: string; sort_order: string; is_active: boolean;
 };
 
-const initialForm: ProductFormState = {
-  category_id: '',
-  name: '',
-  description: '',
-  priceTl: '',
-  image_url: '',
-  sort_order: '',
-  is_active: true
-};
+const initialForm: ProductFormState = { category_id: '', name: '', description: '', priceTl: '', image_url: '', sort_order: '', is_active: true };
 
 function tlToPriceInt(value: string): number {
   const numeric = Number(value.replace(',', '.'));
   return Number.isFinite(numeric) ? Math.round(numeric * 100) : NaN;
 }
-
-function priceIntToTl(value: number): string {
-  return (value / 100).toFixed(2);
-}
+function priceIntToTl(value: number): string { return (value / 100).toFixed(2); }
 
 export function ProductsPage() {
   const { accessToken } = useAuth();
@@ -45,16 +26,12 @@ export function ProductsPage() {
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [toast, setToast] = useState<ToastState>(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductResponse | null>(null);
   const [form, setForm] = useState<ProductFormState>(initialForm);
   const [uploading, setUploading] = useState(false);
 
-  const sortedCategories = useMemo(
-    () => [...categories].filter((c) => c.is_active).sort((a, b) => a.sort_order - b.sort_order),
-    [categories]
-  );
+  const sortedCategories = useMemo(() => [...categories].filter(c => c.is_active).sort((a, b) => a.sort_order - b.sort_order), [categories]);
 
   async function loadCategories() {
     const data = await apiRequest<CategoryResponse[]>('/admin/categories', { token: accessToken });
@@ -64,7 +41,6 @@ export function ProductsPage() {
   async function loadProducts(categoryId = selectedCategoryId) {
     const query = new URLSearchParams({ page: '1', page_size: '100' });
     if (categoryId) query.set('category_id', categoryId);
-
     const data = await apiRequest<ProductResponse[]>(`/admin/products?${query.toString()}`, { token: accessToken });
     setItems(data);
   }
@@ -75,17 +51,15 @@ export function ProductsPage() {
   }
 
   useEffect(() => {
-    Promise.all([loadCategories(), loadProducts()]).catch((error: unknown) => {
-      showToast(error instanceof Error ? error.message : 'Ürün verileri alınamadı.', 'error');
+    Promise.all([loadCategories(), loadProducts()]).catch((e: unknown) => {
+      showToast(e instanceof Error ? e.message : 'Veriler alınamadı.', 'error');
     });
   }, [accessToken]);
 
   async function onCategoryFilterChange(categoryId: string) {
     setSelectedCategoryId(categoryId);
-    try {
-      await loadProducts(categoryId);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Filtreleme başarısız.', 'error');
+    try { await loadProducts(categoryId); } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Filtreleme başarısız.', 'error');
     }
   }
 
@@ -97,253 +71,210 @@ export function ProductsPage() {
 
   function openEditModal(item: ProductResponse) {
     setEditingItem(item);
-    setForm({
-      category_id: item.category_id,
-      name: item.name,
-      description: item.description ?? '',
-      priceTl: priceIntToTl(item.price_int),
-      image_url: item.image_url ?? '',
-      sort_order: String(item.sort_order),
-      is_active: item.is_active
-    });
+    setForm({ category_id: item.category_id, name: item.name, description: item.description ?? '', priceTl: priceIntToTl(item.price_int), image_url: item.image_url ?? '', sort_order: String(item.sort_order), is_active: item.is_active });
     setIsModalOpen(true);
   }
 
-  function closeModal() {
-    setIsModalOpen(false);
-    setEditingItem(null);
-    setForm(initialForm);
-  }
+  function closeModal() { setIsModalOpen(false); setEditingItem(null); setForm(initialForm); }
 
   async function onUploadImage(file: File | null) {
     if (!file || !accessToken) return;
-
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       setUploading(true);
-      const response = await fetch(`${API_BASE_URL}/admin/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(payload.message ?? 'Görsel yüklenemedi.');
-      }
-
+      const response = await fetch(`${API_BASE_URL}/admin/upload`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: formData });
+      if (!response.ok) { const p = (await response.json().catch(() => ({}))) as { message?: string }; throw new Error(p.message ?? 'Görsel yüklenemedi.'); }
       const data = (await response.json()) as UploadResponse;
-      setForm((prev) => ({ ...prev, image_url: data.image_url }));
+      setForm(prev => ({ ...prev, image_url: data.image_url }));
       showToast('Görsel yüklendi.', 'success');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Görsel yüklenemedi.', 'error');
-    } finally {
-      setUploading(false);
-    }
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Görsel yüklenemedi.', 'error'); }
+    finally { setUploading(false); }
   }
 
   async function saveProduct() {
     const name = form.name.trim();
     const price_int = tlToPriceInt(form.priceTl);
-
-    if (!name) {
-      showToast('Ürün adı boş olamaz.', 'error');
-      return;
-    }
-
-    if (!form.category_id) {
-      showToast('Kategori seçimi zorunludur.', 'error');
-      return;
-    }
-
-    if (!Number.isFinite(price_int) || price_int < 0) {
-      showToast('Fiyat geçersiz.', 'error');
-      return;
-    }
-
-    const payload = {
-      category_id: form.category_id,
-      name,
-      price_int,
-      description: form.description.trim() || undefined,
-      image_url: form.image_url || undefined,
-      sort_order: form.sort_order ? Number(form.sort_order) : undefined,
-      is_active: form.is_active
-    };
-
+    if (!name) { showToast('Ürün adı boş olamaz.', 'error'); return; }
+    if (!form.category_id) { showToast('Kategori seçimi zorunludur.', 'error'); return; }
+    if (!Number.isFinite(price_int) || price_int < 0) { showToast('Fiyat geçersiz.', 'error'); return; }
+    const payload = { category_id: form.category_id, name, price_int, description: form.description.trim() || undefined, image_url: form.image_url || undefined, sort_order: form.sort_order ? Number(form.sort_order) : undefined, is_active: form.is_active };
     try {
       if (editingItem) {
-        await apiRequest<ProductResponse>(`/admin/products/${editingItem.id}`, {
-          method: 'PUT',
-          token: accessToken,
-          body: payload
-        });
+        await apiRequest<ProductResponse>(`/admin/products/${editingItem.id}`, { method: 'PUT', token: accessToken, body: payload });
         showToast('Ürün güncellendi.', 'success');
       } else {
-        await apiRequest<ProductResponse>('/admin/products', {
-          method: 'POST',
-          token: accessToken,
-          body: payload
-        });
+        await apiRequest<ProductResponse>('/admin/products', { method: 'POST', token: accessToken, body: payload });
         showToast('Ürün eklendi.', 'success');
       }
-
       closeModal();
       await loadProducts();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Ürün kaydedilemedi.', 'error');
-    }
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Ürün kaydedilemedi.', 'error'); }
+  }
+
+  async function deleteProduct(item: ProductResponse) {
+    if (!confirm(`"${item.name}" silinsin mi?`)) return;
+    try {
+      await apiRequest(`/admin/products/${item.id}`, { method: 'DELETE', token: accessToken });
+      showToast('Ürün silindi.', 'success');
+      await loadProducts();
+    } catch (e) { showToast(e instanceof Error ? e.message : 'Silinemedi.', 'error'); }
   }
 
   return (
-    <section>
-      <h1>Ürünler</h1>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        <select value={selectedCategoryId} onChange={(e) => onCategoryFilterChange(e.target.value)}>
-          <option value="">Tüm kategoriler</option>
-          {sortedCategories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-
-        <button onClick={openCreateModal}>Yeni Ürün Ekle</button>
-      </div>
-
+    <div>
       {toast && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: '8px 10px',
-            borderRadius: 6,
-            background: toast.type === 'error' ? '#fee2e2' : '#dcfce7',
-            color: toast.type === 'error' ? '#991b1b' : '#166534'
-          }}
-        >
+        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
+          style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
           {toast.message}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
-        {items.map((item) => (
-          <article key={item.id} style={{ border: '1px solid #ddd', borderRadius: 10, padding: 10 }}>
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '1 / 1',
-                overflow: 'hidden',
-                borderRadius: 8,
-                background: '#f3f4f6',
-                marginBottom: 8
-              }}
-            >
-              {item.image_url ? (
-                <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : null}
-            </div>
-
-            <strong>{item.name}</strong>
-            <p style={{ margin: '6px 0' }}>{priceIntToTl(item.price_int)} TL</p>
-            <p style={{ opacity: 0.8, fontSize: 13 }}>{item.description || 'Açıklama yok'}</p>
-            <button onClick={() => openEditModal(item)}>Düzenle</button>
-          </article>
-        ))}
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 mb-6">
+        <select
+          value={selectedCategoryId}
+          onChange={e => onCategoryFilterChange(e.target.value)}
+          className="px-4 py-2.5 rounded-xl text-sm outline-none font-medium"
+          style={{border: '1.5px solid #E2E8F0', background: 'white', color: '#0F172A', minWidth: 160}}
+        >
+          <option value="">Tüm Kategoriler</option>
+          {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button onClick={openCreateModal}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white ml-auto"
+          style={{background: '#0F172A'}}>
+          + Yeni Ürün
+        </button>
       </div>
 
-      {isModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,.35)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 30
-          }}
-        >
-          <div style={{ width: 'min(560px, 92vw)', background: '#fff', borderRadius: 10, padding: 16 }}>
-            <h2>{editingItem ? 'Ürün Düzenle' : 'Ürün Ekle'}</h2>
-
-            <div style={{ display: 'grid', gap: 8 }}>
-              <label>
-                Kategori
-                <select
-                  value={form.category_id}
-                  onChange={(e) => setForm((prev) => ({ ...prev, category_id: e.target.value }))}
-                >
-                  <option value="">Kategori seçin</option>
-                  {sortedCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Ürün Adı
-                <input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
-              </label>
-
-              <label>
-                Fiyat (TL)
-                <input
-                  value={form.priceTl}
-                  onChange={(e) => setForm((prev) => ({ ...prev, priceTl: e.target.value }))}
-                  placeholder="Örn: 145,50"
-                />
-              </label>
-
-              <label>
-                Açıklama
-                <textarea value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
-              </label>
-
-              <label>
-                Sıra
-                <input
-                  type="number"
-                  min={1}
-                  value={form.sort_order}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sort_order: e.target.value }))}
-                />
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) => setForm((prev) => ({ ...prev, is_active: e.target.checked }))}
-                />
-                Aktif ürün
-              </label>
-
-              <label>
-                Görsel Yükle
-                <input type="file" accept="image/*" onChange={(e) => onUploadImage(e.target.files?.[0] ?? null)} />
-              </label>
-
-              {uploading && <p>Görsel yükleniyor...</p>}
-              {form.image_url && (
-                <div style={{ width: 140, aspectRatio: '1 / 1', borderRadius: 8, overflow: 'hidden', border: '1px solid #ddd' }}>
-                  <img src={form.image_url} alt="Ürün görseli" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* Grid */}
+      <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))'}}>
+        {items.map(item => (
+          <div key={item.id} className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{border: '1px solid #E2E8F0'}}>
+            <div className="relative" style={{aspectRatio: '1', background: '#F8FAFC'}}>
+              {item.image_url ? (
+                <img src={item.thumb_url || item.image_url} alt={item.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>
+              )}
+              {!item.is_active && (
+                <div className="absolute inset-0 flex items-center justify-center" style={{background: 'rgba(0,0,0,0.4)'}}>
+                  <span className="text-xs font-bold text-white px-2 py-1 rounded-full" style={{background: '#DC2626'}}>Pasif</span>
                 </div>
               )}
             </div>
+            <div className="p-3">
+              <div className="font-semibold text-sm mb-1" style={{color: '#0F172A'}}>{item.name}</div>
+              <div className="font-bold text-sm mb-3" style={{color: '#0D9488'}}>{priceIntToTl(item.price_int)} TL</div>
+              <div className="flex gap-2">
+                <button onClick={() => openEditModal(item)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{background: '#F1F5F9', color: '#0F172A'}}>
+                  Düzenle
+                </button>
+                <button onClick={() => deleteProduct(item)}
+                  className="py-1.5 px-2 rounded-lg text-xs font-semibold"
+                  style={{background: '#FEF2F2', color: '#DC2626'}}>
+                  Sil
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-              <button onClick={closeModal}>İptal</button>
-              <button onClick={saveProduct}>Kaydet</button>
+        {items.length === 0 && (
+          <div className="col-span-full text-center py-16 rounded-2xl" style={{background: 'white', border: '1px dashed #E2E8F0'}}>
+            <div className="text-4xl mb-3">🛒</div>
+            <p className="text-sm" style={{color: '#94A3B8'}}>Henüz ürün yok</p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
+              <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>
+                {editingItem ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
+              </h2>
+              <button onClick={closeModal} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 overflow-y-auto" style={{maxHeight: '70vh'}}>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Kategori</label>
+                <select
+                  value={form.category_id}
+                  onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                >
+                  <option value="">Kategori seçin</option>
+                  {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Ürün Adı</label>
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  placeholder="Ürün adı..." />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Fiyat (TL)</label>
+                <input value={form.priceTl} onChange={e => setForm(p => ({ ...p, priceTl: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  placeholder="Örn: 145,50" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Açıklama</label>
+                <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none"
+                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  rows={2} placeholder="Açıklama..." />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Görsel</label>
+                <input type="file" accept="image/*" onChange={e => onUploadImage(e.target.files?.[0] ?? null)}
+                  className="w-full px-4 py-2 rounded-xl text-sm"
+                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#64748B'}} />
+                {uploading && <p className="text-xs mt-1" style={{color: '#0D9488'}}>Yükleniyor...</p>}
+                {form.image_url && (
+                  <div className="mt-2 w-20 h-20 rounded-xl overflow-hidden" style={{border: '1px solid #E2E8F0'}}>
+                    <img src={form.image_url} alt="Önizleme" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="sr-only" />
+                  <div className="w-10 h-6 rounded-full transition-all" style={{background: form.is_active ? '#0D9488' : '#E2E8F0'}}>
+                    <div className="w-5 h-5 bg-white rounded-full shadow transition-all mt-0.5" style={{marginLeft: form.is_active ? '18px' : '2px'}}></div>
+                  </div>
+                </div>
+                <span className="text-sm font-medium" style={{color: '#0F172A'}}>Aktif ürün</span>
+              </label>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 flex gap-3" style={{borderTop: '1px solid #E2E8F0'}}>
+              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{background: '#F1F5F9', color: '#64748B'}}>İptal</button>
+              <button onClick={saveProduct} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{background: '#0F172A'}}>Kaydet</button>
             </div>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

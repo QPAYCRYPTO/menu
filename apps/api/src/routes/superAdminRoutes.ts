@@ -1,6 +1,7 @@
 // apps/api/src/routes/superAdminRoutes.ts
 import { Router } from 'express';
 import argon2 from 'argon2';
+import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { pool } from '../db/postgres.js';
@@ -8,24 +9,32 @@ import { env } from '../config/env.js';
 
 const createBusinessSchema = z.object({
   business_name: z.string().min(1).max(120),
-  slug: z.string().min(1).max(80).regex(/^[a-z0-9-_]+$/, 'Slug sadece küçük harf, rakam, tire ve alt çizgi içerebilir. Türkçe karakter ve boşluk kullanmayın.'),
+  slug: z.string().min(1).max(80).regex(/^[a-z0-9-_]+$/, 'Slug sadece küçük harf, rakam, tire ve alt çizgi içerebilir.'),
   email: z.string().email('Geçerli bir e-posta adresi girin.'),
   password: z.string().min(8, 'Şifre en az 8 karakter olmalıdır.')
 });
 
 function requireSuperAdmin(req: any, res: any, next: any) {
-  const secret = req.headers['x-super-admin-secret'];
-  if (!secret || secret !== env.superAdminSecret) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Yetkisiz erişim.' });
     return;
   }
-  next();
+  try {
+    const payload = jwt.verify(header.slice(7), env.jwtSecret) as any;
+    if (payload.role !== 'superadmin') {
+      res.status(403).json({ message: 'Bu işlem için yetkiniz yok.' });
+      return;
+    }
+    next();
+  } catch {
+    res.status(401).json({ message: 'Geçersiz token.' });
+  }
 }
 
 export const superAdminRoutes = Router();
 superAdminRoutes.use(requireSuperAdmin);
 
-// Tüm işletmeleri listele
 superAdminRoutes.get('/businesses', async (_req, res) => {
   const result = await pool.query(`
     SELECT 
@@ -40,7 +49,6 @@ superAdminRoutes.get('/businesses', async (_req, res) => {
   res.status(200).json(result.rows);
 });
 
-// Yeni işletme + kullanıcı oluştur
 superAdminRoutes.post('/businesses', async (req, res) => {
   const parsed = createBusinessSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -76,8 +84,8 @@ superAdminRoutes.post('/businesses', async (req, res) => {
 
     const passwordHash = await argon2.hash(password);
     await client.query(
-      `INSERT INTO users (id, business_id, email, password_hash, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, TRUE, NOW(), NOW())`,
+      `INSERT INTO users (id, business_id, email, password_hash, role, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, 'admin', TRUE, NOW(), NOW())`,
       [userId, businessId, email.toLowerCase(), passwordHash]
     );
 
@@ -91,7 +99,6 @@ superAdminRoutes.post('/businesses', async (req, res) => {
   }
 });
 
-// İşletmeyi aktif/pasif yap
 superAdminRoutes.put('/businesses/:id', async (req, res) => {
   const { id } = req.params;
   const { is_active } = req.body;
@@ -109,7 +116,6 @@ superAdminRoutes.put('/businesses/:id', async (req, res) => {
   res.status(200).json(result.rows[0]);
 });
 
-// İşletme şifresini sıfırla
 superAdminRoutes.put('/businesses/:id/reset-password', async (req, res) => {
   const { id } = req.params;
   const { new_password } = req.body;

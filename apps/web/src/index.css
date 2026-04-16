@@ -1,0 +1,12 @@
+/* apps/web/src/index.css */
+@import "tailwindcss";
+
+:root {
+  --teal: #0D9488;
+  --teal-light: #CCFBF1;
+  --teal-dark: #0F766E;
+  --navy: #0F172A;
+  --navy-mid: #1E293B;
+  --gold: #B8860B;
+  --gold-bright: #F59E0B;
+}
