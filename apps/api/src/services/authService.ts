@@ -99,8 +99,8 @@ export async function createPasswordResetToken(email: string): Promise<string | 
   const token_hash = hashToken(token);
 
   await pool.query(
-    `INSERT INTO password_resets (id, business_id, user_id, email, token_hash, expires_at)
-     VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 minutes')`,
+    `INSERT INTO password_resets (id, business_id, user_id, email, token_hash, expires_at, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 minutes', NOW(), NOW())`,
     [randomUUID(), user.business_id, user.id, user.email, token_hash]
   );
 
