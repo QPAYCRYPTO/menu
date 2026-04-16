@@ -182,16 +182,24 @@ adminRoutes.put('/business', async (req, res) => {
 
 adminRoutes.get('/qr', async (req, res) => {
   const businessId = req.ctx!.businessId!;
+  const { content } = req.query;
 
-  const result = await pool.query('SELECT slug FROM businesses WHERE id = $1', [businessId]);
+  let qrContent: string;
 
-  if (result.rowCount !== 1) {
-    res.status(404).json({ message: 'İşletme bulunamadı.' });
-    return;
+  if (content && typeof content === 'string') {
+    // Masa QR'ı için custom content
+    qrContent = content;
+  } else {
+    // Genel menü QR'ı
+    const result = await pool.query('SELECT slug FROM businesses WHERE id = $1', [businessId]);
+    if (result.rowCount !== 1) {
+      res.status(404).json({ message: 'İşletme bulunamadı.' });
+      return;
+    }
+    const slug = String(result.rows[0].slug);
+    qrContent = `${env.publicBaseUrl}/m/${slug}`;
   }
 
-  const slug = String(result.rows[0].slug);
-  const qrContent = `${env.publicBaseUrl}/m/${slug}`;
   const png = await QRCode.toBuffer(qrContent, {
     type: 'png',
     width: 512,

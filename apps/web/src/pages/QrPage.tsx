@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 const PUBLIC_BASE_URL = 'https://www.atlasqrmenu.com';
 
+type Table = { id: string; name: string; is_active: boolean; };
 type ToastState = { message: string; type: 'error' | 'success' } | null;
 
 export function QrPage() {
@@ -14,8 +15,14 @@ export function QrPage() {
   const [qrSrc, setQrSrc] = useState<string>('');
   const [qrBlob, setQrBlob] = useState<Blob | null>(null);
   const [publicLink, setPublicLink] = useState<string>('');
+  const [slug, setSlug] = useState<string>('');
   const [toast, setToast] = useState<ToastState>(null);
   const [loading, setLoading] = useState(true);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [tableQrSrc, setTableQrSrc] = useState<string>('');
+  const [tableQrBlob, setTableQrBlob] = useState<Blob | null>(null);
+  const [tableQrLoading, setTableQrLoading] = useState(false);
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
@@ -24,11 +31,17 @@ export function QrPage() {
 
   useEffect(() => {
     let objectUrl = '';
-    async function loadQrAndLink() {
+    async function loadData() {
       if (!accessToken) return;
       setLoading(true);
-      const business = await apiRequest<BusinessSettingsResponse>('/admin/business', { token: accessToken });
+      const [business, tablesData] = await Promise.all([
+        apiRequest<BusinessSettingsResponse>('/admin/business', { token: accessToken }),
+        apiRequest<Table[]>('/admin/tables', { token: accessToken })
+      ]);
+      setSlug(business.slug);
       setPublicLink(`${PUBLIC_BASE_URL}/m/${business.slug}`);
+      setTables(tablesData.filter(t => t.is_active));
+
       const response = await fetch(`${API_BASE_URL}/admin/qr`, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!response.ok) throw new Error('QR görseli alınamadı.');
       const blob = await response.blob();
@@ -37,19 +50,40 @@ export function QrPage() {
       setQrSrc(objectUrl);
       setLoading(false);
     }
-    loadQrAndLink().catch((e: unknown) => {
+    loadData().catch((e: unknown) => {
       showToast(e instanceof Error ? e.message : 'QR yüklenemedi.', 'error');
       setLoading(false);
     });
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [accessToken]);
 
-  function downloadQr() {
-    if (!qrBlob) { showToast('İndirilecek QR bulunamadı.', 'error'); return; }
-    const url = URL.createObjectURL(qrBlob);
+  async function generateTableQr(table: Table) {
+    setSelectedTable(table);
+    setTableQrLoading(true);
+    setTableQrSrc('');
+    try {
+      const tableLink = `${PUBLIC_BASE_URL}/m/${slug}?masa=${table.id}`;
+      const response = await fetch(`${API_BASE_URL}/admin/qr?content=${encodeURIComponent(tableLink)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!response.ok) throw new Error('QR oluşturulamadı.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setTableQrBlob(blob);
+      setTableQrSrc(url);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'QR oluşturulamadı.', 'error');
+    } finally {
+      setTableQrLoading(false);
+    }
+  }
+
+  function downloadQr(blob: Blob | null, filename: string) {
+    if (!blob) { showToast('İndirilecek QR bulunamadı.', 'error'); return; }
+    const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'atlasqr-menu.png';
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -57,16 +91,15 @@ export function QrPage() {
     showToast('QR indirildi.', 'success');
   }
 
-  async function copyPublicLink() {
-    if (!publicLink) { showToast('Kopyalanacak bağlantı bulunamadı.', 'error'); return; }
+  async function copyLink(link: string) {
     try {
-      await navigator.clipboard.writeText(publicLink);
+      await navigator.clipboard.writeText(link);
       showToast('Link kopyalandı!', 'success');
     } catch { showToast('Kopyalama başarısız.', 'error'); }
   }
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-2xl">
       {toast && (
         <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
           style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
@@ -74,84 +107,129 @@ export function QrPage() {
         </div>
       )}
 
-      {/* Başlık */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{background: '#CCFBF1'}}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5">
-            <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
-            <rect x="3" y="16" width="5" height="5"/><path d="M21 16h-6v5M16 11h5M11 3v5M11 11h5v5"/>
-          </svg>
+      {/* Genel Menü QR */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6" style={{border: '1px solid #E2E8F0'}}>
+        <div className="px-6 py-4 border-b" style={{borderColor: '#E2E8F0'}}>
+          <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Genel Menü QR</h2>
+          <p className="text-xs mt-1" style={{color: '#94A3B8'}}>Masa seçimi olmadan direkt menüye yönlendirir</p>
         </div>
-        <h2 className="font-bold text-xl mb-1" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Menü QR Kodunuz</h2>
-        <p className="text-sm" style={{color: '#94A3B8'}}>Masalarınıza yerleştirin, müşterileriniz okusun</p>
+
+        <div className="p-6 flex items-center gap-6">
+          <div className="flex-shrink-0">
+            {loading ? (
+              <div className="w-32 h-32 rounded-xl flex items-center justify-center" style={{background: '#E2E8F0'}}>
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{borderColor: '#0D9488', borderTopColor: 'transparent'}}></div>
+              </div>
+            ) : qrSrc ? (
+              <div className="p-3 rounded-xl" style={{background: '#F8FAFC', border: '1px solid #E2E8F0'}}>
+                <img src={qrSrc} alt="QR Kod" className="w-32 h-32 rounded-lg" />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex-1">
+            {publicLink && (
+              <p className="text-xs mb-3 font-mono truncate" style={{color: '#0D9488'}}>{publicLink}</p>
+            )}
+            <div className="flex flex-col gap-2">
+              <button onClick={() => downloadQr(qrBlob, 'atlasqr-menu.png')}
+                className="py-2 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2"
+                style={{background: '#0F172A'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                İndir
+              </button>
+              <button onClick={() => copyLink(publicLink)}
+                className="py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                style={{background: '#CCFBF1', color: '#0F766E'}}>
+                Linki Kopyala
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* QR Kart */}
+      {/* Masa QR'ları */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{border: '1px solid #E2E8F0'}}>
-        
-        {/* QR Görsel */}
-        <div className="p-8 flex items-center justify-center" style={{background: '#F8FAFC'}}>
-          {loading ? (
-            <div className="w-48 h-48 rounded-2xl flex items-center justify-center" style={{background: '#E2E8F0'}}>
-              <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{borderColor: '#0D9488', borderTopColor: 'transparent'}}></div>
-            </div>
-          ) : qrSrc ? (
-            <div className="p-4 rounded-2xl" style={{background: 'white', boxShadow: '0 4px 24px rgba(15,23,42,0.1)'}}>
-              <img src={qrSrc} alt="QR Kod" className="w-48 h-48 rounded-xl" />
-            </div>
-          ) : (
-            <div className="w-48 h-48 rounded-2xl flex items-center justify-center" style={{background: '#FEF2F2'}}>
-              <span className="text-sm" style={{color: '#DC2626'}}>QR yüklenemedi</span>
-            </div>
-          )}
+        <div className="px-6 py-4 border-b" style={{borderColor: '#E2E8F0'}}>
+          <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Masa QR Kodları</h2>
+          <p className="text-xs mt-1" style={{color: '#94A3B8'}}>Her masaya özel QR — sipariş sistemi için gerekli</p>
         </div>
 
-        {/* Public Link */}
-        {publicLink && (
-          <div className="px-6 py-3 flex items-center gap-3" style={{borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC'}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
-            <a href={publicLink} target="_blank" rel="noreferrer"
-              className="flex-1 text-xs truncate" style={{color: '#0D9488'}}>
-              {publicLink}
-            </a>
+        {tables.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-3">🪑</div>
+            <p className="text-sm mb-2" style={{color: '#94A3B8'}}>Henüz masa tanımlanmamış</p>
+            <p className="text-xs" style={{color: '#CBD5E1'}}>Masa yönetiminden masa ekleyin</p>
+          </div>
+        ) : (
+          <div className="divide-y" style={{borderColor: '#F1F5F9'}}>
+            {tables.map(table => (
+              <div key={table.id} className="px-6 py-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: '#CCFBF1'}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5">
+                    <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
+                    <rect x="3" y="16" width="5" height="5"/><path d="M21 16h-6v5M16 11h5M11 3v5M11 11h5v5"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-sm" style={{color: '#0F172A'}}>{table.name}</div>
+                  <div className="text-xs font-mono truncate" style={{color: '#94A3B8'}}>/m/{slug}?masa={table.id.slice(0, 8)}...</div>
+                </div>
+                <button onClick={() => generateTableQr(table)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex-shrink-0"
+                  style={{background: '#0D9488'}}>
+                  QR Oluştur
+                </button>
+              </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {/* Butonlar */}
-        <div className="p-6 flex gap-3">
-          <button onClick={downloadQr}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2"
-            style={{background: '#0F172A'}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            PNG İndir
-          </button>
-          <button onClick={copyPublicLink}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-            style={{background: '#CCFBF1', color: '#0F766E'}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-            Linki Kopyala
-          </button>
-        </div>
+      {/* Masa QR Modal */}
+      {selectedTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm">
+            <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
+              <h3 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>{selectedTable.name} — QR</h3>
+              <button onClick={() => { setSelectedTable(null); setTableQrSrc(''); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
+            </div>
 
-        {/* Bilgi */}
-        <div className="px-6 pb-6">
-          <div className="rounded-xl p-4 flex gap-3" style={{background: '#FEF3C7'}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth="2" className="flex-shrink-0 mt-0.5">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <p className="text-xs leading-relaxed" style={{color: '#92400E'}}>
-              QR kodu indirip masalarınıza, menü kartlarınıza veya vitrine yapıştırabilirsiniz. Müşterileriniz kodu okutunca menünüze ulaşır.
-            </p>
+            <div className="p-6 flex flex-col items-center">
+              {tableQrLoading ? (
+                <div className="w-48 h-48 rounded-xl flex items-center justify-center" style={{background: '#E2E8F0'}}>
+                  <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{borderColor: '#0D9488', borderTopColor: 'transparent'}}></div>
+                </div>
+              ) : tableQrSrc ? (
+                <div className="p-4 rounded-2xl mb-4" style={{background: '#F8FAFC', border: '1px solid #E2E8F0'}}>
+                  <img src={tableQrSrc} alt={`${selectedTable.name} QR`} className="w-48 h-48 rounded-xl" />
+                </div>
+              ) : null}
+
+              <p className="text-xs text-center mb-4 font-mono" style={{color: '#0D9488'}}>
+                {PUBLIC_BASE_URL}/m/{slug}?masa={selectedTable.id.slice(0, 8)}...
+              </p>
+
+              <div className="flex gap-3 w-full">
+                <button onClick={() => downloadQr(tableQrBlob, `qr-${selectedTable.name}.png`)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
+                  style={{background: '#0F172A'}}>
+                  İndir
+                </button>
+                <button onClick={() => copyLink(`${PUBLIC_BASE_URL}/m/${slug}?masa=${selectedTable.id}`)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{background: '#CCFBF1', color: '#0F766E'}}>
+                  Linki Kopyala
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

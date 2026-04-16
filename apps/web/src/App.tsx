@@ -6,6 +6,7 @@ import { RequireAuth } from './components/RequireAuth';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { LoginPage } from './pages/LoginPage';
+import { OrdersPage } from './pages/OrdersPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { PublicMenuPage } from './pages/PublicMenuPage';
 import { QrPage } from './pages/QrPage';
@@ -13,6 +14,7 @@ import { ResetPage } from './pages/ResetPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
+import { TablesPage } from './pages/TablesPage';
 
 export function App() {
   return (
@@ -37,6 +39,8 @@ export function App() {
             <Route path="products" element={<ProductsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="qr" element={<QrPage />} />
+            <Route path="tables" element={<TablesPage />} />
+            <Route path="orders" element={<OrdersPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

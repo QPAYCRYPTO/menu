@@ -9,6 +9,8 @@ import { authRoutes } from './routes/authRoutes.js';
 import { adminRoutes } from './routes/adminRoutes.js';
 import { publicRoutes } from './routes/publicRoutes.js';
 import { superAdminRoutes } from './routes/superAdminRoutes.js';
+import { tableRoutes } from './routes/tableRoutes.js';
+import { orderRoutes } from './routes/orderRoutes.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -38,6 +40,8 @@ export function createApp() {
   app.use('/api/auth', authRoutes);
   app.use('/admin', adminRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/admin/tables', tableRoutes);
+  app.use('/api/admin/orders', orderRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/superadmin', superAdminRoutes);
 
