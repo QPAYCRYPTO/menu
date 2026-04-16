@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
-const API_BASE_URL = 'https://menuapi-production-3a61.up.railway.app/api';
+const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 
 type ToastState = {
   message: string;
