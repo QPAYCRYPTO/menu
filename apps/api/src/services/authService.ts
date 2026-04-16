@@ -18,7 +18,7 @@ function generateOpaqueToken(): string {
 }
 
 function createAccessToken(payload: { user_id: string; business_id: string; email: string }): string {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtAccessExpiresIn });
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtAccessExpiresIn as any });
 }
 
 export async function login(email: string, password: string): Promise<TokenPair | null> {

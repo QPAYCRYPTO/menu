@@ -35,13 +35,20 @@ authRoutes.post('/refresh', async (req, res) => {
   res.status(200).json({ access_token: accessToken });
 });
 
+// apps/api/src/routes/authRoutes.ts
 authRoutes.post('/request-reset', requestResetRateLimit, async (req, res) => {
   const parsed = requestResetSchema.safeParse(req.body);
 
   if (parsed.success) {
-    const token = await createPasswordResetToken(parsed.data.email);
-    if (token) {
-      await sendPasswordResetMail(parsed.data.email, token);
+    try {
+      const token = await createPasswordResetToken(parsed.data.email);
+      if (token) {
+        await sendPasswordResetMail(parsed.data.email, token);
+      }
+    } catch (error) {
+      console.error('Mail gönderim hatası:', error);
+      res.status(500).json({ message: String(error) });
+      return;
     }
   }
 
