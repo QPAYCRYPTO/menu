@@ -8,9 +8,9 @@ import { env } from '../config/env.js';
 
 const createBusinessSchema = z.object({
   business_name: z.string().min(1).max(120),
-  slug: z.string().min(1).max(80).regex(/^[a-z0-9-]+$/),
-  email: z.string().email(),
-  password: z.string().min(8)
+  slug: z.string().min(1).max(80).regex(/^[a-z0-9-_]+$/, 'Slug sadece küçük harf, rakam, tire ve alt çizgi içerebilir. Türkçe karakter ve boşluk kullanmayın.'),
+  email: z.string().email('Geçerli bir e-posta adresi girin.'),
+  password: z.string().min(8, 'Şifre en az 8 karakter olmalıdır.')
 });
 
 function requireSuperAdmin(req: any, res: any, next: any) {
