@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
+const API_BASE_URL = 'https://menuapi-production-3a61.up.railway.app/api';
 
 type ToastState = {
   message: string;
