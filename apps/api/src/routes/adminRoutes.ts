@@ -182,15 +182,13 @@ adminRoutes.put('/business', async (req, res) => {
 
 adminRoutes.get('/qr', async (req, res) => {
   const businessId = req.ctx!.businessId!;
-  const { content } = req.query;
+  const { content, table_id } = req.query;
 
   let qrContent: string;
 
   if (content && typeof content === 'string') {
-    // Masa QR'ı için custom content
     qrContent = content;
   } else {
-    // Genel menü QR'ı
     const result = await pool.query('SELECT slug FROM businesses WHERE id = $1', [businessId]);
     if (result.rowCount !== 1) {
       res.status(404).json({ message: 'İşletme bulunamadı.' });
@@ -200,11 +198,39 @@ adminRoutes.get('/qr', async (req, res) => {
     qrContent = `${env.publicBaseUrl}/m/${slug}`;
   }
 
+  // Tema rengini al
+  const bizResult = await pool.query('SELECT theme_color FROM businesses WHERE id = $1', [businessId]);
+  const themeColor = bizResult.rows[0]?.theme_color ?? '#0F172A';
+
   const png = await QRCode.toBuffer(qrContent, {
     type: 'png',
     width: 512,
-    margin: 1
+    margin: 2,
+    color: {
+      dark: themeColor,
+      light: '#FFFFFF'
+    }
   });
+
+  // Masa QR'ı ise R2'ye kaydet
+  if (table_id && typeof table_id === 'string') {
+    const tableResult = await pool.query(
+      'SELECT id, qr_url FROM tables WHERE id = $1 AND business_id = $2',
+      [table_id, businessId]
+    );
+
+    if (tableResult.rowCount === 1 && !tableResult.rows[0].qr_url) {
+      // Henüz kaydedilmemiş — R2'ye yükle
+      const key = `business/${businessId}/tables/${table_id}_qr.png`;
+      const { uploadToS3 } = await import('../services/storageService.js');
+      const qrUrl = await uploadToS3(key, png, 'image/png');
+
+      await pool.query(
+        'UPDATE tables SET qr_url = $1, updated_at = NOW() WHERE id = $2',
+        [qrUrl, table_id]
+      );
+    }
+  }
 
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'image/png');

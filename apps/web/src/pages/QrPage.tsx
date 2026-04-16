@@ -63,9 +63,10 @@ export function QrPage() {
     setTableQrSrc('');
     try {
       const tableLink = `${PUBLIC_BASE_URL}/m/${slug}?masa=${table.id}`;
-      const response = await fetch(`${API_BASE_URL}/admin/qr?content=${encodeURIComponent(tableLink)}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/admin/qr?content=${encodeURIComponent(tableLink)}&table_id=${table.id}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
       if (!response.ok) throw new Error('QR oluşturulamadı.');
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);

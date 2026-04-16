@@ -34,39 +34,50 @@ function orderTotal(items: OrderItem[]): number {
   return items.reduce((sum, item) => sum + item.price_int * item.quantity, 0);
 }
 
-// Sipariş sesi
 function playOrderSound() {
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const times = [0, 0.3];
-  times.forEach(time => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.5, ctx.currentTime + time);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.3);
-    osc.start(ctx.currentTime + time);
-    osc.stop(ctx.currentTime + time + 0.3);
-  });
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(987, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.7, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 1.2);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(783, ctx.currentTime + 0.6);
+    gain2.gain.setValueAtTime(0, ctx.currentTime + 0.6);
+    gain2.gain.setValueAtTime(0.7, ctx.currentTime + 0.65);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+    osc2.start(ctx.currentTime + 0.6);
+    osc2.stop(ctx.currentTime + 1.8);
+  } catch {}
 }
 
-// Garson çağrı sesi
 function playCallSound() {
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  [0, 0.2, 0.4, 0.6].forEach((time, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = i % 2 === 0 ? 660 : 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.5, ctx.currentTime + time);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.2);
-    osc.start(ctx.currentTime + time);
-    osc.stop(ctx.currentTime + time + 0.2);
-  });
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    [0, 0.45, 0.9].forEach(time => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1318, ctx.currentTime + time);
+      gain.gain.setValueAtTime(0.7, ctx.currentTime + time);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.35);
+      osc.start(ctx.currentTime + time);
+      osc.stop(ctx.currentTime + time + 0.35);
+    });
+  } catch {}
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -88,7 +99,7 @@ export function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState<ToastState>(null);
   const [filter, setFilter] = useState<string>('active');
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const prevOrderIds = useRef<Set<string>>(new Set());
   const audioUnlocked = useRef(false);
 
   function showToast(message: string, type: 'error' | 'success') {
@@ -96,50 +107,54 @@ export function OrdersPage() {
     window.setTimeout(() => setToast(null), 3000);
   }
 
+  function unlockAudio() {
+    if (audioUnlocked.current) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      ctx.resume();
+      audioUnlocked.current = true;
+    } catch {}
+  }
+
   async function loadOrders() {
     try {
-      const url = filter === 'active' ? '/admin/orders' : '/admin/orders?status=delivered';
+      const url = filter === 'active'
+        ? '/admin/orders'
+        : '/admin/orders?status=delivered';
       const data = await apiRequest<Order[]>(url, { token: accessToken });
-      setOrders(data);
+
+      if (filter === 'active') {
+        // Yeni sipariş var mı kontrol et — ses çal
+        const newIds = new Set(data.map((o: Order) => o.id));
+        const hasNew = [...newIds].some(id => !prevOrderIds.current.has(id));
+
+        if (hasNew && prevOrderIds.current.size > 0) {
+          const newOrders = data.filter((o: Order) => !prevOrderIds.current.has(o.id));
+          const hasCall = newOrders.some(o => o.type === 'call');
+          if (hasCall) playCallSound();
+          else playOrderSound();
+        }
+
+        prevOrderIds.current = newIds;
+
+        // Delivered olanları koru
+        setOrders(prev => {
+          const deliveredPrev = prev.filter(o => o.status === 'delivered');
+          return [...data, ...deliveredPrev.filter(d => !data.find(n => n.id === d.id))];
+        });
+      } else {
+        setOrders(data);
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Siparişler alınamadı.', 'error');
     }
   }
 
-  // SSE bağlantısı
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const es = new EventSource(`${API_BASE_URL}/admin/orders/stream`, {
-      // @ts-ignore
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    // EventSource header desteği yok — polyfill ile yapalım
-    eventSourceRef.current?.close();
-
-    // Polling fallback — SSE header sorunu için
-    const interval = setInterval(() => {
-      loadOrders();
-    }, 5000);
-
-    return () => {
-      es.close();
-      clearInterval(interval);
-    };
-  }, [accessToken]);
-
   useEffect(() => {
     loadOrders();
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
   }, [accessToken, filter]);
-
-  // Ses izni için ilk tıklama
-  function unlockAudio() {
-    if (audioUnlocked.current) return;
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    ctx.resume();
-    audioUnlocked.current = true;
-  }
 
   async function updateStatus(order: Order, status: string) {
     try {
@@ -168,7 +183,6 @@ export function OrdersPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Siparişler</h2>
@@ -234,7 +248,6 @@ export function OrdersPage() {
           <div key={order.id} className="bg-white rounded-2xl shadow-sm overflow-hidden"
             style={{border: `1px solid ${order.status === 'pending' ? '#FDE68A' : '#E2E8F0'}`}}>
 
-            {/* Kart Header */}
             <div className="px-4 py-3 flex items-center justify-between"
               style={{background: order.status === 'pending' ? '#FFFBEB' : '#F8FAFC', borderBottom: '1px solid #E2E8F0'}}>
               <div>
@@ -249,7 +262,6 @@ export function OrdersPage() {
               </span>
             </div>
 
-            {/* Ürünler */}
             <div className="px-4 py-3">
               {order.items.map(item => (
                 <div key={item.id} className="flex items-center justify-between py-1.5"
@@ -281,7 +293,6 @@ export function OrdersPage() {
               </div>
             </div>
 
-            {/* Durum Butonları */}
             {order.status !== 'delivered' && (
               <div className="px-4 pb-4 flex gap-2">
                 {order.status === 'pending' && (

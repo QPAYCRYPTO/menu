@@ -66,9 +66,12 @@ orderRoutes.get('/', async (req, res) => {
 
   const params: any[] = [businessId];
 
+  // include_delivered varsa delivered'ları da getir
   if (status) {
     params.push(status);
     query += ` AND o.status = $${params.length}`;
+  } else if (req.query.include_delivered === 'true') {
+    // hepsini getir
   } else {
     query += ` AND o.status != 'delivered'`;
   }
