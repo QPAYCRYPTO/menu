@@ -1,7 +1,7 @@
 // apps/web/src/pages/SuperAdminPage.tsx
 import { useEffect, useState } from 'react';
 
-const API_BASE_URL = 'https://menuapi-production-3a61.up.railway.app/api';
+const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 
 type Business = {
   id: string;

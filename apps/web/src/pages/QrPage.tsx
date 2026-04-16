@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
-const API_BASE_URL = 'https://menuapi-production-3a61.up.railway.app/api';
-const PUBLIC_BASE_URL = 'https://menuweb-production.up.railway.app';
+const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const PUBLIC_BASE_URL = 'https://www.atlasqrmenu.com';
 
 type ToastState = {
   message: string;
