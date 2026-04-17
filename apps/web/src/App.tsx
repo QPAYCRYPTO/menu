@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { AdminLayout } from './components/Layout';
 import { RequireAuth } from './components/RequireAuth';
+import { OrderProvider } from './context/OrderContext';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { LoginPage } from './pages/LoginPage';
@@ -30,7 +31,9 @@ export function App() {
             path="/admin"
             element={
               <RequireAuth>
-                <AdminLayout />
+                <OrderProvider>
+                  <AdminLayout />
+                </OrderProvider>
               </RequireAuth>
             }
           >

@@ -1,114 +1,14 @@
 // apps/web/src/components/Layout.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { apiRequest } from '../api/client';
-
-// Yeni sipariş sesi — DINGGG DANGGG
-function playOrderSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    // DINGGGG
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(987, ctx.currentTime); // Si notası
-    gain1.gain.setValueAtTime(0.7, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 1.2);
-
-    // DANGGGGG
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(783, ctx.currentTime + 0.6); // Sol notası
-    gain2.gain.setValueAtTime(0, ctx.currentTime + 0.6);
-    gain2.gain.setValueAtTime(0.7, ctx.currentTime + 0.65);
-    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-    osc2.start(ctx.currentTime + 0.6);
-    osc2.stop(ctx.currentTime + 1.8);
-  } catch {}
-}
-
-// Garson çağrı sesi — DINGG DINGG DINGG
-function playCallSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    [0, 0.45, 0.9].forEach(time => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1318, ctx.currentTime + time); // Mi notası — keskin
-      gain.gain.setValueAtTime(0.7, ctx.currentTime + time);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.35);
-      osc.start(ctx.currentTime + time);
-      osc.stop(ctx.currentTime + time + 0.35);
-    });
-  } catch {}
-}
+import { useOrders } from '../context/OrderContext';
 
 export function AdminLayout() {
-  const { logout, accessToken } = useAuth();
+  const { logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [callCount, setCallCount] = useState(0);
-  const prevOrderIds = useRef<Set<string>>(new Set());
-  const audioUnlocked = useRef(false);
-
-  // Ses izni
-  function unlockAudio() {
-    if (audioUnlocked.current) return;
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      ctx.resume();
-      audioUnlocked.current = true;
-    } catch {}
-  }
-
-  // Sipariş polling — 5 saniyede bir kontrol
-  useEffect(() => {
-    if (!accessToken) return;
-
-    async function checkOrders() {
-      try {
-        const orders = await apiRequest<any[]>('/admin/orders', { token: accessToken });
-        const pending = orders.filter((o: any) => o.status === 'pending');
-        const calls = pending.filter((o: any) => o.type === 'call');
-        const foods = pending.filter((o: any) => o.type === 'order');
-
-        setPendingCount(pending.length);
-        setCallCount(calls.length);
-
-        // Yeni sipariş var mı?
-        const newOrderIds = new Set(pending.map((o: any) => o.id));
-        const hasNewOrder = [...newOrderIds].some(id => !prevOrderIds.current.has(id));
-
-        if (hasNewOrder && prevOrderIds.current.size > 0) {
-          const newCalls = [...newOrderIds].filter(id => !prevOrderIds.current.has(id) && calls.find((o: any) => o.id === id));
-          const newFoods = [...newOrderIds].filter(id => !prevOrderIds.current.has(id) && foods.find((o: any) => o.id === id));
-
-          if (newCalls.length > 0) playCallSound();
-          else if (newFoods.length > 0) playOrderSound();
-        }
-
-        prevOrderIds.current = newOrderIds;
-      } catch {}
-    }
-
-    checkOrders();
-    const interval = setInterval(checkOrders, 5000);
-    return () => clearInterval(interval);
-  }, [accessToken]);
+  const { pendingCount, callCount, unlockAudio } = useOrders();
 
   const navItems = [
     { to: '/admin', label: 'Panel', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> },
@@ -154,7 +54,6 @@ export function AdminLayout() {
             style={{background: isActive(item.to) ? '#0D9488' : 'transparent', color: isActive(item.to) ? 'white' : 'rgba(255,255,255,0.5)', textDecoration: 'none'}}>
             <span style={{color: isActive(item.to) ? 'white' : 'rgba(255,255,255,0.4)', position: 'relative'}}>
               {item.icon}
-              {/* Kırmızı nokta */}
               {(item as any).badge > 0 && (
                 <span style={{position: 'absolute', top: -4, right: -4, background: '#DC2626', color: 'white', width: 16, height: 16, borderRadius: '50%', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                   {(item as any).badge > 9 ? '9+' : (item as any).badge}
@@ -187,12 +86,10 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen flex" style={{background: '#F8FAFC'}} onClick={unlockAudio}>
 
-      {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col" style={{width: 220, background: '#0F172A', minHeight: '100vh', flexShrink: 0}}>
         <SidebarContent />
       </div>
 
-      {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0" style={{background: 'rgba(0,0,0,0.5)'}} onClick={() => setSidebarOpen(false)} />
@@ -202,7 +99,6 @@ export function AdminLayout() {
         </div>
       )}
 
-      {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <div className="px-4 md:px-8 py-4 border-b flex items-center justify-between" style={{background: 'white', borderColor: '#E2E8F0'}}>
           <div className="flex items-center gap-3">
@@ -229,7 +125,7 @@ export function AdminLayout() {
                 </div>
               </Link>
             )}
-            {pendingCount === 0 && (
+            {pendingCount === 0 && callCount === 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold" style={{background: '#CCFBF1', color: '#0F766E'}}>
                 <div className="w-2 h-2 rounded-full" style={{background: '#0D9488'}}></div>
                 <span className="hidden sm:inline">Aktif</span>

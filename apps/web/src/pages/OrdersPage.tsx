@@ -39,26 +39,22 @@ function playOrderSound() {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
+    osc1.connect(gain1); gain1.connect(ctx.destination);
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(987, ctx.currentTime);
     gain1.gain.setValueAtTime(0.7, ctx.currentTime);
     gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 1.2);
+    osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 1.2);
 
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
+    osc2.connect(gain2); gain2.connect(ctx.destination);
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(783, ctx.currentTime + 0.6);
     gain2.gain.setValueAtTime(0, ctx.currentTime + 0.6);
     gain2.gain.setValueAtTime(0.7, ctx.currentTime + 0.65);
     gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-    osc2.start(ctx.currentTime + 0.6);
-    osc2.stop(ctx.currentTime + 1.8);
+    osc2.start(ctx.currentTime + 0.6); osc2.stop(ctx.currentTime + 1.8);
   } catch {}
 }
 
@@ -68,16 +64,37 @@ function playCallSound() {
     [0, 0.45, 0.9].forEach(time => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(1318, ctx.currentTime + time);
       gain.gain.setValueAtTime(0.7, ctx.currentTime + time);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.35);
-      osc.start(ctx.currentTime + time);
-      osc.stop(ctx.currentTime + time + 0.35);
+      osc.start(ctx.currentTime + time); osc.stop(ctx.currentTime + time + 0.35);
     });
   } catch {}
+}
+
+// Kaç dakika/saat önce
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return `${diff}sn önce`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}dk önce`;
+  return `${Math.floor(diff / 3600)}sa önce`;
+}
+
+// Kronometre — kaç dakika geçti
+function useElapsed(dateStr: string) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = new Date(dateStr).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [dateStr]);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -93,6 +110,131 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   ready: { bg: '#D1FAE5', color: '#065F46' },
   delivered: { bg: '#F1F5F9', color: '#64748B' }
 };
+
+// Sipariş kartı — kronometre için ayrı component
+function OrderCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: string) => void }) {
+  const elapsed = useElapsed(order.created_at);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden"
+      style={{border: `1px solid ${order.status === 'pending' ? '#FDE68A' : '#E2E8F0'}`}}>
+
+      <div className="px-4 py-3 flex items-center justify-between"
+        style={{background: order.status === 'pending' ? '#FFFBEB' : '#F8FAFC', borderBottom: '1px solid #E2E8F0'}}>
+        <div>
+          <div className="font-bold text-sm" style={{color: '#0F172A'}}>{order.table_name}</div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs" style={{color: '#94A3B8'}}>
+              {new Date(order.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}
+            </span>
+            <span className="text-xs" style={{color: '#94A3B8'}}>·</span>
+            <span className="text-xs" style={{color: '#94A3B8'}}>{timeAgo(order.created_at)}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {order.status !== 'delivered' && (
+            <span className="font-mono text-xs font-bold px-2 py-1 rounded-lg"
+              style={{background: '#FEF3C7', color: '#B45309'}}>
+              ⏱ {elapsed}
+            </span>
+          )}
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{background: STATUS_COLORS[order.status].bg, color: STATUS_COLORS[order.status].color}}>
+            {STATUS_LABELS[order.status]}
+          </span>
+        </div>
+      </div>
+
+      <div className="px-4 py-3">
+        {order.items.map(item => (
+          <div key={item.id} className="flex items-center justify-between py-1.5"
+            style={{borderBottom: '1px solid #F1F5F9'}}>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                style={{background: '#0D9488'}}>
+                {item.quantity}
+              </span>
+              <span className="text-sm" style={{color: '#0F172A'}}>{item.product_name}</span>
+            </div>
+            <span className="text-xs font-semibold" style={{color: '#64748B'}}>
+              {priceIntToTl(item.price_int * item.quantity)} TL
+            </span>
+          </div>
+        ))}
+
+        {order.note && (
+          <div className="mt-2 px-3 py-2 rounded-lg text-xs" style={{background: '#FEF3C7', color: '#92400E'}}>
+            📝 {order.note}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mt-3 pt-2" style={{borderTop: '1px solid #E2E8F0'}}>
+          <span className="text-xs font-semibold" style={{color: '#64748B'}}>Toplam</span>
+          <span className="font-bold text-sm" style={{color: '#0D9488'}}>
+            {priceIntToTl(orderTotal(order.items))} TL
+          </span>
+        </div>
+      </div>
+
+      {order.status !== 'delivered' && (
+        <div className="px-4 pb-4 flex gap-2">
+          {order.status === 'pending' && (
+            <button onClick={() => onUpdate(order, 'preparing')}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
+              style={{background: '#0369A1'}}>
+              Hazırlanıyor
+            </button>
+          )}
+          {order.status === 'preparing' && (
+            <button onClick={() => onUpdate(order, 'ready')}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
+              style={{background: '#059669'}}>
+              Hazır
+            </button>
+          )}
+          {order.status === 'ready' && (
+            <button onClick={() => onUpdate(order, 'delivered')}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
+              style={{background: '#64748B'}}>
+              Teslim Edildi ✓
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Garson çağrı kartı — kronometre için ayrı component
+function CallCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: string) => void }) {
+  const elapsed = useElapsed(order.created_at);
+
+  return (
+    <div className="rounded-2xl p-4" style={{background: '#FEF2F2', border: '2px solid #FECACA'}}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🔔</span>
+          <span className="font-bold text-sm" style={{color: '#0F172A'}}>{order.table_name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs font-bold px-2 py-1 rounded-lg" style={{background: '#FEE2E2', color: '#DC2626'}}>
+            ⏱ {elapsed}
+          </span>
+          <span className="text-xs" style={{color: '#94A3B8'}}>
+            {new Date(order.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}
+          </span>
+        </div>
+      </div>
+      <div className="text-xs mb-1" style={{color: '#94A3B8'}}>{timeAgo(order.created_at)}</div>
+      {order.note && <p className="text-xs mb-3" style={{color: '#64748B'}}>{order.note}</p>}
+      <button onClick={() => onUpdate(order, 'delivered')}
+        className="w-full py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
+        style={{background: '#DC2626'}}>
+        Garson Gitti ✓
+      </button>
+    </div>
+  );
+}
 
 export function OrdersPage() {
   const { accessToken } = useAuth();
@@ -124,7 +266,6 @@ export function OrdersPage() {
       const data = await apiRequest<Order[]>(url, { token: accessToken });
 
       if (filter === 'active') {
-        // Yeni sipariş var mı kontrol et — ses çal
         const newIds = new Set(data.map((o: Order) => o.id));
         const hasNew = [...newIds].some(id => !prevOrderIds.current.has(id));
 
@@ -137,7 +278,6 @@ export function OrdersPage() {
 
         prevOrderIds.current = newIds;
 
-        // Delivered olanları koru
         setOrders(prev => {
           const deliveredPrev = prev.filter(o => o.status === 'delivered');
           return [...data, ...deliveredPrev.filter(d => !data.find(n => n.id === d.id))];
@@ -151,17 +291,48 @@ export function OrdersPage() {
   }
 
   useEffect(() => {
+    if (!accessToken) return;
     loadOrders();
-    const interval = setInterval(loadOrders, 5000);
+
+    // SSE bağlantısı
+    async function connectSSE() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/orders/stream`, {
+          headers: { Authorization: `Bearer ${accessToken!}` }
+        });
+        if (!response.body) return;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value);
+          for (const line of text.split('\n')) {
+            if (line.startsWith('data:')) {
+              try {
+                const data = JSON.parse(line.slice(5).trim());
+                if (data.type === 'new_order') { playOrderSound(); await loadOrders(); }
+                else if (data.type === 'call') { playCallSound(); await loadOrders(); }
+              } catch {}
+            }
+          }
+        }
+      } catch {
+        setTimeout(connectSSE, 5000);
+      }
+    }
+
+    connectSSE();
+
+    // Fallback polling — 30 saniye
+    const interval = setInterval(loadOrders, 30000);
     return () => clearInterval(interval);
   }, [accessToken, filter]);
 
   async function updateStatus(order: Order, status: string) {
     try {
       await apiRequest(`/admin/orders/${order.id}`, {
-        method: 'PUT',
-        token: accessToken,
-        body: { status }
+        method: 'PUT', token: accessToken, body: { status }
       });
       await loadOrders();
       showToast('Durum güncellendi.', 'success');
@@ -194,17 +365,17 @@ export function OrdersPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => setFilter('active')}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            className="px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-transform"
             style={{background: filter === 'active' ? '#0F172A' : '#F1F5F9', color: filter === 'active' ? 'white' : '#0F172A'}}>
             Aktif
           </button>
           <button onClick={() => setFilter('delivered')}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            className="px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-transform"
             style={{background: filter === 'delivered' ? '#0F172A' : '#F1F5F9', color: filter === 'delivered' ? 'white' : '#0F172A'}}>
             Tamamlanan
           </button>
           <button onClick={loadOrders}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            className="px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-transform"
             style={{background: '#F1F5F9', color: '#0F172A'}}>
             🔄
           </button>
@@ -219,24 +390,7 @@ export function OrdersPage() {
           </h3>
           <div className="grid gap-3" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'}}>
             {callOrders.map(order => (
-              <div key={order.id} className="rounded-2xl p-4"
-                style={{background: '#FEF2F2', border: '2px solid #FECACA'}}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🔔</span>
-                    <span className="font-bold text-sm" style={{color: '#0F172A'}}>{order.table_name}</span>
-                  </div>
-                  <span className="text-xs" style={{color: '#94A3B8'}}>
-                    {new Date(order.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}
-                  </span>
-                </div>
-                {order.note && <p className="text-xs mb-3" style={{color: '#64748B'}}>{order.note}</p>}
-                <button onClick={() => updateStatus(order, 'delivered')}
-                  className="w-full py-2 rounded-xl text-xs font-semibold text-white"
-                  style={{background: '#DC2626'}}>
-                  Garson Gitti ✓
-                </button>
-              </div>
+              <CallCard key={order.id} order={order} onUpdate={updateStatus} />
             ))}
           </div>
         </div>
@@ -245,80 +399,7 @@ export function OrdersPage() {
       {/* Siparişler */}
       <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'}}>
         {foodOrders.map(order => (
-          <div key={order.id} className="bg-white rounded-2xl shadow-sm overflow-hidden"
-            style={{border: `1px solid ${order.status === 'pending' ? '#FDE68A' : '#E2E8F0'}`}}>
-
-            <div className="px-4 py-3 flex items-center justify-between"
-              style={{background: order.status === 'pending' ? '#FFFBEB' : '#F8FAFC', borderBottom: '1px solid #E2E8F0'}}>
-              <div>
-                <div className="font-bold text-sm" style={{color: '#0F172A'}}>{order.table_name}</div>
-                <div className="text-xs" style={{color: '#94A3B8'}}>
-                  {new Date(order.created_at).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})}
-                </div>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{background: STATUS_COLORS[order.status].bg, color: STATUS_COLORS[order.status].color}}>
-                {STATUS_LABELS[order.status]}
-              </span>
-            </div>
-
-            <div className="px-4 py-3">
-              {order.items.map(item => (
-                <div key={item.id} className="flex items-center justify-between py-1.5"
-                  style={{borderBottom: '1px solid #F1F5F9'}}>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                      style={{background: '#0D9488'}}>
-                      {item.quantity}
-                    </span>
-                    <span className="text-sm" style={{color: '#0F172A'}}>{item.product_name}</span>
-                  </div>
-                  <span className="text-xs font-semibold" style={{color: '#64748B'}}>
-                    {priceIntToTl(item.price_int * item.quantity)} TL
-                  </span>
-                </div>
-              ))}
-
-              {order.note && (
-                <div className="mt-2 px-3 py-2 rounded-lg text-xs" style={{background: '#FEF3C7', color: '#92400E'}}>
-                  📝 {order.note}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between mt-3 pt-2" style={{borderTop: '1px solid #E2E8F0'}}>
-                <span className="text-xs font-semibold" style={{color: '#64748B'}}>Toplam</span>
-                <span className="font-bold text-sm" style={{color: '#0D9488'}}>
-                  {priceIntToTl(orderTotal(order.items))} TL
-                </span>
-              </div>
-            </div>
-
-            {order.status !== 'delivered' && (
-              <div className="px-4 pb-4 flex gap-2">
-                {order.status === 'pending' && (
-                  <button onClick={() => updateStatus(order, 'preparing')}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold text-white"
-                    style={{background: '#0369A1'}}>
-                    Hazırlanıyor
-                  </button>
-                )}
-                {order.status === 'preparing' && (
-                  <button onClick={() => updateStatus(order, 'ready')}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold text-white"
-                    style={{background: '#059669'}}>
-                    Hazır
-                  </button>
-                )}
-                {order.status === 'ready' && (
-                  <button onClick={() => updateStatus(order, 'delivered')}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold text-white"
-                    style={{background: '#64748B'}}>
-                    Teslim Edildi ✓
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          <OrderCard key={order.id} order={order} onUpdate={updateStatus} />
         ))}
 
         {foodOrders.length === 0 && callOrders.length === 0 && (
