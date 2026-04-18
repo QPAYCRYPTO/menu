@@ -16,6 +16,7 @@ const createPublicOrderSchema = z.object({
   table_id: z.string().uuid(),
   note: z.string().max(500).optional(),
   type: z.enum(['order', 'call']).default('order'),
+  customer_token: z.string().min(10).max(100).optional(),
   items: z.array(z.object({
     product_id: z.string().uuid(),
     quantity: z.number().int().min(1)
@@ -109,10 +110,10 @@ publicRoutes.post('/order/:slug', async (req, res) => {
     await client.query('BEGIN');
 
     const orderResult = await client.query(
-      `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, created_at, updated_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, $5, NOW(), NOW())
+      `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, customer_token, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, $5, $6, NOW(), NOW())
        RETURNING id, created_at`,
-      [businessId, table.id, table.name, parsed.data.note ?? null, parsed.data.type]
+      [businessId, table.id, table.name, parsed.data.note ?? null, parsed.data.type, parsed.data.customer_token ?? null]
     );
 
     orderId = orderResult.rows[0].id;
