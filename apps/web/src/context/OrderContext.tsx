@@ -1,20 +1,53 @@
 // apps/web/src/context/OrderContext.tsx
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 
+export type OrderItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price_int: number;
+};
+
+export type Order = {
+  id: string;
+  table_id: string;
+  table_name: string;
+  status: 'pending' | 'preparing' | 'ready' | 'delivered';
+  note: string | null;
+  type: 'order' | 'call';
+  created_at: string;
+  items: OrderItem[];
+};
+
 type OrderContextValue = {
+  // Aktif siparişler (pending/preparing/ready)
+  activeOrders: Order[];
+  // Badge sayıları
   pendingCount: number;
   callCount: number;
+  // Ses kilidi
   unlockAudio: () => void;
+  // Manuel refresh (yenile butonu için)
+  refreshActive: () => Promise<void>;
+  // Tamamlananlar için ayrı fetch — sadece Tamamlananlar sekmesi tıklayınca kullanılır
+  fetchDelivered: () => Promise<Order[]>;
+  // Sipariş durumu güncelleme — optimistic update + backend çağrısı
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
 };
 
 const OrderContext = createContext<OrderContextValue>({
+  activeOrders: [],
   pendingCount: 0,
   callCount: 0,
-  unlockAudio: () => {}
+  unlockAudio: () => {},
+  refreshActive: async () => {},
+  fetchDelivered: async () => [],
+  updateOrderStatus: async () => {}
 });
 
 function playOrderSound() {
@@ -59,60 +92,83 @@ function playCallSound() {
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuth();
-  const [pendingCount, setPendingCount] = useState(0);
-  const [callCount, setCallCount] = useState(0);
-  const prevIds = useRef<Set<string>>(new Set());
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const audioUnlocked = useRef(false);
 
-  function unlockAudio() {
+  const unlockAudio = useCallback(() => {
     if (audioUnlocked.current) return;
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       ctx.resume();
       audioUnlocked.current = true;
     } catch {}
-  }
+  }, []);
 
-  async function fetchCounts() {
+  // Aktif siparişleri backend'den çek — sadece ilk yükleme ve manuel yenile için
+  const refreshActive = useCallback(async () => {
     if (!accessToken) return;
     try {
-      const orders = await apiRequest<any[]>('/admin/orders', { token: accessToken });
-      const pending = orders.filter((o: any) => o.status === 'pending');
-      const calls = pending.filter((o: any) => o.type === 'call');
-
-      setPendingCount(pending.length);
-      setCallCount(calls.length);
-
-      const newIds = new Set(pending.map((o: any) => o.id as string));
-      const hasNew = [...newIds].some(id => !prevIds.current.has(id));
-
-      if (hasNew && prevIds.current.size > 0) {
-        const newOrders = pending.filter((o: any) => !prevIds.current.has(o.id));
-        if (newOrders.some((o: any) => o.type === 'call')) playCallSound();
-        else playOrderSound();
-      }
-
-      prevIds.current = newIds;
+      const data = await apiRequest<Order[]>('/admin/orders', { token: accessToken });
+      setActiveOrders(data);
     } catch {}
-  }
+  }, [accessToken]);
+
+  // Tamamlananları çek — OrdersPage "Tamamlanan" sekmesine tıklayınca kullanır
+  const fetchDelivered = useCallback(async (): Promise<Order[]> => {
+    if (!accessToken) return [];
+    try {
+      const data = await apiRequest<Order[]>('/admin/orders?status=delivered', { token: accessToken });
+      return data;
+    } catch {
+      return [];
+    }
+  }, [accessToken]);
+
+  // Sipariş durumu güncelle — optimistic update
+  const updateOrderStatus = useCallback(async (orderId: string, status: Order['status']) => {
+    if (!accessToken) return;
+
+    // Optimistic: UI'yi hemen güncelle
+    if (status === 'delivered') {
+      // delivered olan aktif listeden çıkar
+      setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+    } else {
+      setActiveOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    }
+
+    try {
+      await apiRequest(`/admin/orders/${orderId}`, {
+        method: 'PUT',
+        token: accessToken,
+        body: { status }
+      });
+    } catch (e) {
+      // Hata olursa tekrar yükle
+      await refreshActive();
+      throw e;
+    }
+  }, [accessToken, refreshActive]);
 
   useEffect(() => {
     if (!accessToken) return;
 
-    fetchCounts();
+    // İlk yüklemede aktif siparişleri çek
+    refreshActive();
 
-    // SSE bağlantısı
+    let cancelled = false;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+
     async function connectSSE() {
+      if (cancelled) return;
       try {
         const response = await fetch(`${API_BASE_URL}/admin/orders/stream`, {
           headers: { Authorization: `Bearer ${accessToken!}` }
         });
-        if (!response.body) return;
-
-        const reader = response.body.getReader();
+        if (!response.body || cancelled) return;
+        reader = response.body.getReader();
         const decoder = new TextDecoder();
 
-        while (true) {
+        while (!cancelled) {
           const { done, value } = await reader.read();
           if (done) break;
           const text = decoder.decode(value);
@@ -120,26 +176,66 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             if (line.startsWith('data:')) {
               try {
                 const data = JSON.parse(line.slice(5).trim());
-                if (data.type === 'new_order') { playOrderSound(); await fetchCounts(); }
-                else if (data.type === 'call') { playCallSound(); await fetchCounts(); }
+
+                // Yeni sipariş veya garson çağrısı geldi
+                if (data.type === 'new_order' || data.type === 'call') {
+                  // Ses çal
+                  if (data.type === 'call') playCallSound();
+                  else playOrderSound();
+
+                  // Backend yeni payload gönderiyorsa (order alanı varsa) direkt state'e ekle — API ÇAĞRISI YOK
+                  if (data.order) {
+                    setActiveOrders(prev => {
+                      // Duplicate kontrolü (aynı ID iki kez gelirse)
+                      if (prev.find(o => o.id === data.order.id)) return prev;
+                      return [data.order, ...prev];
+                    });
+                  } else {
+                    // Fallback: eski payload formatı — API'den çek
+                    await refreshActive();
+                  }
+                }
               } catch {}
             }
           }
         }
+
+        // Stream kapandıysa yeniden bağlan
+        if (!cancelled) setTimeout(connectSSE, 3000);
       } catch {
-        setTimeout(connectSSE, 5000);
+        if (!cancelled) setTimeout(connectSSE, 5000);
       }
     }
 
     connectSSE();
 
-    // Fallback polling — 30 saniye
-    const interval = setInterval(fetchCounts, 30000);
-    return () => clearInterval(interval);
-  }, [accessToken]);
+    // Güvenlik ağı: 60 saniyede bir sync — SSE kaçırırsa tutarsızlık olmasın
+    const syncInterval = setInterval(() => {
+      refreshActive();
+    }, 60000);
+
+    return () => {
+      cancelled = true;
+      if (reader) {
+        try { reader.cancel(); } catch {}
+      }
+      clearInterval(syncInterval);
+    };
+  }, [accessToken, refreshActive]);
+
+  const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
+  const callCount = activeOrders.filter(o => o.type === 'call' && o.status === 'pending').length;
 
   return (
-    <OrderContext.Provider value={{ pendingCount, callCount, unlockAudio }}>
+    <OrderContext.Provider value={{
+      activeOrders,
+      pendingCount,
+      callCount,
+      unlockAudio,
+      refreshActive,
+      fetchDelivered,
+      updateOrderStatus
+    }}>
       {children}
     </OrderContext.Provider>
   );

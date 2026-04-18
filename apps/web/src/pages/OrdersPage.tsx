@@ -1,29 +1,8 @@
 // apps/web/src/pages/OrdersPage.tsx
-import { useEffect, useRef, useState } from 'react';
-import { apiRequest } from '../api/client';
-import { useAuth } from '../auth/AuthContext';
+import { useEffect, useState } from 'react';
+import { useOrders, Order, OrderItem } from '../context/OrderContext';
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 const FILTER_STORAGE_KEY = 'atlasqr:orders:filter';
-
-type OrderItem = {
-  id: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  price_int: number;
-};
-
-type Order = {
-  id: string;
-  table_id: string;
-  table_name: string;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered';
-  note: string | null;
-  type: 'order' | 'call';
-  created_at: string;
-  items: OrderItem[];
-};
 
 type FilterType = 'active' | 'delivered';
 type ToastState = { message: string; type: 'error' | 'success' } | null;
@@ -34,46 +13,6 @@ function priceIntToTl(value: number): string {
 
 function orderTotal(items: OrderItem[]): number {
   return items.reduce((sum, item) => sum + item.price_int * item.quantity, 0);
-}
-
-function playOrderSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1); gain1.connect(ctx.destination);
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(987, ctx.currentTime);
-    gain1.gain.setValueAtTime(0.7, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
-    osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 1.2);
-
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2); gain2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(783, ctx.currentTime + 0.6);
-    gain2.gain.setValueAtTime(0, ctx.currentTime + 0.6);
-    gain2.gain.setValueAtTime(0.7, ctx.currentTime + 0.65);
-    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
-    osc2.start(ctx.currentTime + 0.6); osc2.stop(ctx.currentTime + 1.8);
-  } catch {}
-}
-
-function playCallSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    [0, 0.45, 0.9].forEach(time => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1318, ctx.currentTime + time);
-      gain.gain.setValueAtTime(0.7, ctx.currentTime + time);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.35);
-      osc.start(ctx.currentTime + time); osc.stop(ctx.currentTime + time + 0.35);
-    });
-  } catch {}
 }
 
 function timeAgo(dateStr: string): string {
@@ -111,7 +50,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   delivered: { bg: '#F1F5F9', color: '#64748B' }
 };
 
-function OrderCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: string) => void }) {
+function OrderCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: Order['status']) => void }) {
   const elapsed = useElapsed(order.created_at);
 
   return (
@@ -204,7 +143,7 @@ function OrderCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order,
   );
 }
 
-function CallCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: string) => void }) {
+function CallCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: Order['status']) => void }) {
   const elapsed = useElapsed(order.created_at);
 
   return (
@@ -235,180 +174,72 @@ function CallCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, 
 }
 
 export function OrdersPage() {
-  const { accessToken } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [toast, setToast] = useState<ToastState>(null);
+  const { activeOrders, refreshActive, fetchDelivered, updateOrderStatus } = useOrders();
 
-  // FIX 2: Filter localStorage'dan okunuyor — F5 sonrası seçim kaybolmuyor
   const [filter, setFilter] = useState<FilterType>(() => {
     const saved = localStorage.getItem(FILTER_STORAGE_KEY);
     return (saved === 'active' || saved === 'delivered') ? saved : 'active';
   });
 
-  // FIX 3: Yenile butonu için loading state
+  const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([]);
+  const [loadingDelivered, setLoadingDelivered] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState<ToastState>(null);
 
-  const prevOrderIds = useRef<Set<string>>(new Set());
-  const audioUnlocked = useRef(false);
-  const filterRef = useRef<FilterType>(filter);
-
-  // filter her değiştiğinde hem ref'i güncelle hem localStorage'a yaz
   useEffect(() => {
-    filterRef.current = filter;
     localStorage.setItem(FILTER_STORAGE_KEY, filter);
   }, [filter]);
+
+  // Tamamlananlar sekmesine geçildiğinde fetch et
+  useEffect(() => {
+    if (filter !== 'delivered') return;
+    let cancelled = false;
+    setLoadingDelivered(true);
+    fetchDelivered().then(data => {
+      if (!cancelled) setDeliveredOrders(data);
+    }).finally(() => {
+      if (!cancelled) setLoadingDelivered(false);
+    });
+    return () => { cancelled = true; };
+  }, [filter, fetchDelivered]);
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 3000);
   }
 
-  function unlockAudio() {
-    if (audioUnlocked.current) return;
+  async function handleUpdateStatus(order: Order, status: Order['status']) {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      ctx.resume();
-      audioUnlocked.current = true;
-    } catch {}
-  }
-
-  // FIX 1: loadOrders artık prev state'i birleştirmiyor — backend'den gelen direkt kullanılıyor
-  // Hangi filtre için yüklendiğini de parametre alıyor ki SSE event'lerinde güncel filtreyi okuyabilsin
-  async function loadOrders(targetFilter?: FilterType, playSoundOnNew = false) {
-    const activeFilter = targetFilter ?? filterRef.current;
-    try {
-      const url = activeFilter === 'active'
-        ? '/admin/orders'
-        : '/admin/orders?status=delivered';
-      const data = await apiRequest<Order[]>(url, { token: accessToken });
-
-      // Ses çalma kontrolü sadece aktif filtrede ve yeni sipariş geldiğinde
-      if (activeFilter === 'active' && playSoundOnNew) {
-        const newIds = new Set(data.map((o: Order) => o.id));
-        const hasNew = [...newIds].some(id => !prevOrderIds.current.has(id));
-
-        if (hasNew && prevOrderIds.current.size > 0) {
-          const newOrders = data.filter((o: Order) => !prevOrderIds.current.has(o.id));
-          const hasCall = newOrders.some(o => o.type === 'call');
-          if (hasCall) playCallSound();
-          else playOrderSound();
-        }
-
-        prevOrderIds.current = newIds;
-      } else if (activeFilter === 'active') {
-        // Sadece ID seti güncelle, ses çalma
-        prevOrderIds.current = new Set(data.map((o: Order) => o.id));
-      }
-
-      // FIX 1 kritik kısım: Direkt data'yı set ediyoruz, prev ile birleştirme yok
-      setOrders(data);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Siparişler alınamadı.', 'error');
-    }
-  }
-
-  // Yenile butonu — görsel feedback ile
-  async function handleRefresh() {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await loadOrders();
-      showToast('Liste güncellendi.', 'success');
-    } finally {
-      // Kısa bir delay — kullanıcı spinner'ı görsün
-      setTimeout(() => setRefreshing(false), 300);
-    }
-  }
-
-  // Filter değiştiğinde listeyi yenile
-  // Burada prevOrderIds'i de temizliyoruz ki filtre değişiminde yanlış ses çalmasın
-  useEffect(() => {
-    if (!accessToken) return;
-    prevOrderIds.current = new Set();
-    loadOrders(filter, false);
-  }, [accessToken, filter]);
-
-  // FIX 4: SSE bağlantısı sadece accessToken'a bağlı — filter değişiminde yeniden bağlanmıyor
-  // Filter'ı filterRef üzerinden okuyor
-  useEffect(() => {
-    if (!accessToken) return;
-
-    let cancelled = false;
-    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-    let pollingInterval: ReturnType<typeof setInterval> | null = null;
-
-    async function connectSSE() {
-      if (cancelled) return;
-      try {
-        const response = await fetch(`${API_BASE_URL}/admin/orders/stream`, {
-          headers: { Authorization: `Bearer ${accessToken!}` }
-        });
-        if (!response.body || cancelled) return;
-        reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (!cancelled) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          for (const line of text.split('\n')) {
-            if (line.startsWith('data:')) {
-              try {
-                const data = JSON.parse(line.slice(5).trim());
-                if (data.type === 'new_order' || data.type === 'call') {
-                  // Güncel filtreyi ref üzerinden oku ve ses çal
-                  await loadOrders(filterRef.current, true);
-                }
-              } catch {}
-            }
-          }
-        }
-
-        // Stream normal şekilde kapandıysa yeniden bağlan
-        if (!cancelled) {
-          setTimeout(connectSSE, 3000);
-        }
-      } catch {
-        if (!cancelled) {
-          setTimeout(connectSSE, 5000);
-        }
-      }
-    }
-
-    connectSSE();
-
-    // Fallback polling — güncel filtreyi ref üzerinden okur
-    pollingInterval = setInterval(() => {
-      loadOrders(filterRef.current, false);
-    }, 30000);
-
-    return () => {
-      cancelled = true;
-      if (reader) {
-        try { reader.cancel(); } catch {}
-      }
-      if (pollingInterval) clearInterval(pollingInterval);
-    };
-  }, [accessToken]);
-
-  async function updateStatus(order: Order, status: string) {
-    try {
-      await apiRequest(`/admin/orders/${order.id}`, {
-        method: 'PUT', token: accessToken, body: { status }
-      });
-      await loadOrders();
+      await updateOrderStatus(order.id, status);
       showToast('Durum güncellendi.', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Güncellenemedi.', 'error');
     }
   }
 
-  const pendingCount = orders.filter(o => o.status === 'pending').length;
-  const callOrders = orders.filter(o => o.type === 'call' && o.status === 'pending');
-  const foodOrders = orders.filter(o => o.type === 'order');
+  async function handleRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      if (filter === 'active') {
+        await refreshActive();
+      } else {
+        const data = await fetchDelivered();
+        setDeliveredOrders(data);
+      }
+      showToast('Liste güncellendi.', 'success');
+    } finally {
+      setTimeout(() => setRefreshing(false), 300);
+    }
+  }
+
+  const displayedOrders = filter === 'active' ? activeOrders : deliveredOrders;
+  const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
+  const callOrders = activeOrders.filter(o => o.type === 'call' && o.status === 'pending');
+  const foodOrders = displayedOrders.filter(o => o.type === 'order');
 
   return (
-    <div onClick={unlockAudio}>
+    <div>
       {toast && (
         <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
           style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
@@ -452,7 +283,7 @@ export function OrdersPage() {
           </h3>
           <div className="grid gap-3" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'}}>
             {callOrders.map(order => (
-              <CallCard key={order.id} order={order} onUpdate={updateStatus} />
+              <CallCard key={order.id} order={order} onUpdate={handleUpdateStatus} />
             ))}
           </div>
         </div>
@@ -460,16 +291,22 @@ export function OrdersPage() {
 
       <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'}}>
         {foodOrders.map(order => (
-          <OrderCard key={order.id} order={order} onUpdate={updateStatus} />
+          <OrderCard key={order.id} order={order} onUpdate={handleUpdateStatus} />
         ))}
 
-        {foodOrders.length === 0 && callOrders.length === 0 && (
+        {foodOrders.length === 0 && callOrders.length === 0 && !loadingDelivered && (
           <div className="col-span-full text-center py-16 rounded-2xl"
             style={{background: 'white', border: '1px dashed #E2E8F0'}}>
             <div className="text-4xl mb-3">🍽️</div>
             <p className="text-sm" style={{color: '#94A3B8'}}>
               {filter === 'active' ? 'Aktif sipariş yok' : 'Tamamlanan sipariş yok'}
             </p>
+          </div>
+        )}
+
+        {loadingDelivered && (
+          <div className="col-span-full text-center py-16">
+            <p className="text-sm" style={{color: '#94A3B8'}}>Yükleniyor...</p>
           </div>
         )}
       </div>
