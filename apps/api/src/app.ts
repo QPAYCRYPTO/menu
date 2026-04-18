@@ -26,7 +26,8 @@ export function createApp() {
     origin: env.webOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Super-Admin-Secret']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Super-Admin-Secret'],
+    maxAge: 86400
   }));
 
   app.use(requestId);
