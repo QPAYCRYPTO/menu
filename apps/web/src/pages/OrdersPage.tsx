@@ -4,6 +4,7 @@ import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const FILTER_STORAGE_KEY = 'atlasqr:orders:filter';
 
 type OrderItem = {
   id: string;
@@ -24,6 +25,7 @@ type Order = {
   items: OrderItem[];
 };
 
+type FilterType = 'active' | 'delivered';
 type ToastState = { message: string; type: 'error' | 'success' } | null;
 
 function priceIntToTl(value: number): string {
@@ -74,7 +76,6 @@ function playCallSound() {
   } catch {}
 }
 
-// Kaç dakika/saat önce
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (diff < 60) return `${diff}sn önce`;
@@ -82,7 +83,6 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 3600)}sa önce`;
 }
 
-// Kronometre — kaç dakika geçti
 function useElapsed(dateStr: string) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -111,7 +111,6 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   delivered: { bg: '#F1F5F9', color: '#64748B' }
 };
 
-// Sipariş kartı — kronometre için ayrı component
 function OrderCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: string) => void }) {
   const elapsed = useElapsed(order.created_at);
 
@@ -205,7 +204,6 @@ function OrderCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order,
   );
 }
 
-// Garson çağrı kartı — kronometre için ayrı component
 function CallCard({ order, onUpdate }: { order: Order; onUpdate: (order: Order, status: string) => void }) {
   const elapsed = useElapsed(order.created_at);
 
@@ -240,9 +238,25 @@ export function OrdersPage() {
   const { accessToken } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState<ToastState>(null);
-  const [filter, setFilter] = useState<string>('active');
+
+  // FIX 2: Filter localStorage'dan okunuyor — F5 sonrası seçim kaybolmuyor
+  const [filter, setFilter] = useState<FilterType>(() => {
+    const saved = localStorage.getItem(FILTER_STORAGE_KEY);
+    return (saved === 'active' || saved === 'delivered') ? saved : 'active';
+  });
+
+  // FIX 3: Yenile butonu için loading state
+  const [refreshing, setRefreshing] = useState(false);
+
   const prevOrderIds = useRef<Set<string>>(new Set());
   const audioUnlocked = useRef(false);
+  const filterRef = useRef<FilterType>(filter);
+
+  // filter her değiştiğinde hem ref'i güncelle hem localStorage'a yaz
+  useEffect(() => {
+    filterRef.current = filter;
+    localStorage.setItem(FILTER_STORAGE_KEY, filter);
+  }, [filter]);
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
@@ -258,14 +272,18 @@ export function OrdersPage() {
     } catch {}
   }
 
-  async function loadOrders() {
+  // FIX 1: loadOrders artık prev state'i birleştirmiyor — backend'den gelen direkt kullanılıyor
+  // Hangi filtre için yüklendiğini de parametre alıyor ki SSE event'lerinde güncel filtreyi okuyabilsin
+  async function loadOrders(targetFilter?: FilterType, playSoundOnNew = false) {
+    const activeFilter = targetFilter ?? filterRef.current;
     try {
-      const url = filter === 'active'
+      const url = activeFilter === 'active'
         ? '/admin/orders'
         : '/admin/orders?status=delivered';
       const data = await apiRequest<Order[]>(url, { token: accessToken });
 
-      if (filter === 'active') {
+      // Ses çalma kontrolü sadece aktif filtrede ve yeni sipariş geldiğinde
+      if (activeFilter === 'active' && playSoundOnNew) {
         const newIds = new Set(data.map((o: Order) => o.id));
         const hasNew = [...newIds].some(id => !prevOrderIds.current.has(id));
 
@@ -277,33 +295,59 @@ export function OrdersPage() {
         }
 
         prevOrderIds.current = newIds;
-
-        setOrders(prev => {
-          const deliveredPrev = prev.filter(o => o.status === 'delivered');
-          return [...data, ...deliveredPrev.filter(d => !data.find(n => n.id === d.id))];
-        });
-      } else {
-        setOrders(data);
+      } else if (activeFilter === 'active') {
+        // Sadece ID seti güncelle, ses çalma
+        prevOrderIds.current = new Set(data.map((o: Order) => o.id));
       }
+
+      // FIX 1 kritik kısım: Direkt data'yı set ediyoruz, prev ile birleştirme yok
+      setOrders(data);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Siparişler alınamadı.', 'error');
     }
   }
 
+  // Yenile butonu — görsel feedback ile
+  async function handleRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await loadOrders();
+      showToast('Liste güncellendi.', 'success');
+    } finally {
+      // Kısa bir delay — kullanıcı spinner'ı görsün
+      setTimeout(() => setRefreshing(false), 300);
+    }
+  }
+
+  // Filter değiştiğinde listeyi yenile
+  // Burada prevOrderIds'i de temizliyoruz ki filtre değişiminde yanlış ses çalmasın
   useEffect(() => {
     if (!accessToken) return;
-    loadOrders();
+    prevOrderIds.current = new Set();
+    loadOrders(filter, false);
+  }, [accessToken, filter]);
 
-    // SSE bağlantısı
+  // FIX 4: SSE bağlantısı sadece accessToken'a bağlı — filter değişiminde yeniden bağlanmıyor
+  // Filter'ı filterRef üzerinden okuyor
+  useEffect(() => {
+    if (!accessToken) return;
+
+    let cancelled = false;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
     async function connectSSE() {
+      if (cancelled) return;
       try {
         const response = await fetch(`${API_BASE_URL}/admin/orders/stream`, {
           headers: { Authorization: `Bearer ${accessToken!}` }
         });
-        if (!response.body) return;
-        const reader = response.body.getReader();
+        if (!response.body || cancelled) return;
+        reader = response.body.getReader();
         const decoder = new TextDecoder();
-        while (true) {
+
+        while (!cancelled) {
           const { done, value } = await reader.read();
           if (done) break;
           const text = decoder.decode(value);
@@ -311,23 +355,41 @@ export function OrdersPage() {
             if (line.startsWith('data:')) {
               try {
                 const data = JSON.parse(line.slice(5).trim());
-                if (data.type === 'new_order') { playOrderSound(); await loadOrders(); }
-                else if (data.type === 'call') { playCallSound(); await loadOrders(); }
+                if (data.type === 'new_order' || data.type === 'call') {
+                  // Güncel filtreyi ref üzerinden oku ve ses çal
+                  await loadOrders(filterRef.current, true);
+                }
               } catch {}
             }
           }
         }
+
+        // Stream normal şekilde kapandıysa yeniden bağlan
+        if (!cancelled) {
+          setTimeout(connectSSE, 3000);
+        }
       } catch {
-        setTimeout(connectSSE, 5000);
+        if (!cancelled) {
+          setTimeout(connectSSE, 5000);
+        }
       }
     }
 
     connectSSE();
 
-    // Fallback polling — 30 saniye
-    const interval = setInterval(loadOrders, 30000);
-    return () => clearInterval(interval);
-  }, [accessToken, filter]);
+    // Fallback polling — güncel filtreyi ref üzerinden okur
+    pollingInterval = setInterval(() => {
+      loadOrders(filterRef.current, false);
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      if (reader) {
+        try { reader.cancel(); } catch {}
+      }
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
+  }, [accessToken]);
 
   async function updateStatus(order: Order, status: string) {
     try {
@@ -357,7 +419,7 @@ export function OrdersPage() {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Siparişler</h2>
-          {pendingCount > 0 && (
+          {pendingCount > 0 && filter === 'active' && (
             <span className="px-2.5 py-1 rounded-full text-xs font-bold text-white" style={{background: '#DC2626'}}>
               {pendingCount} yeni
             </span>
@@ -374,16 +436,16 @@ export function OrdersPage() {
             style={{background: filter === 'delivered' ? '#0F172A' : '#F1F5F9', color: filter === 'delivered' ? 'white' : '#0F172A'}}>
             Tamamlanan
           </button>
-          <button onClick={loadOrders}
-            className="px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-transform"
+          <button onClick={handleRefresh}
+            disabled={refreshing}
+            className="px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-transform disabled:opacity-60"
             style={{background: '#F1F5F9', color: '#0F172A'}}>
-            🔄
+            <span className={refreshing ? 'inline-block animate-spin' : 'inline-block'}>🔄</span>
           </button>
         </div>
       </div>
 
-      {/* Garson Çağrıları */}
-      {callOrders.length > 0 && (
+      {filter === 'active' && callOrders.length > 0 && (
         <div className="mb-6">
           <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{color: '#DC2626'}}>
             🔔 Garson Çağrıları ({callOrders.length})
@@ -396,7 +458,6 @@ export function OrdersPage() {
         </div>
       )}
 
-      {/* Siparişler */}
       <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'}}>
         {foodOrders.map(order => (
           <OrderCard key={order.id} order={order} onUpdate={updateStatus} />
