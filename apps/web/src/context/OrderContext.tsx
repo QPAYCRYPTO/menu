@@ -25,18 +25,12 @@ export type Order = {
 };
 
 type OrderContextValue = {
-  // Aktif siparişler (pending/preparing/ready)
   activeOrders: Order[];
-  // Badge sayıları
   pendingCount: number;
   callCount: number;
-  // Ses kilidi
   unlockAudio: () => void;
-  // Manuel refresh (yenile butonu için)
   refreshActive: () => Promise<void>;
-  // Tamamlananlar için ayrı fetch — sadece Tamamlananlar sekmesi tıklayınca kullanılır
   fetchDelivered: () => Promise<Order[]>;
-  // Sipariş durumu güncelleme — optimistic update + backend çağrısı
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
 };
 
@@ -95,6 +89,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const audioUnlocked = useRef(false);
 
+  // ÖNEMLİ: accessToken'ı ref'e yazıyoruz ki useEffect'in bağımlılığı olmadan okunabilsin
+  const tokenRef = useRef(accessToken);
+  useEffect(() => {
+    tokenRef.current = accessToken;
+  }, [accessToken]);
+
   const unlockAudio = useCallback(() => {
     if (audioUnlocked.current) return;
     try {
@@ -104,33 +104,32 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  // Aktif siparişleri backend'den çek — sadece ilk yükleme ve manuel yenile için
   const refreshActive = useCallback(async () => {
-    if (!accessToken) return;
+    const token = tokenRef.current;
+    if (!token) return;
     try {
-      const data = await apiRequest<Order[]>('/admin/orders', { token: accessToken });
+      const data = await apiRequest<Order[]>('/admin/orders', { token });
       setActiveOrders(data);
     } catch {}
-  }, [accessToken]);
+  }, []);
 
-  // Tamamlananları çek — OrdersPage "Tamamlanan" sekmesine tıklayınca kullanır
   const fetchDelivered = useCallback(async (): Promise<Order[]> => {
-    if (!accessToken) return [];
+    const token = tokenRef.current;
+    if (!token) return [];
     try {
-      const data = await apiRequest<Order[]>('/admin/orders?status=delivered', { token: accessToken });
+      const data = await apiRequest<Order[]>('/admin/orders?status=delivered', { token });
       return data;
     } catch {
       return [];
     }
-  }, [accessToken]);
+  }, []);
 
-  // Sipariş durumu güncelle — optimistic update
   const updateOrderStatus = useCallback(async (orderId: string, status: Order['status']) => {
-    if (!accessToken) return;
+    const token = tokenRef.current;
+    if (!token) return;
 
-    // Optimistic: UI'yi hemen güncelle
+    // Optimistic update
     if (status === 'delivered') {
-      // delivered olan aktif listeden çıkar
       setActiveOrders(prev => prev.filter(o => o.id !== orderId));
     } else {
       setActiveOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
@@ -139,89 +138,138 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiRequest(`/admin/orders/${orderId}`, {
         method: 'PUT',
-        token: accessToken,
+        token,
         body: { status }
       });
     } catch (e) {
-      // Hata olursa tekrar yükle
       await refreshActive();
       throw e;
     }
-  }, [accessToken, refreshActive]);
+  }, [refreshActive]);
 
+  // SSE bağlantısı — SADECE accessToken'a bağlı, callback'lere değil
   useEffect(() => {
     if (!accessToken) return;
 
     // İlk yüklemede aktif siparişleri çek
-    refreshActive();
+    let mounted = true;
+    apiRequest<Order[]>('/admin/orders', { token: accessToken })
+      .then(data => { if (mounted) setActiveOrders(data); })
+      .catch(() => {});
 
+    let abortController: AbortController | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
-    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
     async function connectSSE() {
       if (cancelled) return;
+
+      abortController = new AbortController();
+
       try {
+        console.log('[SSE] Bağlanılıyor...');
         const response = await fetch(`${API_BASE_URL}/admin/orders/stream`, {
-          headers: { Authorization: `Bearer ${accessToken!}` }
+          headers: { Authorization: `Bearer ${accessToken!}` },
+          signal: abortController.signal
         });
+
         if (!response.body || cancelled) return;
-        reader = response.body.getReader();
+        console.log('[SSE] Bağlandı');
+
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
 
         while (!cancelled) {
           const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          for (const line of text.split('\n')) {
-            if (line.startsWith('data:')) {
-              try {
-                const data = JSON.parse(line.slice(5).trim());
+          if (done) {
+            console.log('[SSE] Stream kapandı');
+            break;
+          }
 
-                // Yeni sipariş veya garson çağrısı geldi
-                if (data.type === 'new_order' || data.type === 'call') {
-                  // Ses çal
-                  if (data.type === 'call') playCallSound();
-                  else playOrderSound();
+          buffer += decoder.decode(value, { stream: true });
 
-                  // Backend yeni payload gönderiyorsa (order alanı varsa) direkt state'e ekle — API ÇAĞRISI YOK
-                  if (data.order) {
-                    setActiveOrders(prev => {
-                      // Duplicate kontrolü (aynı ID iki kez gelirse)
-                      if (prev.find(o => o.id === data.order.id)) return prev;
-                      return [data.order, ...prev];
-                    });
-                  } else {
-                    // Fallback: eski payload formatı — API'den çek
-                    await refreshActive();
+          // SSE mesajları \n\n ile ayrılır
+          const messages = buffer.split('\n\n');
+          buffer = messages.pop() || ''; // son parça tamamlanmamış olabilir
+
+          for (const message of messages) {
+            for (const line of message.split('\n')) {
+              if (line.startsWith('data:')) {
+                const dataStr = line.slice(5).trim();
+                if (!dataStr) continue;
+
+                try {
+                  const data = JSON.parse(dataStr);
+                  console.log('[SSE] Event alındı:', data.type, data);
+
+                  if (data.type === 'new_order' || data.type === 'call') {
+                    // Ses çal
+                    if (data.type === 'call') playCallSound();
+                    else playOrderSound();
+
+                    // Backend'den komple order objesi geliyorsa direkt state'e ekle
+                    if (data.order) {
+                      setActiveOrders(prev => {
+                        if (prev.find(o => o.id === data.order.id)) return prev;
+                        return [data.order, ...prev];
+                      });
+                    } else {
+                      // Fallback: eski payload → API'den çek
+                      console.log('[SSE] order objesi yok, API çağrılıyor');
+                      const token = tokenRef.current;
+                      if (token) {
+                        try {
+                          const fresh = await apiRequest<Order[]>('/admin/orders', { token });
+                          setActiveOrders(fresh);
+                        } catch {}
+                      }
+                    }
                   }
+                } catch (err) {
+                  console.error('[SSE] Parse hatası:', err, dataStr);
                 }
-              } catch {}
+              }
             }
           }
         }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          console.log('[SSE] Bağlantı iptal edildi');
+          return;
+        }
+        console.error('[SSE] Bağlantı hatası:', err);
+      }
 
-        // Stream kapandıysa yeniden bağlan
-        if (!cancelled) setTimeout(connectSSE, 3000);
-      } catch {
-        if (!cancelled) setTimeout(connectSSE, 5000);
+      // Yeniden bağlan
+      if (!cancelled) {
+        console.log('[SSE] 3 saniye sonra yeniden bağlanılacak');
+        reconnectTimer = setTimeout(connectSSE, 3000);
       }
     }
 
     connectSSE();
 
-    // Güvenlik ağı: 60 saniyede bir sync — SSE kaçırırsa tutarsızlık olmasın
+    // Güvenlik ağı — 60 saniyede bir sync
     const syncInterval = setInterval(() => {
-      refreshActive();
+      const token = tokenRef.current;
+      if (!token) return;
+      apiRequest<Order[]>('/admin/orders', { token })
+        .then(data => setActiveOrders(data))
+        .catch(() => {});
     }, 60000);
 
     return () => {
+      console.log('[SSE] Cleanup');
       cancelled = true;
-      if (reader) {
-        try { reader.cancel(); } catch {}
+      mounted = false;
+      if (abortController) {
+        try { abortController.abort(); } catch {}
       }
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(syncInterval);
     };
-  }, [accessToken, refreshActive]);
+  }, [accessToken]); // SADECE accessToken
 
   const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
   const callCount = activeOrders.filter(o => o.type === 'call' && o.status === 'pending').length;
