@@ -1,3 +1,4 @@
+// apps/api/src/services/uploadService.ts
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import { uploadToS3 } from './storageService.js';
@@ -9,7 +10,6 @@ export function validateUpload(fileSize: number, contentType: string): void {
   if (fileSize > maxBytes) {
     throw new Error('Dosya boyutu 3MB sınırını aşıyor.');
   }
-
   if (!allowedContentTypes.has(contentType)) {
     throw new Error('Desteklenmeyen dosya türü.');
   }
@@ -38,8 +38,19 @@ export async function processImage(buffer: Buffer, businessId: string): Promise<
     uploadToS3(thumbKey, thumbBuffer, 'image/webp')
   ]);
 
-  return {
-    imageUrl,
-    thumbUrl
-  };
+  return { imageUrl, thumbUrl };
+}
+
+// Logo için ayrı fonksiyon — daha küçük boyut, kare
+export async function processLogo(buffer: Buffer, businessId: string): Promise<string> {
+  const id = randomUUID();
+  const logoKey = `business/${businessId}/logo/${id}.webp`;
+
+  const logoBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: 400, height: 400, fit: 'cover' })
+    .webp({ quality: 85 })
+    .toBuffer();
+
+  return uploadToS3(logoKey, logoBuffer, 'image/webp');
 }

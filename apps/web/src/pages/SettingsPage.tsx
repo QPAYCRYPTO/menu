@@ -44,13 +44,23 @@ export function SettingsPage() {
     formData.append('file', file);
     try {
       setUploading(true);
-      const response = await fetch(`${API_BASE_URL}/admin/upload`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: formData });
-      if (!response.ok) { const p = (await response.json().catch(() => ({}))) as { message?: string }; throw new Error(p.message ?? 'Logo yüklenemedi.'); }
-      const data = (await response.json()) as UploadResponse;
-      setForm(prev => ({ ...prev, logo_url: data.image_url }));
+      const response = await fetch(`${API_BASE_URL}/admin/upload/logo`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData
+      });
+      if (!response.ok) {
+        const p = (await response.json().catch(() => ({}))) as { message?: string };
+        throw new Error(p.message ?? 'Logo yüklenemedi.');
+      }
+      const data = await response.json() as { logo_url: string };
+      setForm(prev => ({ ...prev, logo_url: data.logo_url }));
       showToast('Logo yüklendi.', 'success');
-    } catch (e) { showToast(e instanceof Error ? e.message : 'Logo yüklenemedi.', 'error'); }
-    finally { setUploading(false); }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Logo yüklenemedi.', 'error');
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function saveSettings() {

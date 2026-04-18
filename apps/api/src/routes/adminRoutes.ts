@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
 import { invalidateBusinessMenuCache } from '../services/menuService.js';
-import { processImage, validateUpload } from '../services/uploadService.js';
+import { processImage, processLogo, validateUpload } from '../services/uploadService.js';
 import { sanitizeText } from '../utils/sanitize.js';
 import { env } from '../config/env.js';
 
@@ -184,51 +184,39 @@ adminRoutes.get('/qr', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { content, table_id } = req.query;
 
-  let qrContent: string;
-
-  if (content && typeof content === 'string') {
-    qrContent = content;
-  } else {
-    const result = await pool.query('SELECT slug FROM businesses WHERE id = $1', [businessId]);
-    if (result.rowCount !== 1) {
-      res.status(404).json({ message: 'İşletme bulunamadı.' });
-      return;
-    }
-    const slug = String(result.rows[0].slug);
-    qrContent = `${env.publicBaseUrl}/m/${slug}`;
+  const bizResult = await pool.query(
+    'SELECT slug, theme_color FROM businesses WHERE id = $1',
+    [businessId]
+  );
+  if (bizResult.rowCount !== 1) {
+    res.status(404).json({ message: 'İşletme bulunamadı.' });
+    return;
   }
 
-  // Tema rengini al
-  const bizResult = await pool.query('SELECT theme_color FROM businesses WHERE id = $1', [businessId]);
-  const themeColor = bizResult.rows[0]?.theme_color ?? '#0F172A';
+  const { slug, theme_color } = bizResult.rows[0];
+  const themeColor = theme_color ?? '#0F172A';
+
+  const qrContent = (content && typeof content === 'string')
+    ? content
+    : `${env.publicBaseUrl}/m/${slug}`;
 
   const png = await QRCode.toBuffer(qrContent, {
     type: 'png',
     width: 512,
     margin: 2,
-    color: {
-      dark: themeColor,
-      light: '#FFFFFF'
-    }
+    color: { dark: themeColor, light: '#FFFFFF' }
   });
 
-  // Masa QR'ı ise R2'ye kaydet
   if (table_id && typeof table_id === 'string') {
     const tableResult = await pool.query(
       'SELECT id, qr_url FROM tables WHERE id = $1 AND business_id = $2',
       [table_id, businessId]
     );
-
     if (tableResult.rowCount === 1 && !tableResult.rows[0].qr_url) {
-      // Henüz kaydedilmemiş — R2'ye yükle
       const key = `business/${businessId}/tables/${table_id}_qr.png`;
       const { uploadToS3 } = await import('../services/storageService.js');
       const qrUrl = await uploadToS3(key, png, 'image/png');
-
-      await pool.query(
-        'UPDATE tables SET qr_url = $1, updated_at = NOW() WHERE id = $2',
-        [qrUrl, table_id]
-      );
+      await pool.query('UPDATE tables SET qr_url = $1, updated_at = NOW() WHERE id = $2', [qrUrl, table_id]);
     }
   }
 
@@ -340,21 +328,30 @@ adminRoutes.delete('/categories/:id', async (req, res) => {
   res.status(204).send();
 });
 
+// Ürün görseli upload
 adminRoutes.post('/upload', upload.single('file'), async (req, res) => {
   const businessId = req.ctx!.businessId!;
-
-  if (!req.file) {
-    res.status(400).json({ message: 'Dosya zorunludur.' });
-    return;
-  }
-
+  if (!req.file) { res.status(400).json({ message: 'Dosya zorunludur.' }); return; }
   validateUpload(req.file.size, req.file.mimetype);
   const image = await processImage(req.file.buffer, businessId);
+  res.status(200).json({ image_url: image.imageUrl, thumb_url: image.thumbUrl });
+});
 
-  res.status(200).json({
-    image_url: image.imageUrl,
-    thumb_url: image.thumbUrl
-  });
+// Logo upload — ayrı endpoint
+adminRoutes.post('/upload/logo', upload.single('file'), async (req, res) => {
+  const businessId = req.ctx!.businessId!;
+  if (!req.file) { res.status(400).json({ message: 'Dosya zorunludur.' }); return; }
+  validateUpload(req.file.size, req.file.mimetype);
+  const logoUrl = await processLogo(req.file.buffer, businessId);
+
+  // DB'ye kaydet ve cache temizle
+  const result = await pool.query(
+    `UPDATE businesses SET logo_url = $1, updated_at = NOW() WHERE id = $2 RETURNING slug`,
+    [logoUrl, businessId]
+  );
+  if (result.rowCount === 1) await invalidateBusinessMenuCache(result.rows[0].slug);
+
+  res.status(200).json({ logo_url: logoUrl });
 });
 
 adminRoutes.get('/products', async (req, res) => {

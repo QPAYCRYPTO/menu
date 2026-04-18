@@ -3,40 +3,52 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
+import { subscriber, ORDER_CHANNEL } from '../db/redisPubSub.js';
 
 const updateOrderSchema = z.object({
   status: z.enum(['pending', 'preparing', 'ready', 'delivered'])
 });
 
-// SSE bağlantıları — business_id bazında
-export const sseClients = new Map<string, Set<any>>();
-
 export const orderRoutes = Router();
 orderRoutes.use(requireAuth);
 
-// SSE stream — admin buraya bağlanır
+// SSE endpoint — Redis'i dinler
 orderRoutes.get('/stream', (req, res) => {
   const businessId = req.ctx!.businessId!;
+  const channel = `${ORDER_CHANNEL}:${businessId}`;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  if (!sseClients.has(businessId)) {
-    sseClients.set(businessId, new Set());
-  }
-  sseClients.get(businessId)!.add(res);
-
-  req.on('close', () => {
-    sseClients.get(businessId)?.delete(res);
+  // Redis kanalını dinle
+  subscriber.subscribe(channel, (err) => {
+    if (err) {
+      res.end();
+      return;
+    }
   });
 
+  const messageHandler = (receivedChannel: string, message: string) => {
+    if (receivedChannel === channel) {
+      res.write(`event: order\ndata: ${message}\n\n`);
+    }
+  };
+
+  subscriber.on('message', messageHandler);
+
+  // Ping — bağlantı canlı kalsın
   const ping = setInterval(() => {
     res.write('event: ping\ndata: {}\n\n');
   }, 30000);
 
-  req.on('close', () => clearInterval(ping));
+  // Bağlantı kesilince temizle
+  req.on('close', () => {
+    subscriber.unsubscribe(channel);
+    subscriber.off('message', messageHandler);
+    clearInterval(ping);
+  });
 });
 
 // Siparişleri listele
@@ -66,12 +78,9 @@ orderRoutes.get('/', async (req, res) => {
 
   const params: any[] = [businessId];
 
-  // include_delivered varsa delivered'ları da getir
   if (status) {
     params.push(status);
     query += ` AND o.status = $${params.length}`;
-  } else if (req.query.include_delivered === 'true') {
-    // hepsini getir
   } else {
     query += ` AND o.status != 'delivered'`;
   }

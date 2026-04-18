@@ -6,7 +6,7 @@ import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import { publicMenuRateLimit } from '../middleware/rateLimit.js';
 import { getPublicMenuBySlug } from '../services/menuService.js';
 import { pool } from '../db/postgres.js';
-import { sseClients } from './orderRoutes.js';
+import { publishOrder } from '../db/redisPubSub.js';
 
 const slugParamsSchema = z.object({
   slug: z.string().min(1).max(120)
@@ -124,17 +124,13 @@ publicRoutes.post('/order/:slug', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // SSE ile admin'e bildir
-    const clients = sseClients.get(businessId);
-    if (clients && clients.size > 0) {
-      const event = JSON.stringify({
-        type: 'new_order',
-        order_id: orderId,
-        table_name: table.name,
-        order_type: parsed.data.type
-      });
-      clients.forEach(c => c.write(`event: order\ndata: ${event}\n\n`));
-    }
+    // Redis Pub/Sub ile admin'e bildir
+    await publishOrder(businessId, {
+      type: 'new_order',
+      order_id: orderId,
+      table_name: table.name,
+      order_type: parsed.data.type
+    });
 
     res.status(201).json({ order_id: orderId, message: 'Sipariş alındı.' });
   } catch (error) {
@@ -186,16 +182,12 @@ publicRoutes.post('/call/:slug', async (req, res) => {
     [businessId, table.id, table.name, note ?? null]
   );
 
-  // SSE ile admin'e bildir
-  const clients = sseClients.get(businessId);
-  if (clients && clients.size > 0) {
-    const event = JSON.stringify({
-      type: 'call',
-      table_name: table.name,
-      order_type: 'call'
-    });
-    clients.forEach(c => c.write(`event: order\ndata: ${event}\n\n`));
-  }
+  // Redis Pub/Sub ile admin'e bildir
+  await publishOrder(businessId, {
+    type: 'call',
+    table_name: table.name,
+    order_type: 'call'
+  });
 
   res.status(201).json({ message: 'Garson çağrıldı.' });
 });
