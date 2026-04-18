@@ -6,14 +6,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
-import { getSessionWithOrders, closeSession } from '../services/sessionService.js';
+import { getSessionWithOrders } from '../services/sessionService.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 
 export const sessionRoutes = Router();
 sessionRoutes.use(requireAuth);
 
 // GET /api/admin/sessions
-// Tüm açık masaları listeler (masa bilgisi + sipariş sayısı + adisyon ile)
+// Tüm açık masaları listeler
 sessionRoutes.get('/', async (req, res) => {
   const businessId = req.ctx!.businessId!;
 
@@ -69,11 +69,6 @@ sessionRoutes.get('/:id', async (req, res) => {
 });
 
 // POST /api/admin/sessions/:id/close
-// Session'ı kapatır (masa kapatma)
-// Body: { action?: 'close' | 'transfer' | 'cancel_pending' }
-//   - close: sadece kapat (pending siparişler öylece kalır)
-//   - transfer: pending siparişleri yeni bir session'a taşı (yeni müşteri için)
-//   - cancel_pending: pending siparişleri iptal et, session'ı kapat
 const closeSessionSchema = z.object({
   action: z.enum(['close', 'transfer', 'cancel_pending']).default('close')
 });
@@ -109,7 +104,7 @@ sessionRoutes.post('/:id/close', async (req, res) => {
 
     const session = sessionResult.rows[0];
 
-    // Pending (delivered olmamış) siparişleri kontrol et
+    // Pending (delivered/cancelled olmamış) siparişleri kontrol et
     const pendingResult = await client.query(
       `SELECT id FROM orders 
        WHERE session_id = $1 
@@ -119,11 +114,11 @@ sessionRoutes.post('/:id/close', async (req, res) => {
     );
 
     const pendingCount = pendingResult.rowCount ?? 0;
+    const pendingIds = pendingResult.rows.map((r: any) => r.id);
 
     // Pending varsa action'a göre davran
     if (pendingCount > 0) {
       if (action === 'close') {
-        // Sadece kapatma isteği, ama pending var — hata döndür
         await client.query('ROLLBACK');
         res.status(409).json({
           message: 'Bu masada teslim edilmemiş siparişler var.',
@@ -134,25 +129,53 @@ sessionRoutes.post('/:id/close', async (req, res) => {
       }
 
       if (action === 'transfer') {
-        // Yeni session aç, pending siparişleri taşı
+        // ÖNEMLİ SIRA:
+        // 1) ÖNCE eski session'ı kapat (unique index serbestleşsin)
+        // 2) SONRA yeni session aç
+        // 3) Pending siparişleri yeni session'a taşı
+
+        // 1) Eski session'ı kapat
+        await client.query(
+          `UPDATE table_sessions 
+           SET status = 'closed', 
+               closed_at = NOW(), 
+               closed_by = $2,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [id, userId]
+        );
+
+        // 2) Yeni session aç (aynı masa, artık unique constraint serbest)
         const newSessionResult = await client.query(
           `INSERT INTO table_sessions (business_id, table_id, status, opened_at, updated_at)
            VALUES ($1, $2, 'open', NOW(), NOW())
-           RETURNING id`,
+           RETURNING *`,
           [businessId, session.table_id]
         );
-        const newSessionId = newSessionResult.rows[0].id;
+        const newSession = newSessionResult.rows[0];
 
-        await client.query(
-          `UPDATE orders 
-           SET session_id = $1, updated_at = NOW()
-           WHERE session_id = $2 
-             AND type = 'order'
-             AND status IN ('pending', 'preparing', 'ready')`,
-          [newSessionId, id]
-        );
-      } else if (action === 'cancel_pending') {
-        // Pending siparişleri iptal et
+        // 3) Pending siparişleri yeni session'a taşı
+        if (pendingIds.length > 0) {
+          await client.query(
+            `UPDATE orders 
+             SET session_id = $1, updated_at = NOW()
+             WHERE id = ANY($2::uuid[])`,
+            [newSession.id, pendingIds]
+          );
+        }
+
+        await client.query('COMMIT');
+
+        res.status(200).json({
+          message: 'Masa kapatıldı, bekleyen siparişler yeni oturuma taşındı.',
+          closed_session: { id, status: 'closed' },
+          new_session: newSession
+        });
+        return;
+      }
+
+      if (action === 'cancel_pending') {
+        // Pending siparişleri iptal et, sonra session'ı kapat
         await client.query(
           `UPDATE orders 
            SET status = 'cancelled',
@@ -160,24 +183,49 @@ sessionRoutes.post('/:id/close', async (req, res) => {
                cancelled_by = $1,
                cancel_reason = 'Masa kapatılırken iptal edildi',
                updated_at = NOW()
-           WHERE session_id = $2 
-             AND type = 'order'
-             AND status IN ('pending', 'preparing', 'ready')`,
-          [userId, id]
+           WHERE id = ANY($2::uuid[])`,
+          [userId, pendingIds]
         );
+
+        await client.query(
+          `UPDATE table_sessions 
+           SET status = 'closed', 
+               closed_at = NOW(), 
+               closed_by = $2,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [id, userId]
+        );
+
+        await client.query('COMMIT');
+
+        res.status(200).json({
+          message: 'Bekleyen siparişler iptal edildi ve masa kapatıldı.',
+          closed_session: { id, status: 'closed' }
+        });
+        return;
       }
     }
 
-    // Session'ı kapat
-    const closed = await closeSession(id, userId, client);
+    // Pending yoksa (veya action='close' ve pending=0) — direkt kapat
+    await client.query(
+      `UPDATE table_sessions 
+       SET status = 'closed', 
+           closed_at = NOW(), 
+           closed_by = $2,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [id, userId]
+    );
 
     await client.query('COMMIT');
+
     res.status(200).json({
-      session: closed,
-      message: 'Masa kapatıldı.'
+      message: 'Masa kapatıldı.',
+      closed_session: { id, status: 'closed' }
     });
   } catch (error) {
-    await client.query('ROLLBACK');
+    try { await client.query('ROLLBACK'); } catch {}
     throw error;
   } finally {
     client.release();
