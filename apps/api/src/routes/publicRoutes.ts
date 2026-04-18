@@ -93,17 +93,30 @@ publicRoutes.post('/order/:slug', async (req, res) => {
   const table = tableResult.rows[0];
   const client = await pool.connect();
 
+  // Sipariş kalemlerini burada biriktireceğiz — SSE payload'ı için
+  const orderItems: Array<{
+    id: string;
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    price_int: number;
+  }> = [];
+
+  let createdAt: string = '';
+  let orderId: string = '';
+
   try {
     await client.query('BEGIN');
 
     const orderResult = await client.query(
       `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, created_at, updated_at)
        VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, $5, NOW(), NOW())
-       RETURNING id`,
+       RETURNING id, created_at`,
       [businessId, table.id, table.name, parsed.data.note ?? null, parsed.data.type]
     );
 
-    const orderId = orderResult.rows[0].id;
+    orderId = orderResult.rows[0].id;
+    createdAt = orderResult.rows[0].created_at;
 
     if (parsed.data.items && parsed.data.items.length > 0) {
       for (const item of parsed.data.items) {
@@ -113,23 +126,43 @@ publicRoutes.post('/order/:slug', async (req, res) => {
         );
         if (productResult.rowCount === 1) {
           const product = productResult.rows[0];
-          await client.query(
+          const itemResult = await client.query(
             `INSERT INTO order_items (id, order_id, product_id, product_name, quantity, price_int, created_at)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())`,
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
+             RETURNING id`,
             [orderId, product.id, product.name, item.quantity, product.price_int]
           );
+          // Sipariş kalemini biriktir
+          orderItems.push({
+            id: itemResult.rows[0].id,
+            product_id: product.id,
+            product_name: product.name,
+            quantity: item.quantity,
+            price_int: product.price_int
+          });
         }
       }
     }
 
     await client.query('COMMIT');
 
-    // Redis Pub/Sub ile admin'e bildir
+    // Redis Pub/Sub ile admin'e bildir — YENİ: order detayları da gönderiliyor
     await publishOrder(businessId, {
       type: 'new_order',
       order_id: orderId,
       table_name: table.name,
-      order_type: parsed.data.type
+      order_type: parsed.data.type,
+      // YENİ: Komple sipariş objesi — frontend direkt state'e ekleyebilsin
+      order: {
+        id: orderId,
+        table_id: table.id,
+        table_name: table.name,
+        status: 'pending',
+        note: parsed.data.note ?? null,
+        type: parsed.data.type,
+        created_at: createdAt,
+        items: orderItems
+      }
     });
 
     res.status(201).json({ order_id: orderId, message: 'Sipariş alındı.' });
@@ -176,17 +209,33 @@ publicRoutes.post('/call/:slug', async (req, res) => {
 
   const table = tableResult.rows[0];
 
-  await pool.query(
+  // Garson çağrısı insert — sonucu al ki SSE'ye gönderebilelim
+  const callResult = await pool.query(
     `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, created_at, updated_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, 'call', NOW(), NOW())`,
+     VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, 'call', NOW(), NOW())
+     RETURNING id, created_at`,
     [businessId, table.id, table.name, note ?? null]
   );
 
-  // Redis Pub/Sub ile admin'e bildir
+  const callId = callResult.rows[0].id;
+  const callCreatedAt = callResult.rows[0].created_at;
+
+  // Redis Pub/Sub ile admin'e bildir — YENİ: tam çağrı objesi de gönderiliyor
   await publishOrder(businessId, {
     type: 'call',
     table_name: table.name,
-    order_type: 'call'
+    order_type: 'call',
+    // YENİ: Komple çağrı objesi
+    order: {
+      id: callId,
+      table_id: table.id,
+      table_name: table.name,
+      status: 'pending',
+      note: note ?? null,
+      type: 'call',
+      created_at: callCreatedAt,
+      items: []
+    }
   });
 
   res.status(201).json({ message: 'Garson çağrıldı.' });
