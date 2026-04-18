@@ -15,6 +15,7 @@ import { customerOrderRoutes } from './routes/customerOrderRoutes.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { sessionRoutes } from './routes/sessionRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin/tables', tableRoutes);
   app.use('/api/admin/orders', orderRoutes);
+  app.use('/api/admin/sessions', sessionRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/public', customerOrderRoutes);
   app.use('/api/superadmin', superAdminRoutes);
