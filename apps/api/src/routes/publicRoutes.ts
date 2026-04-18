@@ -7,6 +7,7 @@ import { publicMenuRateLimit } from '../middleware/rateLimit.js';
 import { getPublicMenuBySlug } from '../services/menuService.js';
 import { pool } from '../db/postgres.js';
 import { publishOrder } from '../db/redisPubSub.js';
+import { getOrCreateOpenSession } from '../services/sessionService.js';
 
 const slugParamsSchema = z.object({
   slug: z.string().min(1).max(120)
@@ -109,11 +110,19 @@ publicRoutes.post('/order/:slug', async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // Session bağlama — sadece 'order' tipinde siparişler için
+    // Garson çağrıları (type='call') session'sız kalır
+    let sessionId: string | null = null;
+    if (parsed.data.type === 'order') {
+      const session = await getOrCreateOpenSession(businessId, table.id, client);
+      sessionId = session.id;
+    }
+
     const orderResult = await client.query(
-      `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, customer_token, created_at, updated_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, $5, $6, NOW(), NOW())
+      `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, customer_token, session_id, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, $5, $6, $7, NOW(), NOW())
        RETURNING id, created_at`,
-      [businessId, table.id, table.name, parsed.data.note ?? null, parsed.data.type, parsed.data.customer_token ?? null]
+      [businessId, table.id, table.name, parsed.data.note ?? null, parsed.data.type, parsed.data.customer_token ?? null, sessionId]
     );
 
     orderId = orderResult.rows[0].id;
