@@ -40,11 +40,17 @@ export function createApp() {
 
   app.use('/auth', authRoutes);
   app.use('/api/auth', authRoutes);
-  app.use('/admin', adminRoutes);
-  app.use('/api/admin', adminRoutes);
+
+  // ÖNCE: Spesifik route'lar
   app.use('/api/admin/tables', tableRoutes);
   app.use('/api/admin/orders', orderRoutes);
   app.use('/api/admin/sessions', sessionRoutes);
+
+  // SONRA: Genel admin route'u (catch-all)
+  app.use('/admin', adminRoutes);
+  app.use('/api/admin', adminRoutes);
+
+  // Public route'lar
   app.use('/api/public', publicRoutes);
   app.use('/api/public', customerOrderRoutes);
   app.use('/api/superadmin', superAdminRoutes);
