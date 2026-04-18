@@ -3,6 +3,8 @@ import type { PublicMenuCategory, PublicMenuResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
+import { getCustomerToken } from '../utils/customerToken';
+import { MyOrdersTab } from '../components/MyOrdersTab';
 
 const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
 const BRAND_NAME = 'AtlasQR';
@@ -13,6 +15,8 @@ type CartItem = {
   price_int: number;
   quantity: number;
 };
+
+type MainTab = 'menu' | 'orders';
 
 function formatPrice(priceInt: number): string {
   return `${(priceInt / 100).toFixed(2)} TL`;
@@ -35,9 +39,13 @@ export function PublicMenuPage() {
   const tableId = searchParams.get('masa');
 
   const [menu, setMenu] = useState<PublicMenuResponse | null>(null);
+  const [tableName, setTableName] = useState<string>(''); // ← YENİ: masa adı
   const [activeCategoryId, setActiveCategoryId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  // Ana sekme (Menü / Siparişlerim)
+  const [mainTab, setMainTab] = useState<MainTab>('menu');
 
   // Sepet
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -49,6 +57,10 @@ export function PublicMenuPage() {
   // Garson çağır
   const [callSent, setCallSent] = useState(false);
 
+  // Müşteri token (ilk yüklemede oluştur/al)
+  const [customerToken] = useState<string>(() => getCustomerToken());
+
+  // Menü yükle
   useEffect(() => {
     let mounted = true;
     setLoading(true);
@@ -62,6 +74,21 @@ export function PublicMenuPage() {
       .catch(() => { if (!mounted) return; setMenu(null); setLoading(false); });
     return () => { mounted = false; };
   }, [slug]);
+
+  // Masa adını yükle (eğer masa ID varsa)
+  useEffect(() => {
+    if (!tableId || !slug) return;
+    let mounted = true;
+    fetch(`${API_BASE_URL}/public/table/${slug}/${tableId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (mounted && data && data.name) {
+          setTableName(data.name);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [slug, tableId]);
 
   const activeCategory = useMemo<PublicMenuCategory | null>(() => {
     if (!menu) return null;
@@ -112,6 +139,7 @@ export function PublicMenuPage() {
           table_id: tableId,
           note: orderNote || undefined,
           type: 'order',
+          customer_token: customerToken, // ← YENİ: müşteri kimliği
           items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
         })
       });
@@ -196,15 +224,23 @@ export function PublicMenuPage() {
               <h1 className="font-bold text-base leading-tight text-white" style={{fontFamily: 'Georgia, serif'}}>
                 {menu.business.name}
               </h1>
-              {tableId && (
-                <p className="text-xs mt-0.5" style={{color: 'rgba(255,255,255,0.5)'}}>
-                  🪑 Masa: {tableId.slice(0, 8)}...
-                </p>
+              {/* YENİ: Masa adı büyük ve turkuaz */}
+              {tableId && tableName && (
+                <div style={{
+                  marginTop: 4,
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: themeColor,
+                  letterSpacing: '0.02em',
+                  fontFamily: 'Georgia, serif'
+                }}>
+                  📍 {tableName}
+                </div>
               )}
             </div>
 
             {/* Sepet butonu */}
-            {tableId && (
+            {tableId && mainTab === 'menu' && (
               <button onClick={() => setCartOpen(true)}
                 style={{position: 'relative', width: 40, height: 40, borderRadius: 10, background: themeColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
@@ -220,64 +256,105 @@ export function PublicMenuPage() {
             )}
           </div>
 
-          {/* Kategori sekmeleri */}
-          <div style={{display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4}}>
-            {menu.categories.map(cat => (
-              <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
-                style={{flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: activeCategory?.id === cat.id ? themeColor : 'rgba(255,255,255,0.1)', color: activeCategory?.id === cat.id ? 'white' : 'rgba(255,255,255,0.6)', border: `1px solid ${activeCategory?.id === cat.id ? themeColor : 'rgba(255,255,255,0.15)'}`}}>
-                {cat.name}
+          {/* YENİ: Ana sekmeler (Menü / Siparişlerim) — sadece masa varsa */}
+          {tableId && (
+            <div style={{display: 'flex', gap: 4, marginBottom: 12, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 10}}>
+              <button onClick={() => setMainTab('menu')}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', border: 'none',
+                  background: mainTab === 'menu' ? themeColor : 'transparent',
+                  color: mainTab === 'menu' ? 'white' : 'rgba(255,255,255,0.6)'
+                }}>
+                🍽️ Menü
               </button>
-            ))}
-          </div>
+              <button onClick={() => setMainTab('orders')}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', border: 'none',
+                  background: mainTab === 'orders' ? themeColor : 'transparent',
+                  color: mainTab === 'orders' ? 'white' : 'rgba(255,255,255,0.6)'
+                }}>
+                📋 Siparişlerim
+              </button>
+            </div>
+          )}
+
+          {/* Kategori sekmeleri — sadece Menü sekmesinde */}
+          {mainTab === 'menu' && (
+            <div style={{display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4}}>
+              {menu.categories.map(cat => (
+                <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
+                  style={{flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: activeCategory?.id === cat.id ? themeColor : 'rgba(255,255,255,0.1)', color: activeCategory?.id === cat.id ? 'white' : 'rgba(255,255,255,0.6)', border: `1px solid ${activeCategory?.id === cat.id ? themeColor : 'rgba(255,255,255,0.15)'}`}}>
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Ürünler */}
-      <div className="px-4 py-6" style={{paddingBottom: tableId ? 100 : 24}}>
-        {activeCategory && (
-          <>
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-bold text-base" style={{color: textColor, fontFamily: 'Georgia, serif'}}>{activeCategory.name}</h2>
-              <div className="flex-1 h-px" style={{background: cardBorder}}></div>
-              <span className="text-xs px-2 py-1 rounded-full font-medium" style={{background: `${themeColor}20`, color: themeColor}}>
-                {activeCategory.products?.length ?? 0} ürün
-              </span>
-            </div>
+      {/* YENİ: Sekme içeriği */}
+      {mainTab === 'orders' && tableId ? (
+        <MyOrdersTab
+          slug={slug}
+          tableId={tableId}
+          token={customerToken}
+          themeColor={themeColor}
+          textColor={textColor}
+          textMuted={textMuted}
+          cardBg={cardBg}
+          cardBorder={cardBorder}
+          darkMode={darkMode}
+        />
+      ) : (
+        /* Menü — Ürünler */
+        <div className="px-4 py-6" style={{paddingBottom: tableId ? 100 : 24}}>
+          {activeCategory && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="font-bold text-base" style={{color: textColor, fontFamily: 'Georgia, serif'}}>{activeCategory.name}</h2>
+                <div className="flex-1 h-px" style={{background: cardBorder}}></div>
+                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{background: `${themeColor}20`, color: themeColor}}>
+                  {activeCategory.products?.length ?? 0} ürün
+                </span>
+              </div>
 
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12}}>
-              {(activeCategory.products ?? []).map(product => (
-                <div key={product.id} onClick={() => setSelectedProduct(product)}
-                  style={{background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 16, overflow: 'hidden', cursor: 'pointer'}}>
-                  <div style={{width: '100%', paddingTop: '100%', position: 'relative', background: darkMode ? '#334155' : '#F1F5F9'}}>
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name}
-                        style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} />
-                    ) : (
-                      <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32}}>🍽️</div>
-                    )}
-                    {/* Sepetteki miktar */}
-                    {cart.find(i => i.product_id === product.id) && (
-                      <div style={{position: 'absolute', top: 8, right: 8, background: themeColor, color: 'white', width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                        {cart.find(i => i.product_id === product.id)?.quantity}
-                      </div>
-                    )}
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12}}>
+                {(activeCategory.products ?? []).map(product => (
+                  <div key={product.id} onClick={() => setSelectedProduct(product)}
+                    style={{background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 16, overflow: 'hidden', cursor: 'pointer'}}>
+                    <div style={{width: '100%', paddingTop: '100%', position: 'relative', background: darkMode ? '#334155' : '#F1F5F9'}}>
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name}
+                          style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} />
+                      ) : (
+                        <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32}}>🍽️</div>
+                      )}
+                      {/* Sepetteki miktar */}
+                      {cart.find(i => i.product_id === product.id) && (
+                        <div style={{position: 'absolute', top: 8, right: 8, background: themeColor, color: 'white', width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                          {cart.find(i => i.product_id === product.id)?.quantity}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{padding: '10px 12px'}}>
+                      <div style={{fontWeight: 600, fontSize: 13, color: textColor, marginBottom: 2, lineHeight: 1.3}}>{product.name}</div>
+                      {product.description && (
+                        <div style={{fontSize: 11, color: textMuted, marginBottom: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical'}}>{product.description}</div>
+                      )}
+                      <div style={{fontWeight: 700, fontSize: 14, color: themeColor}}>{formatPrice(product.price_int)}</div>
+                    </div>
                   </div>
-                  <div style={{padding: '10px 12px'}}>
-                    <div style={{fontWeight: 600, fontSize: 13, color: textColor, marginBottom: 2, lineHeight: 1.3}}>{product.name}</div>
-                    {product.description && (
-                      <div style={{fontSize: 11, color: textMuted, marginBottom: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical'}}>{product.description}</div>
-                    )}
-                    <div style={{fontWeight: 700, fontSize: 14, color: themeColor}}>{formatPrice(product.price_int)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
-      {/* Alt bar — Garson çağır + Sepet (sadece masa varsa) */}
-      {tableId && (
+      {/* Alt bar — Garson çağır + Sepet (sadece masa varsa ve Menü sekmesindeyken) */}
+      {tableId && mainTab === 'menu' && (
         <div style={{position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 20, padding: '12px 16px', background: cardBg, borderTop: `1px solid ${cardBorder}`, display: 'flex', gap: 10}}>
           <button onClick={callWaiter}
             style={{flex: 1, padding: '12px', borderRadius: 12, border: `1.5px solid ${themeColor}`, background: 'transparent', color: themeColor, fontWeight: 700, fontSize: 14, cursor: 'pointer'}}>

@@ -1,5 +1,5 @@
 // apps/api/src/routes/customerOrderRoutes.ts
-// Müşterinin kendi siparişlerini görme endpoint'leri
+// Müşteri tarafı public endpoint'ler
 // Bu dosya mevcut orderRoutes.ts ve publicRoutes.ts'e dokunmadan eklenmiştir
 
 import { Router } from 'express';
@@ -16,7 +16,36 @@ const paramsSchema = z.object({
 });
 
 const querySchema = z.object({
-  token: z.string().min(10).max(100) // UUID veya benzeri
+  token: z.string().min(10).max(100)
+});
+
+// GET /api/public/table/:slug/:table_id
+// Masa bilgisini döner (masa adı) — public menü header'ında göstermek için
+customerOrderRoutes.get('/table/:slug/:table_id', publicMenuRateLimit, async (req, res) => {
+  const parsed = paramsSchema.safeParse(req.params);
+  if (!parsed.success) {
+    throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+
+  const { slug, table_id } = parsed.data;
+
+  const result = await pool.query(`
+    SELECT t.id, t.name
+    FROM tables t
+    INNER JOIN businesses b ON b.id = t.business_id
+    WHERE b.slug = $1 
+      AND b.is_active = TRUE
+      AND t.id = $2
+      AND t.is_active = TRUE
+  `, [slug, table_id]);
+
+  if (result.rowCount !== 1) {
+    res.status(404).json({ message: 'Masa bulunamadı.' });
+    return;
+  }
+
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.status(200).json(result.rows[0]);
 });
 
 // GET /api/public/my-orders/:slug/:table_id?token=XXX
@@ -29,7 +58,7 @@ customerOrderRoutes.get('/my-orders/:slug/:table_id', publicMenuRateLimit, async
 
   const queryParsed = querySchema.safeParse(req.query);
   if (!queryParsed.success) {
-    // Token yoksa boş liste döndür (hata değil, sadece hiçbir şey yok)
+    // Token yoksa boş liste (hata değil)
     res.status(200).json([]);
     return;
   }
@@ -49,7 +78,7 @@ customerOrderRoutes.get('/my-orders/:slug/:table_id', publicMenuRateLimit, async
 
   const businessId = bizResult.rows[0].id;
 
-  // Masa doğrulaması (güvenlik — farklı masanın token'ı bu masada sipariş göremez)
+  // Masa doğrulaması
   const tableResult = await pool.query(
     `SELECT id FROM tables WHERE id = $1 AND business_id = $2 AND is_active = TRUE`,
     [table_id, businessId]
@@ -59,11 +88,7 @@ customerOrderRoutes.get('/my-orders/:slug/:table_id', publicMenuRateLimit, async
     return;
   }
 
-  // Müşterinin kendi siparişlerini getir
-  // - Sadece bu masa + bu token
-  // - Son 6 saatteki siparişler (session sistemi olmadığı için geçici filtre)
-  // - Sipariş tipi 'order' (garson çağrıları değil)
-  // - Durum: delivered ve cancelled HARİÇ (aktif olanlar)
+  // Müşterinin kendi siparişleri — aktif olanlar (delivered/cancelled hariç)
   const ordersResult = await pool.query(`
     SELECT 
       o.id, o.table_name, o.status, o.note, o.created_at,
@@ -90,7 +115,6 @@ customerOrderRoutes.get('/my-orders/:slug/:table_id', publicMenuRateLimit, async
     ORDER BY o.created_at DESC
   `, [businessId, table_id, token]);
 
-  // Cache'lemeyi engelle - her istek güncel veri almalı
   res.setHeader('Cache-Control', 'no-cache, no-store');
   res.status(200).json(ordersResult.rows);
 });
