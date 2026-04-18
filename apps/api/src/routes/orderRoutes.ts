@@ -17,10 +17,25 @@ orderRoutes.get('/stream', (req, res) => {
   const businessId = req.ctx!.businessId!;
   const channel = `${ORDER_CHANNEL}:${businessId}`;
 
+  // CDN/proxy buffering ENGELLEME — bu SSE için kritik
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform, no-store');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');         // Nginx/Cloudflare buffering off
+  res.setHeader('Content-Encoding', 'none');        // Compression off
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  // TCP seviyesinde buffering'i kapat
+  if (res.socket) {
+    res.socket.setNoDelay(true);
+    res.socket.setKeepAlive(true);
+  }
+
   res.flushHeaders();
+
+  // Bağlantı kurulur kurulmaz ilk veri gönder — bu proxy buffering'i kırar
+  res.write(`: connected at ${Date.now()}\n\n`);
 
   // Redis kanalını dinle
   subscriber.subscribe(channel, (err) => {
@@ -38,14 +53,13 @@ orderRoutes.get('/stream', (req, res) => {
 
   subscriber.on('message', messageHandler);
 
-  // Ping — bağlantı canlı kalsın
+  // Ping — bağlantı canlı kalsın, 15 saniye (proxy timeout'larını önlemek için daha sık)
   const ping = setInterval(() => {
-    res.write('event: ping\ndata: {}\n\n');
-  }, 30000);
+    res.write(`: ping ${Date.now()}\n\n`);
+  }, 15000);
 
   // Bağlantı kesilince temizle
   req.on('close', () => {
-    subscriber.unsubscribe(channel);
     subscriber.off('message', messageHandler);
     clearInterval(ping);
   });
