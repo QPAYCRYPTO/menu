@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
 import { subscriber, ORDER_CHANNEL } from '../db/redisPubSub.js';
+import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
 
 const updateOrderSchema = z.object({
   status: z.enum(['pending', 'preparing', 'ready', 'delivered'])
@@ -116,19 +117,69 @@ orderRoutes.put('/:id', async (req, res) => {
     return;
   }
 
-  const result = await pool.query(
-    `UPDATE orders SET status = $1, updated_at = NOW()
-     WHERE id = $2 AND business_id = $3
-     RETURNING id, status, table_name, type`,
-    [parsed.data.status, id, businessId]
-  );
+  const newStatus = parsed.data.status;
+  const client = await pool.connect();
 
-  if (result.rowCount !== 1) {
-    res.status(404).json({ message: 'Sipariş bulunamadı.' });
-    return;
+  try {
+    await client.query('BEGIN');
+
+    // 1. Siparişin mevcut durumunu ve session_id'sini al
+    const currentResult = await client.query(
+      `SELECT status, session_id FROM orders 
+       WHERE id = $1 AND business_id = $2
+       FOR UPDATE`,
+      [id, businessId]
+    );
+
+    if (currentResult.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ message: 'Sipariş bulunamadı.' });
+      return;
+    }
+
+    const currentStatus = currentResult.rows[0].status;
+    const sessionId = currentResult.rows[0].session_id;
+
+    // 2. Durumu güncelle
+    const updateResult = await client.query(
+      `UPDATE orders SET status = $1, updated_at = NOW()
+       WHERE id = $2 AND business_id = $3
+       RETURNING id, status, table_name, type`,
+      [newStatus, id, businessId]
+    );
+
+    // 3. Session toplam güncelleme mantığı — sadece session_id varsa
+    if (sessionId) {
+      const wasDelivered = currentStatus === 'delivered';
+      const willBeDelivered = newStatus === 'delivered';
+
+      // Siparişin toplam tutarını hesapla
+      if (wasDelivered !== willBeDelivered) {
+        const totalResult = await client.query(
+          `SELECT COALESCE(SUM(quantity * price_int), 0)::int as total 
+           FROM order_items WHERE order_id = $1`,
+          [id]
+        );
+        const orderTotal = totalResult.rows[0].total;
+
+        if (willBeDelivered) {
+          // Delivered oldu → session toplamına EKLE
+          await incrementSessionTotal(sessionId, orderTotal, client);
+        } else if (wasDelivered) {
+          // Delivered'dan geri alındı → session toplamından ÇIKAR
+          await decrementSessionTotal(sessionId, orderTotal, client);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.status(200).json(updateResult.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  res.status(200).json(result.rows[0]);
 });
 
 // Siparişi kapat
