@@ -1,44 +1,61 @@
 // apps/api/src/routes/orderRoutes.ts
+// GÜNCEL: Sipariş iptal endpoint'i eklendi (POST /:id/cancel)
+// Mevcut endpoint'ler korundu, sadece yeni bir endpoint eklendi
+
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
-import { subscriber, ORDER_CHANNEL } from '../db/redisPubSub.js';
+import { subscriber, ORDER_CHANNEL, publishOrder } from '../db/redisPubSub.js';
 import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
 
 const updateOrderSchema = z.object({
   status: z.enum(['pending', 'preparing', 'ready', 'delivered'])
 });
 
+// İptal sebebi kodları
+const cancelReasonCodes = [
+  'customer_cancelled',  // Müşteri vazgeçti
+  'customer_left',        // Müşteri gitti
+  'not_claimed',          // Hazır ama alıcı yok
+  'no_payment',           // Ödemeden gitti (kasa açığı)
+  'wrong_order',          // Yanlış sipariş
+  'out_of_stock',         // Stok yok
+  'other'                 // Diğer (açıklama zorunlu)
+] as const;
+
+const cancelOrderSchema = z.object({
+  reason_code: z.enum(cancelReasonCodes),
+  reason_text: z.string().max(500).optional()
+}).refine(
+  (data) => data.reason_code !== 'other' || (data.reason_text !== undefined && data.reason_text.trim().length >= 3),
+  { message: "'Diğer' sebebi için açıklama zorunludur (en az 3 karakter).", path: ['reason_text'] }
+);
+
 export const orderRoutes = Router();
 orderRoutes.use(requireAuth);
 
-// SSE endpoint — Redis'i dinler
+// SSE endpoint
 orderRoutes.get('/stream', (req, res) => {
   const businessId = req.ctx!.businessId!;
   const channel = `${ORDER_CHANNEL}:${businessId}`;
 
-  // CDN/proxy buffering ENGELLEME — bu SSE için kritik
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform, no-store');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');         // Nginx/Cloudflare buffering off
-  res.setHeader('Content-Encoding', 'none');        // Compression off
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Content-Encoding', 'none');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  // TCP seviyesinde buffering'i kapat
   if (res.socket) {
     res.socket.setNoDelay(true);
     res.socket.setKeepAlive(true);
   }
 
   res.flushHeaders();
-
-  // Bağlantı kurulur kurulmaz ilk veri gönder — bu proxy buffering'i kırar
   res.write(`: connected at ${Date.now()}\n\n`);
 
-  // Redis kanalını dinle
   subscriber.subscribe(channel, (err) => {
     if (err) {
       res.end();
@@ -54,12 +71,10 @@ orderRoutes.get('/stream', (req, res) => {
 
   subscriber.on('message', messageHandler);
 
-  // Ping — bağlantı canlı kalsın, 15 saniye (proxy timeout'larını önlemek için daha sık)
   const ping = setInterval(() => {
     res.write(`: ping ${Date.now()}\n\n`);
   }, 15000);
 
-  // Bağlantı kesilince temizle
   req.on('close', () => {
     subscriber.off('message', messageHandler);
     clearInterval(ping);
@@ -74,6 +89,7 @@ orderRoutes.get('/', async (req, res) => {
   let query = `
     SELECT 
       o.id, o.table_id, o.table_name, o.status, o.note, o.type, o.created_at,
+      o.cancelled_at, o.cancel_reason,
       COALESCE(
         json_agg(
           json_build_object(
@@ -97,7 +113,7 @@ orderRoutes.get('/', async (req, res) => {
     params.push(status);
     query += ` AND o.status = $${params.length}`;
   } else {
-    query += ` AND o.status != 'delivered'`;
+    query += ` AND o.status NOT IN ('delivered', 'cancelled')`;
   }
 
   query += ` GROUP BY o.id ORDER BY o.created_at DESC LIMIT 100`;
@@ -123,7 +139,6 @@ orderRoutes.put('/:id', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // 1. Siparişin mevcut durumunu ve session_id'sini al
     const currentResult = await client.query(
       `SELECT status, session_id FROM orders 
        WHERE id = $1 AND business_id = $2
@@ -140,7 +155,12 @@ orderRoutes.put('/:id', async (req, res) => {
     const currentStatus = currentResult.rows[0].status;
     const sessionId = currentResult.rows[0].session_id;
 
-    // 2. Durumu güncelle
+    if (currentStatus === 'cancelled') {
+      await client.query('ROLLBACK');
+      res.status(409).json({ message: 'İptal edilmiş sipariş güncellenemez.' });
+      return;
+    }
+
     const updateResult = await client.query(
       `UPDATE orders SET status = $1, updated_at = NOW()
        WHERE id = $2 AND business_id = $3
@@ -148,12 +168,10 @@ orderRoutes.put('/:id', async (req, res) => {
       [newStatus, id, businessId]
     );
 
-    // 3. Session toplam güncelleme mantığı — sadece session_id varsa
     if (sessionId) {
       const wasDelivered = currentStatus === 'delivered';
       const willBeDelivered = newStatus === 'delivered';
 
-      // Siparişin toplam tutarını hesapla
       if (wasDelivered !== willBeDelivered) {
         const totalResult = await client.query(
           `SELECT COALESCE(SUM(quantity * price_int), 0)::int as total 
@@ -163,10 +181,8 @@ orderRoutes.put('/:id', async (req, res) => {
         const orderTotal = totalResult.rows[0].total;
 
         if (willBeDelivered) {
-          // Delivered oldu → session toplamına EKLE
           await incrementSessionTotal(sessionId, orderTotal, client);
         } else if (wasDelivered) {
-          // Delivered'dan geri alındı → session toplamından ÇIKAR
           await decrementSessionTotal(sessionId, orderTotal, client);
         }
       }
@@ -182,7 +198,109 @@ orderRoutes.put('/:id', async (req, res) => {
   }
 });
 
-// Siparişi kapat
+// YENİ: Sipariş iptal
+// POST /api/admin/orders/:id/cancel
+orderRoutes.post('/:id/cancel', async (req, res) => {
+  const businessId = req.ctx!.businessId!;
+  const userId = req.ctx!.userId!;
+  const { id } = req.params;
+
+  const parsed = cancelOrderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
+    res.status(400).json({ message: firstError.message });
+    return;
+  }
+
+  const { reason_code, reason_text } = parsed.data;
+
+  // Final sebep: kod + opsiyonel metin
+  const finalReason = reason_text && reason_text.trim().length > 0
+    ? `${reason_code}: ${reason_text.trim()}`
+    : reason_code;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const currentResult = await client.query(
+      `SELECT id, status, session_id, table_name, type FROM orders 
+       WHERE id = $1 AND business_id = $2
+       FOR UPDATE`,
+      [id, businessId]
+    );
+
+    if (currentResult.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ message: 'Sipariş bulunamadı.' });
+      return;
+    }
+
+    const order = currentResult.rows[0];
+
+    if (order.status === 'cancelled') {
+      await client.query('ROLLBACK');
+      res.status(409).json({ message: 'Bu sipariş zaten iptal edilmiş.' });
+      return;
+    }
+
+    const wasDelivered = order.status === 'delivered';
+
+    const updateResult = await client.query(
+      `UPDATE orders 
+       SET status = 'cancelled',
+           cancelled_at = NOW(),
+           cancelled_by = $1,
+           cancel_reason = $2,
+           updated_at = NOW()
+       WHERE id = $3 AND business_id = $4
+       RETURNING id, status, table_name, type, cancel_reason, cancelled_at`,
+      [userId, finalReason, id, businessId]
+    );
+
+    // Delivered idiyse session toplamından düş
+    if (wasDelivered && order.session_id) {
+      const totalResult = await client.query(
+        `SELECT COALESCE(SUM(quantity * price_int), 0)::int as total 
+         FROM order_items WHERE order_id = $1`,
+        [id]
+      );
+      const orderTotal = totalResult.rows[0].total;
+
+      if (orderTotal > 0) {
+        await decrementSessionTotal(order.session_id, orderTotal, client);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // SSE ile yayınla
+    try {
+      await publishOrder(businessId, {
+        type: 'order_cancelled',
+        order_id: id,
+        table_name: order.table_name,
+        order_type: order.type,
+        reason: finalReason
+      });
+    } catch {
+      // SSE hata yutulur
+    }
+
+    res.status(200).json({
+      message: 'Sipariş iptal edildi.',
+      order: updateResult.rows[0]
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
+// Legacy: Siparişi "kapat" — delivered yapar
 orderRoutes.delete('/:id', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { id } = req.params;
