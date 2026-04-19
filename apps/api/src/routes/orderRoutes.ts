@@ -1,6 +1,5 @@
 // apps/api/src/routes/orderRoutes.ts
-// GÜNCEL: Sipariş iptal endpoint'i eklendi (POST /:id/cancel)
-// Mevcut endpoint'ler korundu, sadece yeni bir endpoint eklendi
+// GÜNCEL: delivered_at alanı eklendi (sipariş hazırlama süresi için)
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -13,15 +12,14 @@ const updateOrderSchema = z.object({
   status: z.enum(['pending', 'preparing', 'ready', 'delivered'])
 });
 
-// İptal sebebi kodları
 const cancelReasonCodes = [
-  'customer_cancelled',  // Müşteri vazgeçti
-  'customer_left',        // Müşteri gitti
-  'not_claimed',          // Hazır ama alıcı yok
-  'no_payment',           // Ödemeden gitti (kasa açığı)
-  'wrong_order',          // Yanlış sipariş
-  'out_of_stock',         // Stok yok
-  'other'                 // Diğer (açıklama zorunlu)
+  'customer_cancelled',
+  'customer_left',
+  'not_claimed',
+  'no_payment',
+  'wrong_order',
+  'out_of_stock',
+  'other'
 ] as const;
 
 const cancelOrderSchema = z.object({
@@ -35,7 +33,7 @@ const cancelOrderSchema = z.object({
 export const orderRoutes = Router();
 orderRoutes.use(requireAuth);
 
-// SSE endpoint
+// SSE
 orderRoutes.get('/stream', (req, res) => {
   const businessId = req.ctx!.businessId!;
   const channel = `${ORDER_CHANNEL}:${businessId}`;
@@ -81,14 +79,15 @@ orderRoutes.get('/stream', (req, res) => {
   });
 });
 
-// Siparişleri listele
+// Siparişleri listele - delivered_at eklendi
 orderRoutes.get('/', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { status } = req.query;
 
   let query = `
     SELECT 
-      o.id, o.table_id, o.table_name, o.status, o.note, o.type, o.created_at,
+      o.id, o.table_id, o.table_name, o.status, o.note, o.type, 
+      o.created_at, o.delivered_at,
       o.cancelled_at, o.cancel_reason,
       COALESCE(
         json_agg(
@@ -122,7 +121,7 @@ orderRoutes.get('/', async (req, res) => {
   res.status(200).json(result.rows);
 });
 
-// Sipariş durumunu güncelle
+// Sipariş durumunu güncelle - delivered_at yazma eklendi
 orderRoutes.put('/:id', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { id } = req.params;
@@ -161,10 +160,26 @@ orderRoutes.put('/:id', async (req, res) => {
       return;
     }
 
+    // delivered_at'i özenle yönet:
+    // - delivered oluyorsa NOW() yaz
+    // - delivered'dan çıkıyorsa NULL yap (geri alma senaryosu)
+    // - diğer durumlarda dokunma
+    let deliveredAtClause: string;
+    if (newStatus === 'delivered' && currentStatus !== 'delivered') {
+      deliveredAtClause = 'delivered_at = NOW()';
+    } else if (currentStatus === 'delivered' && newStatus !== 'delivered') {
+      deliveredAtClause = 'delivered_at = NULL';
+    } else {
+      deliveredAtClause = 'delivered_at = delivered_at'; // no-op
+    }
+
     const updateResult = await client.query(
-      `UPDATE orders SET status = $1, updated_at = NOW()
+      `UPDATE orders 
+       SET status = $1, 
+           updated_at = NOW(),
+           ${deliveredAtClause}
        WHERE id = $2 AND business_id = $3
-       RETURNING id, status, table_name, type`,
+       RETURNING id, status, table_name, type, delivered_at`,
       [newStatus, id, businessId]
     );
 
@@ -198,8 +213,7 @@ orderRoutes.put('/:id', async (req, res) => {
   }
 });
 
-// YENİ: Sipariş iptal
-// POST /api/admin/orders/:id/cancel
+// Sipariş iptal
 orderRoutes.post('/:id/cancel', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const userId = req.ctx!.userId!;
@@ -214,7 +228,6 @@ orderRoutes.post('/:id/cancel', async (req, res) => {
 
   const { reason_code, reason_text } = parsed.data;
 
-  // Final sebep: kod + opsiyonel metin
   const finalReason = reason_text && reason_text.trim().length > 0
     ? `${reason_code}: ${reason_text.trim()}`
     : reason_code;
@@ -259,7 +272,6 @@ orderRoutes.post('/:id/cancel', async (req, res) => {
       [userId, finalReason, id, businessId]
     );
 
-    // Delivered idiyse session toplamından düş
     if (wasDelivered && order.session_id) {
       const totalResult = await client.query(
         `SELECT COALESCE(SUM(quantity * price_int), 0)::int as total 
@@ -275,7 +287,6 @@ orderRoutes.post('/:id/cancel', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // SSE ile yayınla
     try {
       await publishOrder(businessId, {
         type: 'order_cancelled',
@@ -285,7 +296,7 @@ orderRoutes.post('/:id/cancel', async (req, res) => {
         reason: finalReason
       });
     } catch {
-      // SSE hata yutulur
+      // yut
     }
 
     res.status(200).json({
@@ -300,13 +311,14 @@ orderRoutes.post('/:id/cancel', async (req, res) => {
   }
 });
 
-// Legacy: Siparişi "kapat" — delivered yapar
+// Legacy: Siparişi "kapat"
 orderRoutes.delete('/:id', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { id } = req.params;
 
   const result = await pool.query(
-    `UPDATE orders SET status = 'delivered', updated_at = NOW()
+    `UPDATE orders 
+     SET status = 'delivered', delivered_at = NOW(), updated_at = NOW()
      WHERE id = $1 AND business_id = $2 RETURNING id`,
     [id, businessId]
   );

@@ -21,6 +21,7 @@ export type Order = {
   note: string | null;
   type: 'order' | 'call';
   created_at: string;
+  delivered_at?: string | null;
   cancelled_at?: string | null;
   cancel_reason?: string | null;
   items: OrderItem[];
@@ -129,12 +130,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const token = tokenRef.current;
     if (!token) return [];
     try {
-      // Tamamlananlar: delivered + cancelled birleşik
       const [delivered, cancelled] = await Promise.all([
         apiRequest<Order[]>('/admin/orders?status=delivered', { token }),
         apiRequest<Order[]>('/admin/orders?status=cancelled', { token })
       ]);
-      // Birleştir ve tarihe göre sırala (yeniden eskiye)
       const all = [...delivered, ...cancelled].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
@@ -166,7 +165,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshActive]);
 
-  // YENİ: Sipariş iptal
   const cancelOrder = useCallback(async (
     orderId: string,
     reasonCode: CancelReasonCode,
@@ -175,7 +173,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const token = tokenRef.current;
     if (!token) return;
 
-    // Optimistic: aktif listeden kaldır
     setActiveOrders(prev => prev.filter(o => o.id !== orderId));
 
     try {
@@ -185,13 +182,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         body: { reason_code: reasonCode, reason_text: reasonText }
       });
     } catch (e) {
-      // Hata olursa listeyi tekrar yükle
       await refreshActive();
       throw e;
     }
   }, [refreshActive]);
 
-  // SSE bağlantısı
   useEffect(() => {
     if (!accessToken) return;
 
@@ -265,8 +260,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                       }
                     }
                   } else if (data.type === 'order_cancelled') {
-                    // Başka bir yerden (veya başka bir admin'den) iptal edildiyse
-                    // aktif listeden çıkar
                     if (data.order_id) {
                       setActiveOrders(prev => prev.filter(o => o.id !== data.order_id));
                     }
