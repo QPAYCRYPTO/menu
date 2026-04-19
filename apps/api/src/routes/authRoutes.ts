@@ -1,3 +1,4 @@
+// apps/api/src/routes/authRoutes.ts
 import { Router } from 'express';
 import { loginSchema, refreshSchema, requestResetSchema, resetPasswordSchema } from '@menu/shared';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
@@ -13,12 +14,21 @@ authRoutes.post('/login', loginRateLimit, async (req, res) => {
     throw new AppError('Geçersiz giriş verisi.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
 
-  const tokens = await login(parsed.data.email, parsed.data.password);
-  if (!tokens) {
+  const result = await login(parsed.data.email, parsed.data.password);
+
+  if (!result.ok) {
+    if (result.reason === 'business_suspended') {
+      throw new AppError(
+        'Hesabınız geçici olarak askıya alındı. Lütfen yönetici ile iletişime geçin.',
+        403,
+        APP_ERROR_CODES.FORBIDDEN
+      );
+    }
+    // invalid_credentials
     throw new AppError('E-posta veya şifre hatalı.', 401, APP_ERROR_CODES.UNAUTHORIZED);
   }
 
-  res.status(200).json(tokens);
+  res.status(200).json(result.tokens);
 });
 
 authRoutes.post('/refresh', async (req, res) => {
@@ -35,7 +45,6 @@ authRoutes.post('/refresh', async (req, res) => {
   res.status(200).json({ access_token: accessToken });
 });
 
-// apps/api/src/routes/authRoutes.ts
 authRoutes.post('/request-reset', requestResetRateLimit, async (req, res) => {
   const parsed = requestResetSchema.safeParse(req.body);
 

@@ -11,6 +11,11 @@ type TokenPair = {
   role: 'admin' | 'superadmin' | 'owner';
 };
 
+// Login sonucu: başarılı (tokens) | başarısız (reason kodu)
+export type LoginResult =
+  | { ok: true; tokens: TokenPair }
+  | { ok: false; reason: 'invalid_credentials' | 'business_suspended' };
+
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -23,9 +28,7 @@ function createAccessToken(payload: { user_id: string; business_id: string | nul
   return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtAccessExpiresIn as any });
 }
 
-export async function login(email: string, password: string): Promise<TokenPair | null> {
-  // Kullanıcı + işletme durumu birlikte çek
-  // superadmin'in business_id'si NULL olabilir, ona LEFT JOIN
+export async function login(email: string, password: string): Promise<LoginResult> {
   const result = await pool.query(
     `SELECT 
        u.id, u.business_id, u.email, u.password_hash, u.role, u.password_version,
@@ -36,16 +39,19 @@ export async function login(email: string, password: string): Promise<TokenPair 
     [email.toLowerCase()]
   );
 
-  if (result.rowCount !== 1) return null;
+  if (result.rowCount !== 1) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
 
   const user = result.rows[0];
   const passwordValid = await argon2.verify(user.password_hash, password);
-  if (!passwordValid) return null;
+  if (!passwordValid) {
+    return { ok: false, reason: 'invalid_credentials' };
+  }
 
-  // İşletmeye bağlı kullanıcılar için işletme aktif olmalı
-  // (superadmin business_id NULL olabilir, ona dokunma)
+  // Şifre doğru ama işletme pasifse → farklı mesaj dön
   if (user.business_id !== null && user.business_active === false) {
-    return null; // işletme pasif → login red
+    return { ok: false, reason: 'business_suspended' };
   }
 
   const role = user.role ?? 'admin';
@@ -66,7 +72,10 @@ export async function login(email: string, password: string): Promise<TokenPair 
     [refresh_token_hash, user.id]
   );
 
-  return { access_token, refresh_token, role };
+  return {
+    ok: true,
+    tokens: { access_token, refresh_token, role }
+  };
 }
 
 export async function refresh(refreshToken: string): Promise<string | null> {
@@ -86,7 +95,6 @@ export async function refresh(refreshToken: string): Promise<string | null> {
 
   const user = result.rows[0];
 
-  // İşletme pasifse refresh verme
   if (user.business_id !== null && user.business_active === false) {
     return null;
   }
@@ -101,8 +109,6 @@ export async function refresh(refreshToken: string): Promise<string | null> {
 }
 
 export async function createPasswordResetToken(email: string): Promise<string | null> {
-  // Şifre sıfırlama linki: işletme pasif olsa bile verelim mi?
-  // Verelim — kullanıcı sonradan aktive olabilir, linkin işine yaraması için
   const result = await pool.query(
     `SELECT id, business_id, email
      FROM users
