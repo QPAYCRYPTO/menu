@@ -16,6 +16,7 @@ import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sessionRoutes } from './routes/sessionRoutes.js';
+import { ownerRoutes } from './routes/ownerRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -55,6 +56,9 @@ export function createApp() {
   app.use('/api/public', publicRoutes);
   app.use('/api/public', customerOrderRoutes);
   app.use('/api/superadmin', superAdminRoutes);
+
+  // Owner (patron) route'ları — sadece owner + superadmin erişebilir
+  app.use('/api/owner', ownerRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
