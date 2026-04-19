@@ -1,9 +1,11 @@
 // packages/shared/src/types.ts
+export type UserRole = 'admin' | 'superadmin' | 'owner';
+
 export interface SessionUser {
   user_id: string;
   business_id: string | null;
   email: string;
-  role: 'admin' | 'superadmin';
+  role: UserRole;
   password_version: number;
 }
 
@@ -16,7 +18,10 @@ export interface RequestContext {
 export interface LoginResponse {
   access_token: string;
   refresh_token: string;
-  role: 'admin' | 'superadmin';
+  role: UserRole;
+  email: string;
+  business_id: string | null;
+  business_name: string | null;
 }
 
 export interface RefreshResponse {

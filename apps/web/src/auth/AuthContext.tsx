@@ -9,6 +9,9 @@ type AuthContextValue = {
   accessToken: string | null;
   refreshToken: string | null;
   role: UserRole | null;
+  email: string | null;
+  businessId: string | null;
+  businessName: string | null;
   login: (email: string, password: string) => Promise<UserRole>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -19,6 +22,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const ACCESS_TOKEN_KEY = 'menu_access_token';
 const REFRESH_TOKEN_KEY = 'menu_refresh_token';
 const ROLE_KEY = 'menu_role';
+const EMAIL_KEY = 'menu_email';
+const BUSINESS_ID_KEY = 'menu_business_id';
+const BUSINESS_NAME_KEY = 'menu_business_name';
 
 function parseStoredRole(value: string | null): UserRole | null {
   if (value === 'admin' || value === 'superadmin' || value === 'owner') {
@@ -31,6 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(REFRESH_TOKEN_KEY));
   const [role, setRole] = useState<UserRole | null>(() => parseStoredRole(localStorage.getItem(ROLE_KEY)));
+  const [email, setEmail] = useState<string | null>(() => localStorage.getItem(EMAIL_KEY));
+  const [businessId, setBusinessId] = useState<string | null>(() => localStorage.getItem(BUSINESS_ID_KEY));
+  const [businessName, setBusinessName] = useState<string | null>(() => localStorage.getItem(BUSINESS_NAME_KEY));
 
   useEffect(() => {
     if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
@@ -48,6 +57,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [role]);
 
   useEffect(() => {
+    if (email) localStorage.setItem(EMAIL_KEY, email);
+    else localStorage.removeItem(EMAIL_KEY);
+  }, [email]);
+
+  useEffect(() => {
+    if (businessId) localStorage.setItem(BUSINESS_ID_KEY, businessId);
+    else localStorage.removeItem(BUSINESS_ID_KEY);
+  }, [businessId]);
+
+  useEffect(() => {
+    if (businessName) localStorage.setItem(BUSINESS_NAME_KEY, businessName);
+    else localStorage.removeItem(BUSINESS_NAME_KEY);
+  }, [businessName]);
+
+  useEffect(() => {
     configureAuthClient({ getRefreshToken: () => refreshToken, setAccessToken });
   }, [refreshToken]);
 
@@ -56,25 +80,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       accessToken,
       refreshToken,
       role,
+      email,
+      businessId,
+      businessName,
       isAuthenticated: Boolean(accessToken),
-      login: async (email: string, password: string) => {
+      login: async (emailInput: string, password: string) => {
         const response = await apiRequest<LoginResponse>('/auth/login', {
           method: 'POST',
-          body: { email, password },
+          body: { email: emailInput, password },
           retryOn401: false
         });
         setAccessToken(response.access_token);
         setRefreshToken(response.refresh_token);
         setRole(response.role as UserRole);
+        setEmail(response.email ?? null);
+        setBusinessId(response.business_id ?? null);
+        setBusinessName(response.business_name ?? null);
         return response.role as UserRole;
       },
       logout: () => {
         setAccessToken(null);
         setRefreshToken(null);
         setRole(null);
+        setEmail(null);
+        setBusinessId(null);
+        setBusinessName(null);
       }
     }),
-    [accessToken, refreshToken, role]
+    [accessToken, refreshToken, role, email, businessId, businessName]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

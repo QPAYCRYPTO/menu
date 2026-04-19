@@ -5,13 +5,17 @@ import { createHash, randomBytes, randomUUID } from 'crypto';
 import { pool } from '../db/postgres.js';
 import { env } from '../config/env.js';
 
+type UserRole = 'admin' | 'superadmin' | 'owner';
+
 type TokenPair = {
   access_token: string;
   refresh_token: string;
-  role: 'admin' | 'superadmin' | 'owner';
+  role: UserRole;
+  email: string;
+  business_id: string | null;
+  business_name: string | null;
 };
 
-// Login sonucu: başarılı (tokens) | başarısız (reason kodu)
 export type LoginResult =
   | { ok: true; tokens: TokenPair }
   | { ok: false; reason: 'invalid_credentials' | 'business_suspended' };
@@ -32,7 +36,8 @@ export async function login(email: string, password: string): Promise<LoginResul
   const result = await pool.query(
     `SELECT 
        u.id, u.business_id, u.email, u.password_hash, u.role, u.password_version,
-       b.is_active AS business_active
+       b.is_active AS business_active,
+       b.name AS business_name
      FROM users u
      LEFT JOIN businesses b ON b.id = u.business_id
      WHERE u.email = $1 AND u.is_active = TRUE`,
@@ -49,12 +54,11 @@ export async function login(email: string, password: string): Promise<LoginResul
     return { ok: false, reason: 'invalid_credentials' };
   }
 
-  // Şifre doğru ama işletme pasifse → farklı mesaj dön
   if (user.business_id !== null && user.business_active === false) {
     return { ok: false, reason: 'business_suspended' };
   }
 
-  const role = user.role ?? 'admin';
+  const role = (user.role ?? 'admin') as UserRole;
 
   const access_token = createAccessToken({
     user_id: user.id,
@@ -74,7 +78,14 @@ export async function login(email: string, password: string): Promise<LoginResul
 
   return {
     ok: true,
-    tokens: { access_token, refresh_token, role }
+    tokens: {
+      access_token,
+      refresh_token,
+      role,
+      email: user.email,
+      business_id: user.business_id,
+      business_name: user.business_name
+    }
   };
 }
 
