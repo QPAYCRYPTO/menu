@@ -17,12 +17,23 @@ export type Order = {
   id: string;
   table_id: string;
   table_name: string;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered';
+  status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   note: string | null;
   type: 'order' | 'call';
   created_at: string;
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
   items: OrderItem[];
 };
+
+export type CancelReasonCode =
+  | 'customer_cancelled'
+  | 'customer_left'
+  | 'not_claimed'
+  | 'no_payment'
+  | 'wrong_order'
+  | 'out_of_stock'
+  | 'other';
 
 type OrderContextValue = {
   activeOrders: Order[];
@@ -32,6 +43,7 @@ type OrderContextValue = {
   refreshActive: () => Promise<void>;
   fetchDelivered: () => Promise<Order[]>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
+  cancelOrder: (orderId: string, reasonCode: CancelReasonCode, reasonText?: string) => Promise<void>;
 };
 
 const OrderContext = createContext<OrderContextValue>({
@@ -41,7 +53,8 @@ const OrderContext = createContext<OrderContextValue>({
   unlockAudio: () => {},
   refreshActive: async () => {},
   fetchDelivered: async () => [],
-  updateOrderStatus: async () => {}
+  updateOrderStatus: async () => {},
+  cancelOrder: async () => {}
 });
 
 function playOrderSound() {
@@ -89,7 +102,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const audioUnlocked = useRef(false);
 
-  // ÖNEMLİ: accessToken'ı ref'e yazıyoruz ki useEffect'in bağımlılığı olmadan okunabilsin
   const tokenRef = useRef(accessToken);
   useEffect(() => {
     tokenRef.current = accessToken;
@@ -117,8 +129,16 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const token = tokenRef.current;
     if (!token) return [];
     try {
-      const data = await apiRequest<Order[]>('/admin/orders?status=delivered', { token });
-      return data;
+      // Tamamlananlar: delivered + cancelled birleşik
+      const [delivered, cancelled] = await Promise.all([
+        apiRequest<Order[]>('/admin/orders?status=delivered', { token }),
+        apiRequest<Order[]>('/admin/orders?status=cancelled', { token })
+      ]);
+      // Birleştir ve tarihe göre sırala (yeniden eskiye)
+      const all = [...delivered, ...cancelled].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      return all;
     } catch {
       return [];
     }
@@ -128,7 +148,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     const token = tokenRef.current;
     if (!token) return;
 
-    // Optimistic update
     if (status === 'delivered') {
       setActiveOrders(prev => prev.filter(o => o.id !== orderId));
     } else {
@@ -147,11 +166,35 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshActive]);
 
-  // SSE bağlantısı — SADECE accessToken'a bağlı, callback'lere değil
+  // YENİ: Sipariş iptal
+  const cancelOrder = useCallback(async (
+    orderId: string,
+    reasonCode: CancelReasonCode,
+    reasonText?: string
+  ) => {
+    const token = tokenRef.current;
+    if (!token) return;
+
+    // Optimistic: aktif listeden kaldır
+    setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+
+    try {
+      await apiRequest(`/admin/orders/${orderId}/cancel`, {
+        method: 'POST',
+        token,
+        body: { reason_code: reasonCode, reason_text: reasonText }
+      });
+    } catch (e) {
+      // Hata olursa listeyi tekrar yükle
+      await refreshActive();
+      throw e;
+    }
+  }, [refreshActive]);
+
+  // SSE bağlantısı
   useEffect(() => {
     if (!accessToken) return;
 
-    // İlk yüklemede aktif siparişleri çek
     let mounted = true;
     apiRequest<Order[]>('/admin/orders', { token: accessToken })
       .then(data => { if (mounted) setActiveOrders(data); })
@@ -189,9 +232,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
           buffer += decoder.decode(value, { stream: true });
 
-          // SSE mesajları \n\n ile ayrılır
           const messages = buffer.split('\n\n');
-          buffer = messages.pop() || ''; // son parça tamamlanmamış olabilir
+          buffer = messages.pop() || '';
 
           for (const message of messages) {
             for (const line of message.split('\n')) {
@@ -204,18 +246,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   console.log('[SSE] Event alındı:', data.type, data);
 
                   if (data.type === 'new_order' || data.type === 'call') {
-                    // Ses çal
                     if (data.type === 'call') playCallSound();
                     else playOrderSound();
 
-                    // Backend'den komple order objesi geliyorsa direkt state'e ekle
                     if (data.order) {
                       setActiveOrders(prev => {
                         if (prev.find(o => o.id === data.order.id)) return prev;
                         return [data.order, ...prev];
                       });
                     } else {
-                      // Fallback: eski payload → API'den çek
                       console.log('[SSE] order objesi yok, API çağrılıyor');
                       const token = tokenRef.current;
                       if (token) {
@@ -224,6 +263,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                           setActiveOrders(fresh);
                         } catch {}
                       }
+                    }
+                  } else if (data.type === 'order_cancelled') {
+                    // Başka bir yerden (veya başka bir admin'den) iptal edildiyse
+                    // aktif listeden çıkar
+                    if (data.order_id) {
+                      setActiveOrders(prev => prev.filter(o => o.id !== data.order_id));
                     }
                   }
                 } catch (err) {
@@ -241,7 +286,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         console.error('[SSE] Bağlantı hatası:', err);
       }
 
-      // Yeniden bağlan
       if (!cancelled) {
         console.log('[SSE] 3 saniye sonra yeniden bağlanılacak');
         reconnectTimer = setTimeout(connectSSE, 3000);
@@ -250,7 +294,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     connectSSE();
 
-    // Güvenlik ağı — 60 saniyede bir sync
     const syncInterval = setInterval(() => {
       const token = tokenRef.current;
       if (!token) return;
@@ -269,7 +312,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(syncInterval);
     };
-  }, [accessToken]); // SADECE accessToken
+  }, [accessToken]);
 
   const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
   const callCount = activeOrders.filter(o => o.type === 'call' && o.status === 'pending').length;
@@ -282,7 +325,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       unlockAudio,
       refreshActive,
       fetchDelivered,
-      updateOrderStatus
+      updateOrderStatus,
+      cancelOrder
     }}>
       {children}
     </OrderContext.Provider>
