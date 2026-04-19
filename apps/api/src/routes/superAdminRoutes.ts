@@ -14,6 +14,15 @@ const createBusinessSchema = z.object({
   password: z.string().min(8, 'Şifre en az 8 karakter olmalıdır.')
 });
 
+const createOwnerSchema = z.object({
+  email: z.string().email('Geçerli bir e-posta adresi girin.'),
+  password: z.string().min(8, 'Şifre en az 8 karakter olmalıdır.')
+});
+
+const resetOwnerPasswordSchema = z.object({
+  new_password: z.string().min(8, 'Şifre en az 8 karakter olmalıdır.')
+});
+
 function requireSuperAdmin(req: any, res: any, next: any) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
@@ -35,20 +44,36 @@ function requireSuperAdmin(req: any, res: any, next: any) {
 export const superAdminRoutes = Router();
 superAdminRoutes.use(requireSuperAdmin);
 
+// ─────────────────────────────────────────────────────────────
+// İŞLETME LİSTELEME (güncellendi — owner bilgileri eklendi)
+// ─────────────────────────────────────────────────────────────
 superAdminRoutes.get('/businesses', async (_req, res) => {
   const result = await pool.query(`
     SELECT 
       b.id, b.name, b.slug, b.is_active, b.created_at,
-      u.email,
+      (
+        SELECT u.email 
+        FROM users u 
+        WHERE u.business_id = b.id AND u.role = 'admin' 
+        ORDER BY u.created_at ASC 
+        LIMIT 1
+      ) as admin_email,
+      (
+        SELECT COUNT(*)::int
+        FROM users u
+        WHERE u.business_id = b.id AND u.role = 'owner' AND u.is_active = TRUE
+      ) as owner_count,
       (SELECT COUNT(*) FROM categories c WHERE c.business_id = b.id) as category_count,
       (SELECT COUNT(*) FROM products p WHERE p.business_id = b.id) as product_count
     FROM businesses b
-    LEFT JOIN users u ON u.business_id = b.id
     ORDER BY b.created_at DESC
   `);
   res.status(200).json(result.rows);
 });
 
+// ─────────────────────────────────────────────────────────────
+// İŞLETME OLUŞTUR (mevcut, dokunmadım)
+// ─────────────────────────────────────────────────────────────
 superAdminRoutes.post('/businesses', async (req, res) => {
   const parsed = createBusinessSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -64,7 +89,7 @@ superAdminRoutes.post('/businesses', async (req, res) => {
     return;
   }
 
-  const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+  const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
   if (existingUser.rowCount! > 0) {
     res.status(400).json({ message: 'Bu e-posta zaten kullanılıyor.' });
     return;
@@ -99,6 +124,9 @@ superAdminRoutes.post('/businesses', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// İŞLETME AKTİF/PASİF (mevcut, dokunmadım)
+// ─────────────────────────────────────────────────────────────
 superAdminRoutes.put('/businesses/:id', async (req, res) => {
   const { id } = req.params;
   const { is_active } = req.body;
@@ -116,6 +144,9 @@ superAdminRoutes.put('/businesses/:id', async (req, res) => {
   res.status(200).json(result.rows[0]);
 });
 
+// ─────────────────────────────────────────────────────────────
+// ADMİN ŞİFRE SIFIRLA (mevcut — sadece admin'i buluyordu)
+// ─────────────────────────────────────────────────────────────
 superAdminRoutes.put('/businesses/:id/reset-password', async (req, res) => {
   const { id } = req.params;
   const { new_password } = req.body;
@@ -127,12 +158,173 @@ superAdminRoutes.put('/businesses/:id/reset-password', async (req, res) => {
 
   const passwordHash = await argon2.hash(new_password);
   const result = await pool.query(
-    `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE business_id = $2 RETURNING id`,
+    `UPDATE users 
+     SET password_hash = $1, password_version = password_version + 1, updated_at = NOW() 
+     WHERE business_id = $2 AND role = 'admin' 
+     RETURNING id`,
     [passwordHash, id]
   );
 
   if (result.rowCount !== 1) {
-    res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+    res.status(404).json({ message: 'Admin kullanıcı bulunamadı.' });
+    return;
+  }
+
+  res.status(200).json({ message: 'Şifre güncellendi.' });
+});
+
+// ═════════════════════════════════════════════════════════════
+// YENİ: OWNER CRUD ENDPOINT'LERİ
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Bu işletmenin owner'larını listele
+ */
+superAdminRoutes.get('/businesses/:id/owners', async (req, res) => {
+  const { id } = req.params;
+
+  // İşletme var mı kontrol et
+  const biz = await pool.query('SELECT id FROM businesses WHERE id = $1', [id]);
+  if (biz.rowCount !== 1) {
+    res.status(404).json({ message: 'İşletme bulunamadı.' });
+    return;
+  }
+
+  const result = await pool.query(
+    `SELECT id, email, is_active, created_at, updated_at
+     FROM users 
+     WHERE business_id = $1 AND role = 'owner'
+     ORDER BY created_at DESC`,
+    [id]
+  );
+  res.status(200).json(result.rows);
+});
+
+/**
+ * Bu işletmeye yeni owner ekle
+ */
+superAdminRoutes.post('/businesses/:id/owners', async (req, res) => {
+  const { id } = req.params;
+
+  const parsed = createOwnerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Geçersiz veri.', errors: parsed.error.issues });
+    return;
+  }
+
+  const { email, password } = parsed.data;
+
+  // İşletme var mı
+  const biz = await pool.query('SELECT id FROM businesses WHERE id = $1', [id]);
+  if (biz.rowCount !== 1) {
+    res.status(404).json({ message: 'İşletme bulunamadı.' });
+    return;
+  }
+
+  // E-posta başka bir kullanıcıda kullanılıyor mu
+  const existingUser = await pool.query(
+    'SELECT id FROM users WHERE email = $1',
+    [email.toLowerCase()]
+  );
+  if (existingUser.rowCount! > 0) {
+    res.status(400).json({ message: 'Bu e-posta zaten kullanılıyor.' });
+    return;
+  }
+
+  const userId = randomUUID();
+  const passwordHash = await argon2.hash(password);
+
+  await pool.query(
+    `INSERT INTO users (id, business_id, email, password_hash, role, is_active, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 'owner', TRUE, NOW(), NOW())`,
+    [userId, id, email.toLowerCase(), passwordHash]
+  );
+
+  res.status(201).json({
+    id: userId,
+    email: email.toLowerCase(),
+    is_active: true,
+    business_id: id
+  });
+});
+
+/**
+ * Owner aktif/pasif toggle
+ */
+superAdminRoutes.put('/businesses/:id/owners/:userId', async (req, res) => {
+  const { id, userId } = req.params;
+  const { is_active } = req.body;
+
+  if (typeof is_active !== 'boolean') {
+    res.status(400).json({ message: 'is_active boolean olmalı.' });
+    return;
+  }
+
+  // Owner bu işletmeye ait mi
+  const result = await pool.query(
+    `UPDATE users 
+     SET is_active = $1, password_version = password_version + 1, updated_at = NOW()
+     WHERE id = $2 AND business_id = $3 AND role = 'owner'
+     RETURNING id, email, is_active`,
+    [is_active, userId, id]
+  );
+
+  if (result.rowCount !== 1) {
+    res.status(404).json({ message: 'Owner bulunamadı.' });
+    return;
+  }
+
+  res.status(200).json(result.rows[0]);
+});
+
+/**
+ * Owner sil (soft delete — is_active = false yapar)
+ * Not: Gerçek delete yerine pasifleştirme tercih ediyoruz (veri bütünlüğü)
+ */
+superAdminRoutes.delete('/businesses/:id/owners/:userId', async (req, res) => {
+  const { id, userId } = req.params;
+
+  const result = await pool.query(
+    `UPDATE users 
+     SET is_active = FALSE, password_version = password_version + 1, updated_at = NOW()
+     WHERE id = $1 AND business_id = $2 AND role = 'owner'
+     RETURNING id`,
+    [userId, id]
+  );
+
+  if (result.rowCount !== 1) {
+    res.status(404).json({ message: 'Owner bulunamadı.' });
+    return;
+  }
+
+  res.status(200).json({ message: 'Owner pasifleştirildi.' });
+});
+
+/**
+ * Owner şifre sıfırla (super admin tarafından)
+ */
+superAdminRoutes.put('/businesses/:id/owners/:userId/reset-password', async (req, res) => {
+  const { id, userId } = req.params;
+
+  const parsed = resetOwnerPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: parsed.error.issues[0].message });
+    return;
+  }
+
+  const { new_password } = parsed.data;
+  const passwordHash = await argon2.hash(new_password);
+
+  const result = await pool.query(
+    `UPDATE users 
+     SET password_hash = $1, password_version = password_version + 1, updated_at = NOW() 
+     WHERE id = $2 AND business_id = $3 AND role = 'owner'
+     RETURNING id, email`,
+    [passwordHash, userId, id]
+  );
+
+  if (result.rowCount !== 1) {
+    res.status(404).json({ message: 'Owner bulunamadı.' });
     return;
   }
 
