@@ -24,7 +24,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 
     // password_version kontrolü
     pool.query(
-      `SELECT password_version FROM users WHERE id = $1 AND is_active = TRUE`,
+      `SELECT password_version, role FROM users WHERE id = $1 AND is_active = TRUE`,
       [payload.user_id]
     ).then(result => {
       if (result.rowCount !== 1) {
@@ -38,12 +38,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
         return;
       }
 
-      req.user = payload;
+      // DB'deki güncel role'ü al (payload stale olabilir)
+      const currentRole: string = result.rows[0].role;
+
+      req.user = { ...payload, role: currentRole } as any;
       req.ctx = {
         requestId: req.requestId || req.ctx?.requestId || '',
         userId: payload.user_id,
-        businessId: payload.business_id ?? ''
-      };
+        businessId: payload.business_id ?? '',
+        role: currentRole
+      } as any;
       next();
     }).catch(() => {
       res.status(500).json({ message: 'Sunucu hatası.' });
@@ -53,3 +57,47 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ message: 'Geçersiz oturum.' });
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+// ROL KONTROLÜ — requireAuth'tan SONRA kullanılmalı
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Belirtilen rollerden birine sahip kullanıcıları geçirir.
+ * Örn: requireRole('owner', 'superadmin')
+ */
+export function requireRole(...allowedRoles: string[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const role = (req.ctx as any)?.role || (req.user as any)?.role;
+
+    if (!role) {
+      res.status(401).json({ message: 'Yetkisiz erişim.' });
+      return;
+    }
+
+    if (!allowedRoles.includes(role)) {
+      res.status(403).json({ message: 'Bu işlem için yetkiniz yok.' });
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
+ * Sadece 'owner' ve 'superadmin' rolüne izin verir.
+ * Patron dashboard ve raporlar için.
+ */
+export const requireOwner = requireRole('owner', 'superadmin');
+
+/**
+ * Sadece 'admin' ve 'superadmin' rolüne izin verir.
+ * Operasyonel yönetim (sipariş, masa, ürün) için.
+ */
+export const requireAdmin = requireRole('admin', 'superadmin');
+
+/**
+ * Sadece 'superadmin' rolüne izin verir.
+ * Çok-işletmeli SaaS yönetim panelleri için.
+ */
+export const requireSuperAdmin = requireRole('superadmin');
