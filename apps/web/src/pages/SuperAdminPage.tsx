@@ -9,11 +9,20 @@ type Business = {
   id: string;
   name: string;
   slug: string;
-  email: string;
+  admin_email: string | null;
+  owner_count: number;
   is_active: boolean;
   created_at: string;
   category_count: number;
   product_count: number;
+};
+
+type Owner = {
+  id: string;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
@@ -32,6 +41,16 @@ export function SuperAdminPage() {
   const [resetForm, setResetForm] = useState({ businessId: '', new_password: '' });
   const [showNewModal, setShowNewModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+
+  // Owner management state
+  const [ownerModalBusiness, setOwnerModalBusiness] = useState<Business | null>(null);
+  const [owners, setOwners] = useState<Owner[]>([]);
+  const [loadingOwners, setLoadingOwners] = useState(false);
+  const [newOwnerForm, setNewOwnerForm] = useState({ email: '', password: '' });
+  const [showNewOwnerForm, setShowNewOwnerForm] = useState(false);
+  const [showNewOwnerPassword, setShowNewOwnerPassword] = useState(false);
+  const [ownerPasswordReset, setOwnerPasswordReset] = useState<{ owner: Owner; newPassword: string } | null>(null);
+  const [showOwnerResetPassword, setShowOwnerResetPassword] = useState(false);
 
   useEffect(() => {
     if (!accessToken || role !== 'superadmin') {
@@ -132,7 +151,7 @@ export function SuperAdminPage() {
     }
   }
 
-  async function resetPassword() {
+  async function resetAdminPassword() {
     if (!resetForm.businessId || !resetForm.new_password) {
       showToast('İşletme ve şifre zorunludur.', 'error'); return;
     }
@@ -146,11 +165,137 @@ export function SuperAdminPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      showToast('Şifre güncellendi.', 'success');
+      showToast('Admin şifresi güncellendi.', 'success');
       setResetForm({ businessId: '', new_password: '' });
       setShowResetModal(false);
     } else {
       showToast(data.message ?? 'Hata.', 'error');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // OWNER İŞLEMLERİ
+  // ─────────────────────────────────────────────────────────────
+
+  async function openOwnerModal(business: Business) {
+    setOwnerModalBusiness(business);
+    setShowNewOwnerForm(false);
+    setNewOwnerForm({ email: '', password: '' });
+    setOwnerPasswordReset(null);
+    await loadOwners(business.id);
+  }
+
+  function closeOwnerModal() {
+    setOwnerModalBusiness(null);
+    setOwners([]);
+    setShowNewOwnerForm(false);
+    setNewOwnerForm({ email: '', password: '' });
+    setOwnerPasswordReset(null);
+  }
+
+  async function loadOwners(businessId: string) {
+    setLoadingOwners(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/owners`, {
+        headers: authHeaders()
+      });
+      if (!res.ok) { showToast('Owner\'lar alınamadı.', 'error'); return; }
+      const data = await res.json();
+      setOwners(data);
+    } catch {
+      showToast('Bağlantı hatası.', 'error');
+    } finally {
+      setLoadingOwners(false);
+    }
+  }
+
+  async function createOwner() {
+    if (!ownerModalBusiness) return;
+    if (!newOwnerForm.email || !newOwnerForm.password) {
+      showToast('Email ve şifre zorunludur.', 'error'); return;
+    }
+    if (newOwnerForm.password.length < 8) {
+      showToast('Şifre en az 8 karakter olmalıdır.', 'error'); return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${ownerModalBusiness.id}/owners`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(newOwnerForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.message ?? 'Owner oluşturulamadı.', 'error');
+        return;
+      }
+      showToast('Owner oluşturuldu.', 'success');
+      setNewOwnerForm({ email: '', password: '' });
+      setShowNewOwnerForm(false);
+      await loadOwners(ownerModalBusiness.id);
+      await loadBusinesses(); // owner_count güncellensin
+    } catch {
+      showToast('Bağlantı hatası.', 'error');
+    }
+  }
+
+  async function toggleOwnerActive(owner: Owner) {
+    if (!ownerModalBusiness) return;
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/superadmin/businesses/${ownerModalBusiness.id}/owners/${owner.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ is_active: !owner.is_active })
+        }
+      );
+      if (!res.ok) { showToast('İşlem başarısız.', 'error'); return; }
+      showToast(owner.is_active ? 'Owner pasifleştirildi.' : 'Owner aktifleştirildi.', 'success');
+      await loadOwners(ownerModalBusiness.id);
+      await loadBusinesses();
+    } catch {
+      showToast('Bağlantı hatası.', 'error');
+    }
+  }
+
+  async function deleteOwner(owner: Owner) {
+    if (!ownerModalBusiness) return;
+    if (!confirm(`${owner.email} adlı owner'ı silmek istediğinize emin misiniz?`)) return;
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/superadmin/businesses/${ownerModalBusiness.id}/owners/${owner.id}`,
+        { method: 'DELETE', headers: authHeaders() }
+      );
+      if (!res.ok) { showToast('Silme başarısız.', 'error'); return; }
+      showToast('Owner silindi.', 'success');
+      await loadOwners(ownerModalBusiness.id);
+      await loadBusinesses();
+    } catch {
+      showToast('Bağlantı hatası.', 'error');
+    }
+  }
+
+  async function resetOwnerPassword() {
+    if (!ownerModalBusiness || !ownerPasswordReset) return;
+    if (ownerPasswordReset.newPassword.length < 8) {
+      showToast('Şifre en az 8 karakter olmalıdır.', 'error'); return;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/superadmin/businesses/${ownerModalBusiness.id}/owners/${ownerPasswordReset.owner.id}/reset-password`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ new_password: ownerPasswordReset.newPassword })
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) { showToast(data.message ?? 'Hata.', 'error'); return; }
+      showToast('Owner şifresi güncellendi.', 'success');
+      setOwnerPasswordReset(null);
+    } catch {
+      showToast('Bağlantı hatası.', 'error');
     }
   }
 
@@ -180,7 +325,7 @@ export function SuperAdminPage() {
           </div>
           <div className="flex gap-2">
             <button onClick={loadBusinesses} className="px-4 py-2 rounded-xl text-sm font-semibold" style={{background: '#F1F5F9', color: '#0F172A'}}>🔄 Yenile</button>
-            <button onClick={() => setShowResetModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold" style={{background: '#FEF3C7', color: '#92400E'}}>🔑 Şifre Sıfırla</button>
+            <button onClick={() => setShowResetModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold" style={{background: '#FEF3C7', color: '#92400E'}}>🔑 Admin Şifre</button>
             <button onClick={() => setShowNewModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold text-white" style={{background: '#0D9488'}}>+ Yeni İşletme</button>
             <button onClick={() => { logout(); navigate('/login'); }} className="px-4 py-2 rounded-xl text-sm font-semibold" style={{background: '#FEF2F2', color: '#DC2626'}}>Çıkış</button>
           </div>
@@ -203,8 +348,10 @@ export function SuperAdminPage() {
             <div className="text-2xl font-bold" style={{color: '#DC2626', fontFamily: 'Georgia, serif'}}>{businesses.filter(b => !b.is_active).length}</div>
           </div>
           <div className="bg-white rounded-2xl p-4" style={{border: '1px solid #E2E8F0'}}>
-            <div className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{color: '#64748B'}}>Toplam Ürün</div>
-            <div className="text-2xl font-bold" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>{businesses.reduce((sum, b) => sum + Number(b.product_count), 0)}</div>
+            <div className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{color: '#64748B'}}>Toplam Owner</div>
+            <div className="text-2xl font-bold" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>
+              {businesses.reduce((sum, b) => sum + Number(b.owner_count), 0)}
+            </div>
           </div>
         </div>
 
@@ -212,15 +359,15 @@ export function SuperAdminPage() {
 
         <div className="bg-white rounded-2xl overflow-hidden mb-8" style={{border: '1px solid #E2E8F0'}}>
           <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-            style={{gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1fr', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0'}}>
-            <div>İşletme</div><div>Slug</div><div>E-posta</div>
-            <div className="text-center">Kat.</div><div className="text-center">Ürün</div>
-            <div>Kayıt</div><div className="text-right">İşlem</div>
+            style={{gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.5fr', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0'}}>
+            <div>İşletme</div><div>Slug</div><div>Admin E-posta</div>
+            <div className="text-center">Owner</div><div className="text-center">Kat.</div><div className="text-center">Ürün</div>
+            <div className="text-right">İşlem</div>
           </div>
 
           {businesses.map(b => (
             <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm"
-              style={{gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1fr', borderBottom: '1px solid #F1F5F9', background: b.is_active ? 'white' : '#FEF8F8'}}>
+              style={{gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.5fr', borderBottom: '1px solid #F1F5F9', background: b.is_active ? 'white' : '#FEF8F8'}}>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                   style={{background: b.is_active ? '#0D9488' : '#94A3B8'}}>
@@ -235,10 +382,26 @@ export function SuperAdminPage() {
                 <a href={`https://www.atlasqrmenu.com/m/${b.slug}`} target="_blank" rel="noreferrer"
                   className="text-xs font-mono truncate block" style={{color: '#0D9488'}}>/{b.slug}</a>
               </div>
-              <div className="text-xs truncate" style={{color: '#64748B'}}>{b.email}</div>
+              <div className="text-xs truncate" style={{color: '#64748B'}}>{b.admin_email || '-'}</div>
+
+              {/* Owner butonu */}
+              <div className="text-center">
+                <button
+                  onClick={() => openOwnerModal(b)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold active:scale-95 transition-transform"
+                  style={{
+                    background: b.owner_count > 0 ? '#F0FDF4' : '#FEF3C7',
+                    color: b.owner_count > 0 ? '#16A34A' : '#92400E'
+                  }}
+                  title="Owner yönetimi"
+                >
+                  👤 {b.owner_count}
+                </button>
+              </div>
+
               <div className="text-center font-semibold" style={{color: '#0F172A'}}>{b.category_count}</div>
               <div className="text-center font-semibold" style={{color: '#0F172A'}}>{b.product_count}</div>
-              <div className="text-xs" style={{color: '#64748B'}}>{new Date(b.created_at).toLocaleDateString('tr-TR')}</div>
+
               <div className="flex justify-end">
                 <button onClick={() => toggleActive(b)} className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                   style={{background: b.is_active ? '#FEF2F2' : '#F0FDF4', color: b.is_active ? '#DC2626' : '#16A34A'}}>
@@ -282,7 +445,7 @@ export function SuperAdminPage() {
                 {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{color: '#0D9488'}}>✅ Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>E-posta</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Admin E-posta</label>
                 <input type="email" value={newForm.email} onChange={(e) => setNewForm(p => ({ ...p, email: e.target.value }))}
                   placeholder="admin@kafe.com" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
                   style={{border: `1.5px solid ${fieldErrors.email ? '#DC2626' : '#E2E8F0'}`, background: '#F8FAFC', color: '#0F172A'}} />
@@ -316,12 +479,12 @@ export function SuperAdminPage() {
         </div>
       )}
 
-      {/* ŞİFRE SIFIRLA MODAL */}
+      {/* ADMIN ŞİFRE SIFIRLA MODAL */}
       {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
-              <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>🔑 Şifre Sıfırla</h2>
+              <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>🔑 Admin Şifresini Sıfırla</h2>
               <button onClick={() => setShowResetModal(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
             </div>
@@ -332,7 +495,7 @@ export function SuperAdminPage() {
                   className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
                   style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}>
                   <option value="">Seçin</option>
-                  {businesses.map(b => <option key={b.id} value={b.id}>{b.name} ({b.email})</option>)}
+                  {businesses.map(b => <option key={b.id} value={b.id}>{b.name} ({b.admin_email})</option>)}
                 </select>
               </div>
               <div>
@@ -352,8 +515,214 @@ export function SuperAdminPage() {
             <div className="px-6 py-4 flex gap-3" style={{borderTop: '1px solid #E2E8F0'}}>
               <button onClick={() => setShowResetModal(false)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{background: '#F1F5F9', color: '#64748B'}}>İptal</button>
-              <button onClick={resetPassword}
+              <button onClick={resetAdminPassword}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{background: '#D97706'}}>Şifreyi Güncelle</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────── */}
+      {/* OWNER YÖNETIM MODAL */}
+      {/* ─────────────────────────────────────────────────────── */}
+      {ownerModalBusiness && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{maxHeight: '85vh'}}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
+              <div>
+                <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>
+                  👤 Owner Yönetimi
+                </h2>
+                <p className="text-xs mt-0.5" style={{color: '#64748B'}}>
+                  {ownerModalBusiness.name} — {owners.filter(o => o.is_active).length} aktif owner
+                </p>
+              </div>
+              <button onClick={closeOwnerModal}
+                className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Yeni Owner Form */}
+              {!showNewOwnerForm ? (
+                <button
+                  onClick={() => setShowNewOwnerForm(true)}
+                  className="w-full py-3 rounded-xl text-sm font-semibold text-white mb-4"
+                  style={{background: '#0D9488'}}
+                >
+                  + Yeni Owner Ekle
+                </button>
+              ) : (
+                <div className="p-4 rounded-xl mb-4" style={{background: '#F8FAFC', border: '1.5px solid #0D9488'}}>
+                  <h3 className="font-semibold text-sm mb-3" style={{color: '#0F172A'}}>Yeni Owner Ekle</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>E-posta</label>
+                      <input
+                        type="email"
+                        value={newOwnerForm.email}
+                        onChange={(e) => setNewOwnerForm(p => ({...p, email: e.target.value}))}
+                        placeholder="patron@firma.com"
+                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                        style={{border: '1.5px solid #E2E8F0', background: 'white', color: '#0F172A'}}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Şifre</label>
+                      <div style={{position: 'relative'}}>
+                        <input
+                          type={showNewOwnerPassword ? 'text' : 'password'}
+                          value={newOwnerForm.password}
+                          onChange={(e) => setNewOwnerForm(p => ({...p, password: e.target.value}))}
+                          placeholder="Min 8 karakter"
+                          className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                          style={{border: '1.5px solid #E2E8F0', background: 'white', color: '#0F172A', paddingRight: 44, boxSizing: 'border-box'}}
+                        />
+                        <button type="button" onClick={() => setShowNewOwnerPassword(!showNewOwnerPassword)}
+                          style={{position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18}}>
+                          {showNewOwnerPassword ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => { setShowNewOwnerForm(false); setNewOwnerForm({email: '', password: ''}); }}
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold"
+                        style={{background: '#F1F5F9', color: '#64748B'}}
+                      >
+                        İptal
+                      </button>
+                      <button
+                        onClick={createOwner}
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold text-white"
+                        style={{background: '#0D9488'}}
+                      >
+                        Oluştur
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Owner Listesi */}
+              {loadingOwners ? (
+                <div className="text-center py-8">
+                  <p className="text-sm" style={{color: '#94A3B8'}}>Yükleniyor...</p>
+                </div>
+              ) : owners.length === 0 ? (
+                <div className="text-center py-8 rounded-xl" style={{background: '#F8FAFC', border: '1px dashed #E2E8F0'}}>
+                  <div className="text-3xl mb-2">👤</div>
+                  <p className="text-sm" style={{color: '#94A3B8'}}>Henüz owner yok</p>
+                  <p className="text-xs mt-1" style={{color: '#CBD5E1'}}>"+ Yeni Owner Ekle" ile başlayın</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {owners.map(owner => (
+                    <div key={owner.id}
+                      className="p-3 rounded-xl"
+                      style={{
+                        background: owner.is_active ? 'white' : '#FEF8F8',
+                        border: `1px solid ${owner.is_active ? '#E2E8F0' : '#FECACA'}`
+                      }}
+                    >
+                      {/* Owner satırı */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                            style={{background: owner.is_active ? '#0D9488' : '#94A3B8'}}
+                          >
+                            {owner.email.charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{minWidth: 0}}>
+                            <div className="font-semibold text-sm truncate" style={{color: '#0F172A'}}>{owner.email}</div>
+                            <div className="text-xs" style={{color: owner.is_active ? '#0D9488' : '#DC2626'}}>
+                              {owner.is_active ? '● Aktif' : '● Pasif'} · {new Date(owner.created_at).toLocaleDateString('tr-TR')}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={() => setOwnerPasswordReset({owner, newPassword: ''})}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                            style={{background: '#FEF3C7', color: '#92400E'}}
+                            title="Şifre sıfırla"
+                          >
+                            🔑
+                          </button>
+                          <button
+                            onClick={() => toggleOwnerActive(owner)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                            style={{
+                              background: owner.is_active ? '#FEF2F2' : '#F0FDF4',
+                              color: owner.is_active ? '#DC2626' : '#16A34A'
+                            }}
+                          >
+                            {owner.is_active ? 'Pasif' : 'Aktif'}
+                          </button>
+                          <button
+                            onClick={() => deleteOwner(owner)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                            style={{background: '#FEF2F2', color: '#DC2626'}}
+                            title="Sil"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Şifre sıfırlama formu (inline) */}
+                      {ownerPasswordReset?.owner.id === owner.id && (
+                        <div className="mt-3 pt-3" style={{borderTop: '1px solid #E2E8F0'}}>
+                          <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>
+                            Yeni Şifre (Owner'a bildirilecek)
+                          </label>
+                          <div className="flex gap-2">
+                            <div style={{position: 'relative', flex: 1}}>
+                              <input
+                                type={showOwnerResetPassword ? 'text' : 'password'}
+                                value={ownerPasswordReset.newPassword}
+                                onChange={(e) => setOwnerPasswordReset(p => p ? {...p, newPassword: e.target.value} : null)}
+                                placeholder="Min 8 karakter"
+                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                                style={{border: '1.5px solid #E2E8F0', background: 'white', color: '#0F172A', paddingRight: 40, boxSizing: 'border-box'}}
+                                autoFocus
+                              />
+                              <button type="button" onClick={() => setShowOwnerResetPassword(!showOwnerResetPassword)}
+                                style={{position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 16}}>
+                                {showOwnerResetPassword ? '🙈' : '👁️'}
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => setOwnerPasswordReset(null)}
+                              className="px-3 py-2 rounded-lg text-xs font-semibold"
+                              style={{background: '#F1F5F9', color: '#64748B'}}
+                            >
+                              İptal
+                            </button>
+                            <button
+                              onClick={resetOwnerPassword}
+                              className="px-3 py-2 rounded-lg text-xs font-semibold text-white"
+                              style={{background: '#D97706'}}
+                            >
+                              Güncelle
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4" style={{borderTop: '1px solid #E2E8F0', background: '#F8FAFC'}}>
+              <button
+                onClick={closeOwnerModal}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold"
+                style={{background: '#F1F5F9', color: '#0F172A'}}
+              >
+                Kapat
+              </button>
             </div>
           </div>
         </div>
