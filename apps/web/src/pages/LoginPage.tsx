@@ -19,6 +19,8 @@ export function LoginPage() {
       const role = await login(email, password);
       if (role === 'superadmin') {
         navigate('/superadmin');
+      } else if (role === 'owner') {
+        navigate('/owner');
       } else {
         navigate('/admin');
       }

@@ -1,6 +1,6 @@
 // apps/web/src/App.tsx
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AdminLayout } from './components/Layout';
 import { RequireAuth } from './components/RequireAuth';
 import { OrderProvider } from './context/OrderContext';
@@ -16,6 +16,16 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { TablesPage } from './pages/TablesPage';
+import { OwnerLayout } from './pages/owner/OwnerLayout';
+import { OwnerDashboardPage } from './pages/owner/OwnerDashboardPage';
+
+// Owner-specific guard: sadece owner ve superadmin
+function RequireOwner({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, role } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (role !== 'owner' && role !== 'superadmin') return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
 export function App() {
   return (
@@ -27,6 +37,23 @@ export function App() {
           <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
           <Route path="/m/:slug" element={<PublicMenuPage />} />
           <Route path="/superadmin" element={<SuperAdminPage />} />
+
+          {/* Owner Routes */}
+          <Route
+            path="/owner"
+            element={
+              <RequireOwner>
+                <OwnerLayout />
+              </RequireOwner>
+            }
+          >
+            <Route index element={<OwnerDashboardPage />} />
+            {/* İleride: <Route path="sales" element={<SalesReportPage />} /> */}
+            {/* İleride: <Route path="products" element={<ProductsReportPage />} /> */}
+            {/* İleride: <Route path="cancellations" element={<CancellationsReportPage />} /> */}
+          </Route>
+
+          {/* Admin Routes */}
           <Route
             path="/admin"
             element={
@@ -45,6 +72,7 @@ export function App() {
             <Route path="tables" element={<TablesPage />} />
             <Route path="orders" element={<OrdersPage />} />
           </Route>
+
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

@@ -3,11 +3,13 @@ import type { LoginResponse } from '@menu/shared';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { apiRequest, configureAuthClient } from '../api/client';
 
+export type UserRole = 'admin' | 'superadmin' | 'owner';
+
 type AuthContextValue = {
   accessToken: string | null;
   refreshToken: string | null;
-  role: 'admin' | 'superadmin' | null;
-  login: (email: string, password: string) => Promise<'admin' | 'superadmin'>;
+  role: UserRole | null;
+  login: (email: string, password: string) => Promise<UserRole>;
   logout: () => void;
   isAuthenticated: boolean;
 };
@@ -18,10 +20,17 @@ const ACCESS_TOKEN_KEY = 'menu_access_token';
 const REFRESH_TOKEN_KEY = 'menu_refresh_token';
 const ROLE_KEY = 'menu_role';
 
+function parseStoredRole(value: string | null): UserRole | null {
+  if (value === 'admin' || value === 'superadmin' || value === 'owner') {
+    return value;
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(REFRESH_TOKEN_KEY));
-  const [role, setRole] = useState<'admin' | 'superadmin' | null>(() => localStorage.getItem(ROLE_KEY) as 'admin' | 'superadmin' | null);
+  const [role, setRole] = useState<UserRole | null>(() => parseStoredRole(localStorage.getItem(ROLE_KEY)));
 
   useEffect(() => {
     if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
@@ -56,8 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setAccessToken(response.access_token);
         setRefreshToken(response.refresh_token);
-        setRole(response.role);
-        return response.role;
+        setRole(response.role as UserRole);
+        return response.role as UserRole;
       },
       logout: () => {
         setAccessToken(null);
