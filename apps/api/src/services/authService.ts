@@ -8,7 +8,7 @@ import { env } from '../config/env.js';
 type TokenPair = {
   access_token: string;
   refresh_token: string;
-  role: 'admin' | 'superadmin';
+  role: 'admin' | 'superadmin' | 'owner';
 };
 
 function hashToken(token: string): string {
@@ -24,10 +24,15 @@ function createAccessToken(payload: { user_id: string; business_id: string | nul
 }
 
 export async function login(email: string, password: string): Promise<TokenPair | null> {
+  // Kullanıcı + işletme durumu birlikte çek
+  // superadmin'in business_id'si NULL olabilir, ona LEFT JOIN
   const result = await pool.query(
-    `SELECT id, business_id, email, password_hash, role, password_version
-     FROM users
-     WHERE email = $1 AND is_active = TRUE`,
+    `SELECT 
+       u.id, u.business_id, u.email, u.password_hash, u.role, u.password_version,
+       b.is_active AS business_active
+     FROM users u
+     LEFT JOIN businesses b ON b.id = u.business_id
+     WHERE u.email = $1 AND u.is_active = TRUE`,
     [email.toLowerCase()]
   );
 
@@ -36,6 +41,12 @@ export async function login(email: string, password: string): Promise<TokenPair 
   const user = result.rows[0];
   const passwordValid = await argon2.verify(user.password_hash, password);
   if (!passwordValid) return null;
+
+  // İşletmeye bağlı kullanıcılar için işletme aktif olmalı
+  // (superadmin business_id NULL olabilir, ona dokunma)
+  if (user.business_id !== null && user.business_active === false) {
+    return null; // işletme pasif → login red
+  }
 
   const role = user.role ?? 'admin';
 
@@ -62,15 +73,23 @@ export async function refresh(refreshToken: string): Promise<string | null> {
   const refreshTokenHash = hashToken(refreshToken);
 
   const result = await pool.query(
-    `SELECT id, business_id, email, role, password_version
-     FROM users
-     WHERE refresh_token_hash = $1 AND is_active = TRUE`,
+    `SELECT 
+       u.id, u.business_id, u.email, u.role, u.password_version,
+       b.is_active AS business_active
+     FROM users u
+     LEFT JOIN businesses b ON b.id = u.business_id
+     WHERE u.refresh_token_hash = $1 AND u.is_active = TRUE`,
     [refreshTokenHash]
   );
 
   if (result.rowCount !== 1) return null;
 
   const user = result.rows[0];
+
+  // İşletme pasifse refresh verme
+  if (user.business_id !== null && user.business_active === false) {
+    return null;
+  }
 
   return createAccessToken({
     user_id: user.id,
@@ -82,6 +101,8 @@ export async function refresh(refreshToken: string): Promise<string | null> {
 }
 
 export async function createPasswordResetToken(email: string): Promise<string | null> {
+  // Şifre sıfırlama linki: işletme pasif olsa bile verelim mi?
+  // Verelim — kullanıcı sonradan aktive olabilir, linkin işine yaraması için
   const result = await pool.query(
     `SELECT id, business_id, email
      FROM users

@@ -45,8 +45,9 @@ export const superAdminRoutes = Router();
 superAdminRoutes.use(requireSuperAdmin);
 
 // ─────────────────────────────────────────────────────────────
-// İŞLETME LİSTELEME (güncellendi — owner bilgileri eklendi)
+// İŞLETMELER
 // ─────────────────────────────────────────────────────────────
+
 superAdminRoutes.get('/businesses', async (_req, res) => {
   const result = await pool.query(`
     SELECT 
@@ -71,9 +72,6 @@ superAdminRoutes.get('/businesses', async (_req, res) => {
   res.status(200).json(result.rows);
 });
 
-// ─────────────────────────────────────────────────────────────
-// İŞLETME OLUŞTUR (mevcut, dokunmadım)
-// ─────────────────────────────────────────────────────────────
 superAdminRoutes.post('/businesses', async (req, res) => {
   const parsed = createBusinessSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -124,9 +122,6 @@ superAdminRoutes.post('/businesses', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// İŞLETME AKTİF/PASİF (mevcut, dokunmadım)
-// ─────────────────────────────────────────────────────────────
 superAdminRoutes.put('/businesses/:id', async (req, res) => {
   const { id } = req.params;
   const { is_active } = req.body;
@@ -141,12 +136,20 @@ superAdminRoutes.put('/businesses/:id', async (req, res) => {
     return;
   }
 
+  // İşletme pasif yapıldıysa o işletmenin tüm kullanıcılarının
+  // password_version'ını artırarak mevcut oturumları iptal et.
+  if (is_active === false) {
+    await pool.query(
+      `UPDATE users 
+       SET password_version = password_version + 1, updated_at = NOW()
+       WHERE business_id = $1`,
+      [id]
+    );
+  }
+
   res.status(200).json(result.rows[0]);
 });
 
-// ─────────────────────────────────────────────────────────────
-// ADMİN ŞİFRE SIFIRLA (mevcut — sadece admin'i buluyordu)
-// ─────────────────────────────────────────────────────────────
 superAdminRoutes.put('/businesses/:id/reset-password', async (req, res) => {
   const { id } = req.params;
   const { new_password } = req.body;
@@ -173,17 +176,13 @@ superAdminRoutes.put('/businesses/:id/reset-password', async (req, res) => {
   res.status(200).json({ message: 'Şifre güncellendi.' });
 });
 
-// ═════════════════════════════════════════════════════════════
-// YENİ: OWNER CRUD ENDPOINT'LERİ
-// ═════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────
+// OWNER CRUD
+// ─────────────────────────────────────────────────────────────
 
-/**
- * Bu işletmenin owner'larını listele
- */
 superAdminRoutes.get('/businesses/:id/owners', async (req, res) => {
   const { id } = req.params;
 
-  // İşletme var mı kontrol et
   const biz = await pool.query('SELECT id FROM businesses WHERE id = $1', [id]);
   if (biz.rowCount !== 1) {
     res.status(404).json({ message: 'İşletme bulunamadı.' });
@@ -200,9 +199,6 @@ superAdminRoutes.get('/businesses/:id/owners', async (req, res) => {
   res.status(200).json(result.rows);
 });
 
-/**
- * Bu işletmeye yeni owner ekle
- */
 superAdminRoutes.post('/businesses/:id/owners', async (req, res) => {
   const { id } = req.params;
 
@@ -214,14 +210,12 @@ superAdminRoutes.post('/businesses/:id/owners', async (req, res) => {
 
   const { email, password } = parsed.data;
 
-  // İşletme var mı
   const biz = await pool.query('SELECT id FROM businesses WHERE id = $1', [id]);
   if (biz.rowCount !== 1) {
     res.status(404).json({ message: 'İşletme bulunamadı.' });
     return;
   }
 
-  // E-posta başka bir kullanıcıda kullanılıyor mu
   const existingUser = await pool.query(
     'SELECT id FROM users WHERE email = $1',
     [email.toLowerCase()]
@@ -248,9 +242,6 @@ superAdminRoutes.post('/businesses/:id/owners', async (req, res) => {
   });
 });
 
-/**
- * Owner aktif/pasif toggle
- */
 superAdminRoutes.put('/businesses/:id/owners/:userId', async (req, res) => {
   const { id, userId } = req.params;
   const { is_active } = req.body;
@@ -260,7 +251,6 @@ superAdminRoutes.put('/businesses/:id/owners/:userId', async (req, res) => {
     return;
   }
 
-  // Owner bu işletmeye ait mi
   const result = await pool.query(
     `UPDATE users 
      SET is_active = $1, password_version = password_version + 1, updated_at = NOW()
@@ -278,17 +268,15 @@ superAdminRoutes.put('/businesses/:id/owners/:userId', async (req, res) => {
 });
 
 /**
- * Owner sil (soft delete — is_active = false yapar)
- * Not: Gerçek delete yerine pasifleştirme tercih ediyoruz (veri bütünlüğü)
+ * Owner HARD DELETE — kalıcı siler, email tekrar kullanılabilir
  */
 superAdminRoutes.delete('/businesses/:id/owners/:userId', async (req, res) => {
   const { id, userId } = req.params;
 
   const result = await pool.query(
-    `UPDATE users 
-     SET is_active = FALSE, password_version = password_version + 1, updated_at = NOW()
+    `DELETE FROM users 
      WHERE id = $1 AND business_id = $2 AND role = 'owner'
-     RETURNING id`,
+     RETURNING id, email`,
     [userId, id]
   );
 
@@ -297,12 +285,12 @@ superAdminRoutes.delete('/businesses/:id/owners/:userId', async (req, res) => {
     return;
   }
 
-  res.status(200).json({ message: 'Owner pasifleştirildi.' });
+  res.status(200).json({ 
+    message: 'Owner kalıcı olarak silindi.',
+    deleted: result.rows[0]
+  });
 });
 
-/**
- * Owner şifre sıfırla (super admin tarafından)
- */
 superAdminRoutes.put('/businesses/:id/owners/:userId/reset-password', async (req, res) => {
   const { id, userId } = req.params;
 
