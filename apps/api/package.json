@@ -8,18 +8,17 @@
     "build": "echo 'no build needed'",
     "start": "tsx src/server.ts",
     "lint": "eslint src --ext .ts",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev --name init",
-    "db:seed": "prisma db seed",
+    "migrate:up": "node-pg-migrate up -m migrations --migration-file-language sql",
+    "migrate:down": "node-pg-migrate down -m migrations --migration-file-language sql",
+    "migrate:create": "node-pg-migrate create -m migrations --migration-file-language sql",
+    "migrate:redo": "node-pg-migrate redo -m migrations --migration-file-language sql",
     "create-business-user": "tsx src/scripts/createBusinessUser.ts",
-    "db:migrate:deploy": "prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
     "@menu/shared": "workspace:*",
-    "@prisma/client": "^5.19.1",
     "argon2": "^0.41.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -29,6 +28,7 @@
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "node-pg-migrate": "^8.0.4",
     "nodemailer": "^6.9.14",
     "pg": "^8.12.0",
     "qrcode": "^1.5.4",
@@ -48,12 +48,8 @@
     "@types/qrcode": "^1.5.5",
     "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^6.0.2",
-    "prisma": "^5.19.1",
     "supertest": "^7.0.0",
     "tsx": "^4.17.1",
     "vitest": "^2.1.1"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

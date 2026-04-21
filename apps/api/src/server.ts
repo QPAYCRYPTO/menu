@@ -11,10 +11,24 @@ const app = createApp();
 
 async function bootstrap(): Promise<void> {
   if (env.nodeEnv === 'production') {
-    logger.info({ message: 'Prisma migrate deploy başlatılıyor.' });
-    await execAsync('npx prisma migrate deploy', { cwd: process.cwd() });
+    logger.info({ message: 'Database migrations başlatılıyor (node-pg-migrate)...' });
+    try {
+      const { stdout, stderr } = await execAsync(
+        'pnpm migrate:up',
+        { cwd: process.cwd() }
+      );
+      if (stdout) logger.info({ message: 'Migration stdout', details: stdout });
+      if (stderr) logger.info({ message: 'Migration stderr', details: stderr });
+      logger.info({ message: 'Migrations tamamlandı.' });
+    } catch (error: any) {
+      logger.error({ 
+        message: 'Migration başarısız! Sunucu başlatılmıyor.', 
+        details: error?.message ?? String(error) 
+      });
+      throw error;
+    }
   } else {
-    logger.info({ message: 'Development mod: migrate deploy atlandı.' });
+    logger.info({ message: 'Development mod: migrate atlandı (lokalde manuel "pnpm migrate:up" çalıştır).' });
   }
 
   logger.info({ message: 'Redis bağlantısı doğrulanıyor.' });
