@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { PublicHeader } from '../components/PublicHeader';
 import { Footer } from './HomePage';
 
-const WHATSAPP_NUMBER = '905XXXXXXXXX';
+const WHATSAPP_NUMBER = '905325646231';
 const WA_LINK = (text: string) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 
 export function PricingPage() {

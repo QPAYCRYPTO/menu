@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PublicHeader } from '../components/PublicHeader';
 
 // WhatsApp numarası — değiştir!
-const WHATSAPP_NUMBER = '905XXXXXXXXX';
+const WHATSAPP_NUMBER = '905325646231';
 const WA_LINK = (text: string) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 
 export function HomePage() {
