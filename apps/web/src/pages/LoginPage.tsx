@@ -34,6 +34,24 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'}}>
       
+      {/* Ana sayfaya dön linki */}
+      <Link
+        to="/"
+        className="absolute top-6 left-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium z-20"
+        style={{
+          color: 'white',
+          background: 'rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          textDecoration: 'none',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Ana Sayfaya Dön
+      </Link>
+      
       {/* Dekoratif daireler */}
       <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{background: '#0D9488', transform: 'translate(30%, -30%)'}}></div>
       <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10" style={{background: '#F59E0B', transform: 'translate(-30%, 30%)'}}></div>
