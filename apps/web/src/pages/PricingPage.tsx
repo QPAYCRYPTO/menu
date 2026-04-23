@@ -48,15 +48,15 @@ export function PricingPage() {
 
       {/* ═══════ PRICING CARDS ═══════ */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-20" id="fiyat">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
           {/* PLAN 1 — Aylık */}
           <PlanCard
             name="Aylık"
             tagline="Esnek başlangıç. İstediğin ay iptal et."
-            price="1.000"
+            price="1.500"
             period="/ay"
-            extra="+ 3.500 ₺ kurulum (tek seferlik)"
+            extra="+ 3.500 ₺ kurulum + eğitim (tek seferlik)"
             features={[
               'Sınırsız QR menü ve ürün',
               'Müşteri sipariş + sepet',
@@ -72,17 +72,18 @@ export function PricingPage() {
           {/* PLAN 2 — Yıllık (FEATURED) */}
           <PlanCard
             name="Yıllık"
-            tagline="2 ay bedava + kurulum hediye. En kazançlı paket."
-            price="10.000"
+            tagline="En popüler tercih. Dengeli ve esnek."
+            price="15.000"
             period="/yıl"
-            savings="Yıllık 5.500 ₺ tasarruf"
+            extra="+ 1.500 ₺ eğitim (tek seferlik) — kurulum hediye"
+            savings="Aylığa göre 4.500 ₺ kazanç"
             features={[
               'Aylık paketin tüm özellikleri',
               'Kurulum HEDİYE (3.500 ₺)',
-              '2 ay BEDAVA',
               'Öncelikli WhatsApp destek',
               'Yeni özelliklere erken erişim',
               'Yıl boyu fiyat sabitliği',
+              '12 aylık taahhüt',
             ]}
             ctaLabel="Yıllık Al"
             ctaLink={WA_LINK('Merhaba, AtlasQR Yıllık paket için bilgi almak istiyorum')}
@@ -90,24 +91,45 @@ export function PricingPage() {
             badge="En Popüler"
           />
 
-          {/* PLAN 3 — Kurucu Üye */}
+          {/* PLAN 3 — 3 Yıllık */}
           <PlanCard
-            name="Kurucu Üye"
-            tagline="İlk 10 işletmeye özel. Bu fiyat sonsuza kadar sabit."
-            price="7.000"
-            period="/yıl"
-            original="Normal fiyat: 10.000 ₺"
+            name="3 Yıllık"
+            tagline="Avantajlı orta vade. Yıllık 13.333 ₺."
+            price="40.000"
+            period="/3 yıl"
+            extra="+ 1.500 ₺ eğitim (tek seferlik) — kurulum hediye"
+            savings="Yıllığa göre %11 indirim"
             features={[
               'Yıllık paketin tüm özellikleri',
               'Kurulum HEDİYE',
-              '%30 indirim — kalıcı',
-              'Ürün gelişiminde söz hakkı',
-              'Direkt geliştirici desteği',
-              'Kurucu üye rozeti',
+              '3 yıl boyunca fiyat sabitliği',
+              'Öncelikli destek',
+              'Yeni modüllere ücretsiz erişim',
+              '36 aylık taahhüt',
             ]}
-            ctaLabel="Yer Ayırt"
-            ctaLink={WA_LINK('Merhaba, AtlasQR Kurucu Üye fiyatı hala geçerli mi?')}
-            badge="Sınırlı"
+            ctaLabel="3 Yıllık Al"
+            ctaLink={WA_LINK('Merhaba, AtlasQR 3 Yıllık paket için bilgi almak istiyorum')}
+          />
+
+          {/* PLAN 4 — 5 Yıllık */}
+          <PlanCard
+            name="5 Yıllık"
+            tagline="En kazançlı paket. Yıllık 12.000 ₺."
+            price="60.000"
+            period="/5 yıl"
+            extra="+ 1.500 ₺ eğitim (tek seferlik) — kurulum hediye"
+            savings="Aylığa göre %33 indirim"
+            features={[
+              '3 Yıllık paketin tüm özellikleri',
+              'Kurulum HEDİYE',
+              '5 yıl boyunca fiyat sabitliği',
+              'VIP destek',
+              'Geliştirici ile direkt iletişim',
+              '60 aylık taahhüt',
+            ]}
+            ctaLabel="5 Yıllık Al"
+            ctaLink={WA_LINK('Merhaba, AtlasQR 5 Yıllık paket için bilgi almak istiyorum')}
+            badge="En Kazançlı"
             badgeColor="#F59E0B"
           />
         </div>
@@ -181,15 +203,15 @@ export function PricingPage() {
             />
             <FaqItem
               question="Kurulum ne kadar sürer? Ben mi yapacağım?"
-              answer="Hayır, sen yapmayacaksın. Kurulum bizim işimiz. Menünü WhatsApp'tan gönder, biz aynı gün içinde sisteme aktarıp QR kodlarını sana yollarız. Ortalama kurulum süresi 1 iş günü."
+              answer="Hayır, sen yapmayacaksın. Kurulum + eğitim bizim işimiz. Menünü WhatsApp'tan gönder, biz aynı gün içinde sisteme aktarıp QR kodlarını sana yollarız. Eğitim WhatsApp veya video görüşme ile yapılır, ortalama 30 dakika sürer. Toplam kurulum süresi 1 iş günü."
             />
             <FaqItem
-              question="Aylık paketten yıllığa geçebilir miyim?"
-              answer="Tabii. İstediğin zaman yıllığa geçersin, kalan ayların hesaba sayılır. Yıllık peşin alanlar kurulum ücreti ödemez ve 2 ay bedava kullanır."
+              question="Aylık paketten daha uzun pakete geçebilir miyim?"
+              answer="Tabii. İstediğin zaman üst pakete (yıllık, 3 yıllık, 5 yıllık) geçersin. Mevcut aylık ödemen yeni pakete sayılır. Yıllık ve daha uzun paketler kurulum ücretinden muaf, sadece tek seferlik 1.500 ₺ eğitim ücreti vardır."
             />
             <FaqItem
               question="Sözleşme zorunluluğu var mı?"
-              answer="Aylık pakette hiçbir taahhüt yok — istediğin ay iptal edersin. Yıllık pakette 12 ay taahhüt vardır ama yıl içinde iptal edersen kalan tutarın iadesi yapılmaz, hizmet yıl sonuna kadar açık kalır."
+              answer="Aylık pakette hiçbir taahhüt yok — istediğin ay iptal edersin. Yıllık ve daha uzun paketlerde (3 yıllık, 5 yıllık) satın alınan süre boyunca taahhüt vardır. Süre içinde iptal edersen kalan tutarın iadesi yapılmaz, hizmet süre sonuna kadar açık kalır."
             />
             <FaqItem
               question="Kaç masa, kaç ürün ekleyebilirim?"
@@ -259,12 +281,11 @@ type PlanCardProps = {
 function PlanCard({ name, tagline, price, period, extra, savings, original, features, ctaLabel, ctaLink, featured, badge, badgeColor }: PlanCardProps) {
   return (
     <article
-      className="rounded-2xl p-8 md:p-10 flex flex-col relative transition-all"
+      className="rounded-2xl p-7 md:p-8 flex flex-col relative transition-all"
       style={{
         background: featured ? '#0F172A' : 'white',
         color: featured ? 'white' : '#0F172A',
-        border: featured ? '1px solid #0D9488' : '1px solid #E2E8F0',
-        transform: featured ? 'scale(1.03)' : 'scale(1)',
+        border: featured ? '2px solid #0D9488' : '1px solid #E2E8F0',
         boxShadow: featured ? '0 24px 48px rgba(15, 23, 42, 0.15)' : 'none',
       }}
     >
@@ -294,16 +315,16 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
           className="font-bold"
           style={{
             fontFamily: 'Georgia, serif',
-            fontSize: 56,
-            letterSpacing: '-2px',
+            fontSize: 44,
+            letterSpacing: '-1.5px',
             lineHeight: 1,
             color: featured ? '#0D9488' : '#0F172A',
           }}
         >
           {price}
         </span>
-        <span style={{ fontSize: 28, fontWeight: 500, color: featured ? 'rgba(255,255,255,0.5)' : '#64748B' }}>₺</span>
-        <span style={{ fontSize: 16, color: featured ? 'rgba(255,255,255,0.5)' : '#64748B' }}>{period}</span>
+        <span style={{ fontSize: 22, fontWeight: 500, color: featured ? 'rgba(255,255,255,0.5)' : '#64748B' }}>₺</span>
+        <span style={{ fontSize: 14, color: featured ? 'rgba(255,255,255,0.5)' : '#64748B' }}>{period}</span>
       </div>
 
       {savings && (

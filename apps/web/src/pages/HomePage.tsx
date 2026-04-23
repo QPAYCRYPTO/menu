@@ -1,4 +1,5 @@
 // apps/web/src/pages/HomePage.tsx
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicHeader } from '../components/PublicHeader';
 
@@ -131,7 +132,7 @@ export function HomePage() {
             ].map((s, i) => (
               <a
                 key={i}
-                href={WA_LINK(`Merhaba, ${s.title} hakkında bilgi almak istiyorum`)}
+                href="#ozellikler"
                 className="bg-white rounded-2xl p-5 flex items-center gap-4 transition-all"
                 style={{ border: '1px solid #E2E8F0', textDecoration: 'none', color: '#0F172A' }}
                 onMouseEnter={e => {
@@ -254,8 +255,60 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* ═══════ FAQ / DESTEK ═══════ */}
+      <section id="destek" className="max-w-3xl mx-auto px-4 md:px-6 mt-24">
+        <div className="text-center mb-12">
+          <span
+            className="block text-xs font-semibold mb-3 uppercase"
+            style={{ letterSpacing: '2.5px', color: '#0D9488' }}
+          >
+            Destek &amp; Sıkça Sorulanlar
+          </span>
+          <h2 className="font-bold mb-3" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-1px' }}>
+            Aklındaki sorulara cevaplar.
+          </h2>
+          <p style={{ color: '#64748B', fontSize: 16 }}>
+            Bulamadığını bulamadıysan,{' '}
+            <a
+              href={WA_LINK('Merhaba, AtlasQR hakkında bir sorum var')}
+              style={{ color: '#0D9488', fontWeight: 600, textDecoration: 'none' }}
+            >
+              WhatsApp'tan yaz
+            </a>
+            .
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <FaqItem
+            question="QR menü zorunluluğu beni de kapsıyor mu?"
+            answer="Evet. 11 Ekim 2025 Resmi Gazete'de yayımlanan Fiyat Etiketi Yönetmeliği ile 1 Ocak 2026 itibariyle tüm restoran, kafe, lokanta ve pastaneler için QR menü zorunlu hale geldi. Kapsam dışı olanlar sadece seyyar satıcılar."
+          />
+          <FaqItem
+            question="Kurulum ne kadar sürer? Ben mi yapacağım?"
+            answer="Hayır, sen yapmayacaksın. Kurulum + eğitim bizim işimiz. Menünü WhatsApp'tan gönder, biz aynı gün içinde sisteme aktarıp QR kodlarını sana yollarız. Ortalama kurulum süresi 1 iş günü."
+          />
+          <FaqItem
+            question="Sözleşme zorunluluğu var mı?"
+            answer="Aylık pakette hiçbir taahhüt yok — istediğin ay iptal edersin. Yıllık ve daha uzun paketlerde ise satın alınan süre boyunca taahhüt vardır. Yıl içinde iptal edersen kalan tutarın iadesi yapılmaz, hizmet süre sonuna kadar açık kalır."
+          />
+          <FaqItem
+            question="Kaç masa, kaç ürün ekleyebilirim?"
+            answer="Sınırsız. 5 masalı bir kafe de 100 masalı bir restoran da aynı paketi kullanır. Ürün, kategori, sipariş sayısında da limit yok."
+          />
+          <FaqItem
+            question="Sistem çökerse ne olur?"
+            answer="AtlasQR Amsterdam'daki Railway sunucularında çalışır, %99.9 uptime hedefiyle yönetilir. Bir sorun olduğunda WhatsApp destek hattımızdan dakikalar içinde dönüş yaparız."
+          />
+          <FaqItem
+            question="Kendi marka adımı kullanabilir miyim?"
+            answer="Evet. Tema, renk, logo — hepsi senin. Müşteri menüye girdiğinde senin işletme adını ve renklerini görür."
+          />
+        </div>
+      </section>
+
       {/* ═══════ CTA BAND ═══════ */}
-      <section id="destek" className="max-w-7xl mx-auto px-4 md:px-6 mt-24 mb-20">
+      <section className="max-w-7xl mx-auto px-4 md:px-6 mt-24 mb-20">
         <div
           className="rounded-3xl p-10 md:p-16 text-white text-center relative overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' }}
@@ -392,6 +445,38 @@ function FeatureIcon({ name }: { name: string }) {
   }
 }
 
+// ═══════ FAQ Item Component ═══════
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden bg-white transition-all"
+      style={{ border: '1px solid #E2E8F0' }}
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-6 py-5 flex items-center justify-between font-semibold text-left"
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#0F172A', fontSize: 16 }}
+      >
+        <span className="flex-1 pr-4">{question}</span>
+        <span
+          className="text-2xl shrink-0 transition-transform"
+          style={{ color: '#0D9488', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
+        >
+          +
+        </span>
+      </button>
+      {open && (
+        <div className="px-6 pb-5" style={{ color: '#64748B', fontSize: 15, lineHeight: 1.7 }}>
+          {answer}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Footer() {
   return (
     <footer style={{ background: '#0F172A', color: 'rgba(255,255,255,0.6)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
@@ -438,7 +523,7 @@ export function Footer() {
             </h4>
             <ul className="space-y-2 text-sm">
               <li><a href={WA_LINK('Merhaba, bilgi almak istiyorum')} style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>WhatsApp Destek</a></li>
-              <li><a href="mailto:info@atlasqrmenu.com" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>info@atlasqrmenu.com</a></li>
+              <li><a href="mailto:atlasqrmenu@gmail.com" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>atlasqrmenu@gmail.com</a></li>
               <li><a href="https://www.atlasqrmenu.com" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>atlasqrmenu.com</a></li>
             </ul>
           </div>
