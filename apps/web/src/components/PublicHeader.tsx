@@ -2,6 +2,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 
+type NavLink = {
+  to: string;
+  label: string;
+  isAnchor: boolean;
+};
+
 export function PublicHeader() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -10,10 +16,10 @@ export function PublicHeader() {
     return location.pathname === path;
   }
 
-  const navLinks = [
-    { to: '/fiyat', label: 'Fiyatlandırma' },
-    { to: '/#ozellikler', label: 'Özellikler' },
-    { to: '/#destek', label: 'Destek' },
+  const navLinks: NavLink[] = [
+    { to: '/fiyat', label: 'Fiyatlandırma', isAnchor: false },
+    { to: '#ozellikler', label: 'Özellikler', isAnchor: true },
+    { to: '#destek', label: 'Destek', isAnchor: true },
   ];
 
   return (
@@ -53,26 +59,43 @@ export function PublicHeader() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map(link => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                color: isActive(link.to) ? '#0D9488' : 'white',
-                textDecoration: 'none',
-                background: isActive(link.to) ? 'rgba(13, 148, 136, 0.1)' : 'transparent',
-              }}
-              onMouseEnter={e => {
-                if (!isActive(link.to)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              }}
-              onMouseLeave={e => {
-                if (!isActive(link.to)) e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map(link =>
+            link.isAnchor ? (
+              <a
+                key={link.to}
+                href={link.to}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  color: 'white',
+                  textDecoration: 'none',
+                  background: 'transparent',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  color: isActive(link.to) ? '#0D9488' : 'white',
+                  textDecoration: 'none',
+                  background: isActive(link.to) ? 'rgba(13, 148, 136, 0.1)' : 'transparent',
+                }}
+                onMouseEnter={e => {
+                  if (!isActive(link.to)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                }}
+                onMouseLeave={e => {
+                  if (!isActive(link.to)) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                {link.label}
+              </Link>
+            )
+          )}
           <Link
             to="/login"
             className="ml-3 px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
@@ -112,21 +135,37 @@ export function PublicHeader() {
       {mobileOpen && (
         <div className="md:hidden border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <nav className="px-4 py-3 space-y-1">
-            {navLinks.map(link => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                className="block px-4 py-3 rounded-lg text-sm font-medium"
-                style={{
-                  color: isActive(link.to) ? '#0D9488' : 'white',
-                  background: isActive(link.to) ? 'rgba(13, 148, 136, 0.1)' : 'transparent',
-                  textDecoration: 'none',
-                }}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map(link =>
+              link.isAnchor ? (
+                <a
+                  key={link.to}
+                  href={link.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 rounded-lg text-sm font-medium"
+                  style={{
+                    color: 'white',
+                    background: 'transparent',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 rounded-lg text-sm font-medium"
+                  style={{
+                    color: isActive(link.to) ? '#0D9488' : 'white',
+                    background: isActive(link.to) ? 'rgba(13, 148, 136, 0.1)' : 'transparent',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
             <Link
               to="/login"
               onClick={() => setMobileOpen(false)}
