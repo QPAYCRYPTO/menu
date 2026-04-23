@@ -1,6 +1,6 @@
 // apps/web/src/pages/PricingPage.tsx
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { PublicHeader } from '../components/PublicHeader';
 import { Footer } from './HomePage';
 
@@ -8,6 +8,19 @@ const WHATSAPP_NUMBER = '905325646231';
 const WA_LINK = (text: string) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 
 export function PricingPage() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash) {
+      const el = document.querySelector(location.hash);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [location]);
+
   return (
     <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
       <PublicHeader />

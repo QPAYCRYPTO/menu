@@ -17,9 +17,9 @@ export function PublicHeader() {
   }
 
   const navLinks: NavLink[] = [
-    { to: '/fiyat', label: 'Fiyatlandırma', isAnchor: false },
-    { to: '#ozellikler', label: 'Özellikler', isAnchor: true },
-    { to: '#destek', label: 'Destek', isAnchor: true },
+    { to: '/fiyat#fiyat', label: 'Fiyatlandırma', isAnchor: false },
+    { to: '/#ozellikler', label: 'Özellikler', isAnchor: true },
+    { to: '/#destek', label: 'Destek', isAnchor: true },
   ];
 
   return (
