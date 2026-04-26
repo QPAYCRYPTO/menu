@@ -1,27 +1,64 @@
 // apps/web/src/pages/waiter/WaiterCallsPage.tsx
-// Garson çağrı sayfası
-//
-// Davranış:
-// - WaiterCallsContext'ten aktif çağrıları al
-// - Her çağrıyı büyük emoji + label ile göster (call_type)
-// - Kritik türler kırmızı kart
-// - "✓ İlgilendim" butonu → takeCall API
-// - "Diğer" türü için müşteri açıklaması göster
-// - Çağrı yoksa boş state mesajı
+// CHANGELOG v2:
+// - Admin OrdersPage CallCard tasarımı birebir aynı
+// - Tarih + saat + canlı sayaç (hh:mm:ss formatında)
+// - "kaç saniye/dakika önce" bilgisi
+// - Header rozeti: kaç çağrı + kaç acil
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useWaiterCalls, getCallInfo } from '../../context/WaiterCallsContext';
 import type { WaiterActiveCall } from '../../api/waiterPublicApi';
 
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('tr-TR', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+}
+
 function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateStr).toLocaleTimeString('tr-TR', {
+    hour: '2-digit', minute: '2-digit'
+  });
 }
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return `${diff}sn`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}dk`;
-  return `${Math.floor(diff / 3600)}sa`;
+  if (diff < 60) return `${diff}sn önce`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}dk önce`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}sa önce`;
+  return `${Math.floor(diff / 86400)}g önce`;
+}
+
+function formatDuration(totalSeconds: number): string {
+  if (totalSeconds < 0) totalSeconds = 0;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function useLiveElapsed(dateStr: string): string {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = new Date(dateStr).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [dateStr]);
+  return formatDuration(elapsed);
+}
+
+function LiveTimerBadge({ dateStr }: { dateStr: string }) {
+  const elapsed = useLiveElapsed(dateStr);
+  return (
+    <span className="font-mono text-xs font-bold px-2 py-1 rounded-lg"
+      style={{ background: '#FEF3C7', color: '#B45309' }}
+      title="Çağrı yapıldıktan beri geçen süre">
+      ⏱ {elapsed}
+    </span>
+  );
 }
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
@@ -63,16 +100,18 @@ function CallCard({ call, onTake }: {
         }
       `}</style>
 
-      {/* Üst bant */}
+      {/* Üst — büyük emoji + label + sayaç */}
       <div style={{
         padding: '16px',
         background: info.critical
           ? 'linear-gradient(135deg, #FEE2E2, #FECACA)'
           : 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
         borderBottom: `1px solid ${cardBorder}`,
-        display: 'flex', alignItems: 'center', gap: 14
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14
       }}>
-        <div style={{ fontSize: 44, lineHeight: 1, flexShrink: 0 }}>
+        <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0 }}>
           {info.emoji}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -83,28 +122,24 @@ function CallCard({ call, onTake }: {
             {info.critical ? '⚠️ Acil İstek' : 'Çağrı'}
           </div>
           <div style={{
-            fontSize: 18, fontWeight: 800, color: titleColor,
+            fontSize: 17, fontWeight: 800, color: titleColor,
             fontFamily: 'Georgia, serif', lineHeight: 1.2
           }}>
             {info.label}
           </div>
-          <div style={{ fontWeight: 700, fontSize: 14, color: '#0F172A', marginTop: 4 }}>
+          <div className="font-bold text-sm mt-0.5" style={{ color: '#0F172A' }}>
             📍 {call.table_name}
           </div>
         </div>
-        <div style={{
-          flexShrink: 0, fontSize: 12, fontWeight: 700,
-          padding: '6px 10px', borderRadius: 8,
-          background: 'rgba(255,255,255,0.7)', color: titleColor
-        }}>
-          ⏱ {timeAgo(call.created_at)}
+        <div style={{ flexShrink: 0 }}>
+          <LiveTimerBadge dateStr={call.created_at} />
         </div>
       </div>
 
       {/* "Diğer" türü için müşteri açıklaması */}
       {call.call_type === 'other' && call.note && (
         <div style={{
-          padding: '12px 16px', background: 'white',
+          padding: '10px 16px', background: 'white',
           borderBottom: `1px solid ${cardBorder}`
         }}>
           <div style={{
@@ -113,13 +148,13 @@ function CallCard({ call, onTake }: {
           }}>
             📝 Müşteri Açıklaması
           </div>
-          <div style={{ fontSize: 15, color: '#0F172A', lineHeight: 1.4, fontWeight: 500 }}>
+          <div style={{ fontSize: 14, color: '#0F172A', lineHeight: 1.4 }}>
             {call.note}
           </div>
         </div>
       )}
 
-      {/* Diğer türler için ek not varsa */}
+      {/* Diğer türlerde note varsa */}
       {call.call_type !== 'other' && call.note && call.note.trim() && (
         <div style={{ padding: '8px 16px' }}>
           <div className="text-xs px-2 py-1 rounded-lg"
@@ -129,10 +164,14 @@ function CallCard({ call, onTake }: {
         </div>
       )}
 
-      {/* Saat */}
+      {/* Tarih + saat + ne kadar zaman önce */}
       <div style={{ padding: '8px 16px', borderTop: `1px solid ${cardBorder}` }}>
-        <div className="text-xs" style={{ color: '#64748B' }}>
-          🕐 {formatTime(call.created_at)}
+        <div className="flex items-center gap-1.5 flex-wrap text-xs" style={{ color: '#64748B' }}>
+          <span className="font-mono">📅 {formatDate(call.created_at)}</span>
+          <span style={{ color: '#CBD5E1' }}>·</span>
+          <span className="font-mono">🕐 {formatTime(call.created_at)}</span>
+          <span style={{ color: '#CBD5E1' }}>·</span>
+          <span>{timeAgo(call.created_at)}</span>
         </div>
       </div>
 
@@ -182,18 +221,18 @@ export function WaiterCallsPage() {
       )}
 
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <h2 className="font-bold text-lg" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
             🔔 Çağrılar
           </h2>
           {calls.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white"
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold text-white"
               style={{ background: '#DC2626' }}>
-              {calls.length}
+              {calls.length} yeni
             </span>
           )}
           {criticalCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white animate-pulse"
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold text-white animate-pulse"
               style={{ background: '#DC2626' }}>
               ⚠️ {criticalCount} acil
             </span>
