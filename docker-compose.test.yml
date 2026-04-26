@@ -1,0 +1,62 @@
+# AtlasQR - Lokal Test Ortamı (Postgres + Redis)
+# ====================================================================
+# Bu dosya sadece LOKAL TEST içindir. Production etkilemez.
+#
+# Nasıl kullanılır:
+#   docker compose -f docker-compose.test.yml up -d
+#
+# Durdurmak için:
+#   docker compose -f docker-compose.test.yml down
+#
+# Bağlantı bilgileri:
+#   POSTGRES:
+#     Host:     localhost
+#     Port:     17000
+#     User:     qrmenu_test
+#     Password: qrmenu_test_pw
+#     Database: qrmenu_test
+#
+#   REDIS:
+#     Host: localhost
+#     Port: 6500
+#
+# Connection String'ler (.env.test için):
+#   DATABASE_URL="postgresql://qrmenu_test:qrmenu_test_pw@localhost:17000/qrmenu_test"
+#   REDIS_URL="redis://localhost:6500"
+#
+# NOT: tmpfs kullanıyoruz → veriler RAM'de çalışır, container stop olunca
+#      tüm veri silinir. Test için temiz ortam.
+# ====================================================================
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: qrmenu-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qrmenu_test
+      POSTGRES_PASSWORD: qrmenu_test_pw
+      POSTGRES_DB: qrmenu_test
+    ports:
+      - "17000:5432"
+    tmpfs:
+      - /var/lib/postgresql/data  # RAM üzerinde çalışır - hızlı + kirli kalmaz
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qrmenu_test -d qrmenu_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: qrmenu-redis-test
+    restart: unless-stopped
+    ports:
+      - "6500:6379"
+    tmpfs:
+      - /data  # RAM üzerinde çalışır
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10

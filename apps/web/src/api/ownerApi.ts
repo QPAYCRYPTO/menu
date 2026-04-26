@@ -1,7 +1,7 @@
 // apps/web/src/api/ownerApi.ts
 // Owner (patron) paneli için API çağrıları
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 // ─────────────────────────────────────────────────────────────
 // TİPLER

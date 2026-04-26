@@ -2,7 +2,7 @@
 // Super admin tarafının tüm API çağrıları burada toplanır.
 // UI bileşenleri bu dosyadaki fonksiyonları kullanır.
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 export type Business = {
   id: string;
@@ -14,6 +14,7 @@ export type Business = {
   created_at: string;
   category_count: number;
   product_count: number;
+  waiter_module_enabled: boolean;
 };
 
 export type Owner = {
@@ -147,4 +148,21 @@ export async function resetOwnerPassword(
     }
   );
   return handleResponse<{ message: string }>(res);
+}
+
+// ─────────────────────────────────────────────────────────────
+// GARSON MODÜLÜ FLAG
+// ─────────────────────────────────────────────────────────────
+
+export async function toggleWaiterModule(
+  token: string,
+  businessId: string,
+  enabled: boolean
+): Promise<{ ok: boolean; enabled: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/waiter-module`, {
+    method: 'PATCH',
+    headers: headers(token),
+    body: JSON.stringify({ enabled })
+  });
+  return handleResponse<{ ok: boolean; enabled: boolean }>(res);
 }

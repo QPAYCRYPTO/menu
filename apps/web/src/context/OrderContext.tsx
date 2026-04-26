@@ -1,9 +1,14 @@
 // apps/web/src/context/OrderContext.tsx
+// CHANGELOG v3:
+// - Güncelleme uyarıları KALICI — admin "Gördüm" diyene kadar yanıp söner
+// - Her güncelleme için detay tutuluyor: ne değişti, kim, ne zaman
+// - acknowledgeUpdate(orderId) — admin onaylayınca kaldırır
+
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 export type OrderItem = {
   id: string;
@@ -11,6 +16,7 @@ export type OrderItem = {
   product_name: string;
   quantity: number;
   price_int: number;
+  note?: string | null;  
 };
 
 export type Order = {
@@ -20,10 +26,13 @@ export type Order = {
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   note: string | null;
   type: 'order' | 'call';
+  call_type?: string | null;  
   created_at: string;
   delivered_at?: string | null;
   cancelled_at?: string | null;
   cancel_reason?: string | null;
+  waiter_id?: string | null;
+  waiter_name?: string | null;
   items: OrderItem[];
 };
 
@@ -36,10 +45,30 @@ export type CancelReasonCode =
   | 'out_of_stock'
   | 'other';
 
+// Tek bir değişiklik kaydı
+export type OrderChange = {
+  action: 'added' | 'quantity_changed' | 'removed';
+  product_name: string;
+  quantity?: number;
+  old_quantity?: number;
+  new_quantity?: number;
+};
+
+// Bir sipariş için biriken güncelleme bildirimi
+export type OrderUpdate = {
+  order_id: string;
+  table_name: string;
+  changes: OrderChange[];
+  waiter_name: string | null;
+  timestamp: number;
+};
+
 type OrderContextValue = {
   activeOrders: Order[];
   pendingCount: number;
   callCount: number;
+  pendingUpdates: Map<string, OrderUpdate>; // YENİ: Onay bekleyen güncellemeler
+  acknowledgeUpdate: (orderId: string) => void; // YENİ: Admin "Gördüm" der
   unlockAudio: () => void;
   refreshActive: () => Promise<void>;
   fetchDelivered: () => Promise<Order[]>;
@@ -51,12 +80,18 @@ const OrderContext = createContext<OrderContextValue>({
   activeOrders: [],
   pendingCount: 0,
   callCount: 0,
+  pendingUpdates: new Map(),
+  acknowledgeUpdate: () => {},
   unlockAudio: () => {},
   refreshActive: async () => {},
   fetchDelivered: async () => [],
   updateOrderStatus: async () => {},
   cancelOrder: async () => {}
 });
+
+// ─────────────────────────────────────────────────────────────
+// SES EFEKTLERI
+// ─────────────────────────────────────────────────────────────
 
 function playOrderSound() {
   try {
@@ -98,15 +133,78 @@ function playCallSound() {
   } catch {}
 }
 
+function playUpdateSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1568, ctx.currentTime);
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
+
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuth();
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [pendingUpdates, setPendingUpdates] = useState<Map<string, OrderUpdate>>(new Map());
   const audioUnlocked = useRef(false);
 
   const tokenRef = useRef(accessToken);
   useEffect(() => {
     tokenRef.current = accessToken;
   }, [accessToken]);
+
+  /**
+   * Bir sipariş için yeni güncelleme kaydet.
+   * Aynı sipariş için zaten kayıt varsa, yeni değişiklikleri MEVCUT'a ekle (birikme).
+   */
+  const addUpdate = useCallback((
+    orderId: string,
+    tableName: string,
+    waiterName: string | null,
+    newChanges: OrderChange[]
+  ) => {
+    setPendingUpdates(prev => {
+      const next = new Map(prev);
+      const existing = next.get(orderId);
+
+      if (existing) {
+        // Mevcut güncellemeye yeni değişiklikleri ekle
+        next.set(orderId, {
+          ...existing,
+          changes: [...existing.changes, ...newChanges],
+          timestamp: Date.now()
+        });
+      } else {
+        // Yeni kayıt
+        next.set(orderId, {
+          order_id: orderId,
+          table_name: tableName,
+          waiter_name: waiterName,
+          changes: newChanges,
+          timestamp: Date.now()
+        });
+      }
+
+      return next;
+    });
+  }, []);
+
+  /**
+   * Admin "Gördüm" der → güncelleme kaydı kaldırılır.
+   * Kart normale döner.
+   */
+  const acknowledgeUpdate = useCallback((orderId: string) => {
+    setPendingUpdates(prev => {
+      const next = new Map(prev);
+      next.delete(orderId);
+      return next;
+    });
+  }, []);
 
   const unlockAudio = useCallback(() => {
     if (audioUnlocked.current) return;
@@ -149,6 +247,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     if (status === 'delivered') {
       setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+      // Teslim edilince update bildirimi de kaldırılsın
+      acknowledgeUpdate(orderId);
     } else {
       setActiveOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     }
@@ -163,7 +263,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       await refreshActive();
       throw e;
     }
-  }, [refreshActive]);
+  }, [refreshActive, acknowledgeUpdate]);
 
   const cancelOrder = useCallback(async (
     orderId: string,
@@ -174,6 +274,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+    acknowledgeUpdate(orderId); // İptal edilince update kaydını sil
 
     try {
       await apiRequest(`/admin/orders/${orderId}/cancel`, {
@@ -185,7 +286,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       await refreshActive();
       throw e;
     }
-  }, [refreshActive]);
+  }, [refreshActive, acknowledgeUpdate]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -198,6 +299,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     let abortController: AbortController | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
+
+    async function refetchOrders() {
+      const token = tokenRef.current;
+      if (!token) return;
+      try {
+        const fresh = await apiRequest<Order[]>('/admin/orders', { token });
+        setActiveOrders(fresh);
+      } catch {}
+    }
 
     async function connectSSE() {
       if (cancelled) return;
@@ -240,6 +350,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   const data = JSON.parse(dataStr);
                   console.log('[SSE] Event alındı:', data.type, data);
 
+                  // ─── YENİ SİPARİŞ / ÇAĞRI ─────────────────────
                   if (data.type === 'new_order' || data.type === 'call') {
                     if (data.type === 'call') playCallSound();
                     else playOrderSound();
@@ -250,7 +361,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                         return [data.order, ...prev];
                       });
                     } else {
-                      console.log('[SSE] order objesi yok, API çağrılıyor');
                       const token = tokenRef.current;
                       if (token) {
                         try {
@@ -259,10 +369,41 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                         } catch {}
                       }
                     }
-                  } else if (data.type === 'order_cancelled') {
+                  }
+                  // ─── İPTAL ─────────────────────────────────────
+                  else if (data.type === 'order_cancelled') {
                     if (data.order_id) {
                       setActiveOrders(prev => prev.filter(o => o.id !== data.order_id));
+                      acknowledgeUpdate(data.order_id);
                     }
+                  }
+                  // ─── GARSON ÜRÜN EKLEDİ ────────────────────────
+                  else if (data.type === 'order_items_added') {
+                    playUpdateSound();
+
+                    if (data.order_id && data.changes) {
+                      addUpdate(
+                        data.order_id,
+                        data.table_name || '',
+                        data.waiter_name || null,
+                        data.changes as OrderChange[]
+                      );
+                    }
+                    await refetchOrders();
+                  }
+                  // ─── GARSON ADET DEĞİŞTİRDİ ────────────────────
+                  else if (data.type === 'order_items_updated') {
+                    playUpdateSound();
+
+                    if (data.order_id && data.changes) {
+                      addUpdate(
+                        data.order_id,
+                        data.table_name || '',
+                        data.waiter_name || null,
+                        data.changes as OrderChange[]
+                      );
+                    }
+                    await refetchOrders();
                   }
                 } catch (err) {
                   console.error('[SSE] Parse hatası:', err, dataStr);
@@ -305,7 +446,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(syncInterval);
     };
-  }, [accessToken]);
+  }, [accessToken, addUpdate, acknowledgeUpdate]);
 
   const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
   const callCount = activeOrders.filter(o => o.type === 'call' && o.status === 'pending').length;
@@ -315,6 +456,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       activeOrders,
       pendingCount,
       callCount,
+      pendingUpdates,
+      acknowledgeUpdate,
       unlockAudio,
       refreshActive,
       fetchDelivered,

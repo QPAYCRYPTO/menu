@@ -17,6 +17,8 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sessionRoutes } from './routes/sessionRoutes.js';
 import { ownerRoutes } from './routes/ownerRoutes.js';
+import { waiterAdminRoutes } from './routes/waiterAdminRoutes.js';
+import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -26,7 +28,7 @@ export function createApp() {
   app.use(cors({
     origin: env.webOrigin,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Super-Admin-Secret'],
     maxAge: 86400
   }));
@@ -47,15 +49,19 @@ export function createApp() {
   app.use('/api/admin/tables', tableRoutes);
   app.use('/api/admin/orders', orderRoutes);
   app.use('/api/admin/sessions', sessionRoutes);
+  app.use('/api/admin/waiters', waiterAdminRoutes);
 
   // SONRA: Genel admin route'u (catch-all)
   app.use('/admin', adminRoutes);
   app.use('/api/admin', adminRoutes);
+ 
 
   // Public route'lar
   app.use('/api/public', publicRoutes);
   app.use('/api/public', customerOrderRoutes);
+  app.use('/api/public/waiter', waiterPublicRoutes); 
   app.use('/api/superadmin', superAdminRoutes);
+
 
   // Owner (patron) route'ları — sadece owner + superadmin erişebilir
   app.use('/api/owner', ownerRoutes);

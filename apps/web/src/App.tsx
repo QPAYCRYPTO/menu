@@ -26,10 +26,17 @@ import { SuperAdminPage } from './pages/SuperAdminPage';
 import { TablesPage } from './pages/TablesPage';
 import { OwnerLayout } from './pages/owner/OwnerLayout';
 import { OwnerDashboardPage } from './pages/owner/OwnerDashboardPage';
+import { WaitersPage } from './pages/WaitersPage';
 
 // ✅ YENİ — Bu iki satırı ekle:
 import { HomePage } from './pages/HomePage';
 import { PricingPage } from './pages/PricingPage';
+import { WaiterAuthProvider } from './context/WaiterAuthContext';
+import { WaiterLoginPage } from './pages/waiter/WaiterLoginPage';
+import { WaiterLayout } from './pages/waiter/WaiterLayout';
+import { WaiterTablesPage } from './pages/waiter/WaiterTablesPage';
+import { WaiterTableDetailPage } from './pages/waiter/WaiterTableDetailPage';
+import { WaiterMenuPage } from './pages/waiter/WaiterMenuPage';
 
 function RequireOwner({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, role } = useAuth();
@@ -41,6 +48,7 @@ function RequireOwner({ children }: { children: React.ReactNode }) {
 export function App() {
   return (
     <AuthProvider>
+      <WaiterAuthProvider>
       <BrowserRouter>
         <Routes>
 
@@ -85,13 +93,23 @@ export function App() {
             <Route path="qr" element={<QrPage />} />
             <Route path="tables" element={<TablesPage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="waiters" element={<WaitersPage />} />
           </Route>
 
           {/* ✅ DEĞİŞTİ — Bilinmeyen URL'ler artık ana sayfaya gitsin (login değil) */}
+          {/* GARSON ROUTE'LARI */}
+          <Route path="/g/:token" element={<WaiterLoginPage />} />
+          <Route path="/garson/giris" element={<WaiterLoginPage />} />
+          <Route path="/garson" element={<WaiterLayout />}>
+           <Route index element={<WaiterTablesPage />} />
+           <Route path="masa/:id" element={<WaiterTableDetailPage />} />
+           <Route path="masa/:id/menu" element={<WaiterMenuPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>
       </BrowserRouter>
+    </WaiterAuthProvider> 
     </AuthProvider>
   );
 }

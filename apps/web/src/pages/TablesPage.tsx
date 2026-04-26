@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
+
 type Table = {
   id: string;
   name: string;
@@ -176,7 +178,7 @@ export function TablesPage() {
 
   async function tryCloseSession(sessionId: string, tableName: string, action: 'close' | 'transfer' | 'cancel_pending' = 'close') {
     try {
-      const res = await fetch(`https://api.atlasqrmenu.com/api/admin/sessions/${sessionId}/close`, {
+      const res = await fetch(`${API_BASE_URL}/admin/sessions/${sessionId}/close`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

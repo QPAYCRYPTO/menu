@@ -1,7 +1,7 @@
 // apps/web/src/api/client.ts
 import type { RefreshResponse } from '@menu/shared';
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';

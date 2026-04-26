@@ -7,7 +7,8 @@ import {
   listBusinesses,
   createBusiness as apiCreateBusiness,
   toggleBusinessActive,
-  resetAdminPassword as apiResetAdminPassword
+  resetAdminPassword as apiResetAdminPassword,
+  toggleWaiterModule as apiToggleWaiterModule
 } from '../api/superadminApi';
 import { OwnerManagementModal } from './superadmin/OwnerManagementModal';
 
@@ -114,6 +115,20 @@ export function SuperAdminPage() {
     }
   }
 
+  async function toggleWaiter(business: Business) {
+    if (!accessToken) return;
+    try {
+      await apiToggleWaiterModule(accessToken, business.id, !business.waiter_module_enabled);
+      showToast(
+        business.waiter_module_enabled ? 'Garson modülü kapatıldı.' : 'Garson modülü açıldı.',
+        'success'
+      );
+      await loadBusinesses();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Hata.', 'error');
+    }
+  }
+
   async function resetAdminPassword() {
     if (!accessToken) return;
     if (!resetForm.businessId || !resetForm.new_password) {
@@ -192,15 +207,16 @@ export function SuperAdminPage() {
 
         <div className="bg-white rounded-2xl overflow-hidden mb-8" style={{ border: '1px solid #E2E8F0' }}>
           <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.5fr', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>
+            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>
             <div>İşletme</div><div>Slug</div><div>Admin E-posta</div>
             <div className="text-center">Owner</div><div className="text-center">Kat.</div><div className="text-center">Ürün</div>
+            <div className="text-center">Garson</div>
             <div className="text-right">İşlem</div>
           </div>
 
           {businesses.map(b => (
             <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm"
-              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.5fr', borderBottom: '1px solid #F1F5F9', background: b.is_active ? 'white' : '#FEF8F8' }}>
+              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', borderBottom: '1px solid #F1F5F9', background: b.is_active ? 'white' : '#FEF8F8' }}>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                   style={{ background: b.is_active ? '#0D9488' : '#94A3B8' }}>
@@ -233,6 +249,20 @@ export function SuperAdminPage() {
 
               <div className="text-center font-semibold" style={{ color: '#0F172A' }}>{b.category_count}</div>
               <div className="text-center font-semibold" style={{ color: '#0F172A' }}>{b.product_count}</div>
+
+              <div className="text-center">
+                <button
+                  onClick={() => toggleWaiter(b)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{
+                    background: b.waiter_module_enabled ? '#F0FDF4' : '#F1F5F9',
+                    color: b.waiter_module_enabled ? '#16A34A' : '#64748B'
+                  }}
+                  title={b.waiter_module_enabled ? 'Garson modülü AÇIK' : 'Garson modülü KAPALI'}
+                >
+                  {b.waiter_module_enabled ? '✅ Açık' : '⚪ Kapalı'}
+                </button>
+              </div>
 
               <div className="flex justify-end">
                 <button onClick={() => toggleActive(b)} className="px-3 py-1.5 rounded-lg text-xs font-semibold"

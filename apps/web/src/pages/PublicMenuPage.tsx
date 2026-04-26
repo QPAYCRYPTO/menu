@@ -1,12 +1,18 @@
 // apps/web/src/pages/PublicMenuPage.tsx
+// CHANGELOG:
+// - "Garson Çağır" butonu artık modal açıyor (12 çağrı türü)
+// - "Diğer" seçilirse serbest text alanı çıkıyor (zorunlu min 3 karakter)
+// - Çağrı gönderildikten sonra modal kapanır, toast gösterir
+
 import type { PublicMenuCategory, PublicMenuResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { getCustomerToken } from '../utils/customerToken';
 import { MyOrdersTab } from '../components/MyOrdersTab';
+import { OrderNoteTemplates } from '../components/OrderNoteTemplates';
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const BRAND_NAME = 'AtlasQR';
 
 type CartItem = {
@@ -14,9 +20,31 @@ type CartItem = {
   name: string;
   price_int: number;
   quantity: number;
+  note?: string;
 };
 
 type MainTab = 'menu' | 'orders';
+
+// Çağrı türleri — backend ile aynı 12 madde
+type CallTypeCode =
+  | 'waiter' | 'baby_chair' | 'charger' | 'bill' | 'package'
+  | 'ashtray' | 'lighter' | 'cigarette' | 'water'
+  | 'missing_service' | 'clean_table' | 'other';
+
+const CALL_TYPES: { code: CallTypeCode; emoji: string; label: string }[] = [
+  { code: 'waiter',          emoji: '👤', label: 'Garson' },
+  { code: 'water',           emoji: '💧', label: 'Su' },
+  { code: 'bill',            emoji: '🧾', label: 'Hesap' },
+  { code: 'package',         emoji: '📦', label: 'Paket' },
+  { code: 'baby_chair',      emoji: '🪑', label: 'Mama Sandalyesi' },
+  { code: 'charger',         emoji: '🔌', label: 'Şarj' },
+  { code: 'ashtray',         emoji: '🚬', label: 'Küllük' },
+  { code: 'lighter',         emoji: '🔥', label: 'Çakmak' },
+  { code: 'cigarette',       emoji: '🚬', label: 'Sigara' },
+  { code: 'clean_table',     emoji: '🧽', label: 'Masa Silinsin' },
+  { code: 'missing_service', emoji: '❌', label: 'Servis Eksik' },
+  { code: 'other',           emoji: '✏️', label: 'Diğer' }
+];
 
 function formatPrice(priceInt: number): string {
   return `${(priceInt / 100).toFixed(2)} TL`;
@@ -39,28 +67,30 @@ export function PublicMenuPage() {
   const tableId = searchParams.get('masa');
 
   const [menu, setMenu] = useState<PublicMenuResponse | null>(null);
-  const [tableName, setTableName] = useState<string>(''); // ← YENİ: masa adı
+  const [tableName, setTableName] = useState<string>('');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // Ana sekme (Menü / Siparişlerim)
   const [mainTab, setMainTab] = useState<MainTab>('menu');
 
-  // Sepet
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [orderNote, setOrderNote] = useState('');
   const [orderSent, setOrderSent] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
 
-  // Garson çağır
+  const [openNoteFor, setOpenNoteFor] = useState<string | null>(null);
+
+  // Çağrı modal state
+  const [callModalOpen, setCallModalOpen] = useState(false);
+  const [selectedCallType, setSelectedCallType] = useState<CallTypeCode | null>(null);
+  const [callNote, setCallNote] = useState('');
+  const [callLoading, setCallLoading] = useState(false);
   const [callSent, setCallSent] = useState(false);
 
-  // Müşteri token (ilk yüklemede oluştur/al)
   const [customerToken] = useState<string>(() => getCustomerToken());
 
-  // Menü yükle
   useEffect(() => {
     let mounted = true;
     setLoading(true);
@@ -75,7 +105,6 @@ export function PublicMenuPage() {
     return () => { mounted = false; };
   }, [slug]);
 
-  // Masa adını yükle (eğer masa ID varsa)
   useEffect(() => {
     if (!tableId || !slug) return;
     let mounted = true;
@@ -126,6 +155,16 @@ export function PublicMenuPage() {
       }
       return prev.filter(i => i.product_id !== productId);
     });
+    if (openNoteFor === productId) {
+      const remaining = cart.find(i => i.product_id === productId);
+      if (!remaining || remaining.quantity <= 1) setOpenNoteFor(null);
+    }
+  }
+
+  function updateItemNote(productId: string, newNote: string) {
+    setCart(prev => prev.map(i =>
+      i.product_id === productId ? { ...i, note: newNote } : i
+    ));
   }
 
   async function sendOrder() {
@@ -139,14 +178,19 @@ export function PublicMenuPage() {
           table_id: tableId,
           note: orderNote || undefined,
           type: 'order',
-          customer_token: customerToken, // ← YENİ: müşteri kimliği
-          items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+          customer_token: customerToken,
+          items: cart.map(i => ({
+            product_id: i.product_id,
+            quantity: i.quantity,
+            note: i.note?.trim() || undefined
+          }))
         })
       });
       setOrderSent(true);
       setCart([]);
       setCartOpen(false);
       setOrderNote('');
+      setOpenNoteFor(null);
       setTimeout(() => setOrderSent(false), 4000);
     } catch {
       alert('Sipariş gönderilemedi. Tekrar deneyin.');
@@ -155,18 +199,51 @@ export function PublicMenuPage() {
     }
   }
 
-  async function callWaiter() {
+  // Çağrı butonu → modal aç
+  function openCallModal() {
     if (!tableId) return;
+    setSelectedCallType(null);
+    setCallNote('');
+    setCallModalOpen(true);
+  }
+
+  // Modal'dan çağrıyı gönder
+  async function sendCall() {
+    if (!tableId || !selectedCallType || callLoading) return;
+
+    // "Diğer" seçildiyse note zorunlu
+    if (selectedCallType === 'other' && callNote.trim().length < 3) {
+      return;
+    }
+
+    setCallLoading(true);
     try {
-      await fetch(`${API_BASE_URL}/public/call/${slug}`, {
+      const res = await fetch(`${API_BASE_URL}/public/call/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table_id: tableId })
+        body: JSON.stringify({
+          table_id: tableId,
+          call_type: selectedCallType,
+          note: callNote.trim() || undefined
+        })
       });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Çağrı gönderilemedi.');
+        setCallLoading(false);
+        return;
+      }
+
+      setCallModalOpen(false);
+      setSelectedCallType(null);
+      setCallNote('');
       setCallSent(true);
       setTimeout(() => setCallSent(false), 4000);
     } catch {
-      alert('İstek gönderilemedi. Tekrar deneyin.');
+      alert('Bağlantı hatası. Tekrar deneyin.');
+    } finally {
+      setCallLoading(false);
     }
   }
 
@@ -189,20 +266,22 @@ export function PublicMenuPage() {
     </div>
   );
 
+  // "Diğer" seçilen ve note 3 karakterden az → gönderim devre dışı
+  const canSendCall = selectedCallType !== null &&
+    (selectedCallType !== 'other' || callNote.trim().length >= 3);
+
   return (
     <div className="min-h-screen" style={{background: bgColor, color: textColor}}>
 
-      {/* Sipariş gönderildi bildirimi */}
       {orderSent && (
         <div style={{position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#0D9488', color: 'white', padding: '12px 24px', borderRadius: 12, fontWeight: 600, fontSize: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.2)'}}>
           ✅ Siparişiniz alındı!
         </div>
       )}
 
-      {/* Garson çağrıldı bildirimi */}
       {callSent && (
         <div style={{position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#F59E0B', color: 'white', padding: '12px 24px', borderRadius: 12, fontWeight: 600, fontSize: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.2)'}}>
-          🔔 Garson çağrıldı!
+          🔔 Çağrı gönderildi! Garson en kısa sürede gelecek.
         </div>
       )}
 
@@ -224,7 +303,6 @@ export function PublicMenuPage() {
               <h1 className="font-bold text-base leading-tight text-white" style={{fontFamily: 'Georgia, serif'}}>
                 {menu.business.name}
               </h1>
-              {/* YENİ: Masa adı büyük ve turkuaz */}
               {tableId && tableName && (
                 <div style={{
                   marginTop: 4,
@@ -239,7 +317,6 @@ export function PublicMenuPage() {
               )}
             </div>
 
-            {/* Sepet butonu */}
             {tableId && mainTab === 'menu' && (
               <button onClick={() => setCartOpen(true)}
                 style={{position: 'relative', width: 40, height: 40, borderRadius: 10, background: themeColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
@@ -256,7 +333,6 @@ export function PublicMenuPage() {
             )}
           </div>
 
-          {/* YENİ: Ana sekmeler (Menü / Siparişlerim) — sadece masa varsa */}
           {tableId && (
             <div style={{display: 'flex', gap: 4, marginBottom: 12, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 10}}>
               <button onClick={() => setMainTab('menu')}
@@ -280,7 +356,6 @@ export function PublicMenuPage() {
             </div>
           )}
 
-          {/* Kategori sekmeleri — sadece Menü sekmesinde */}
           {mainTab === 'menu' && (
             <div style={{display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4}}>
               {menu.categories.map(cat => (
@@ -294,7 +369,6 @@ export function PublicMenuPage() {
         </div>
       </div>
 
-      {/* YENİ: Sekme içeriği */}
       {mainTab === 'orders' && tableId ? (
         <MyOrdersTab
           slug={slug}
@@ -308,7 +382,6 @@ export function PublicMenuPage() {
           darkMode={darkMode}
         />
       ) : (
-        /* Menü — Ürünler */
         <div className="px-4 py-6" style={{paddingBottom: tableId ? 100 : 24}}>
           {activeCategory && (
             <>
@@ -331,7 +404,6 @@ export function PublicMenuPage() {
                       ) : (
                         <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32}}>🍽️</div>
                       )}
-                      {/* Sepetteki miktar */}
                       {cart.find(i => i.product_id === product.id) && (
                         <div style={{position: 'absolute', top: 8, right: 8, background: themeColor, color: 'white', width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                           {cart.find(i => i.product_id === product.id)?.quantity}
@@ -353,10 +425,9 @@ export function PublicMenuPage() {
         </div>
       )}
 
-      {/* Alt bar — Garson çağır + Sepet (sadece masa varsa ve Menü sekmesindeyken) */}
       {tableId && mainTab === 'menu' && (
         <div style={{position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 20, padding: '12px 16px', background: cardBg, borderTop: `1px solid ${cardBorder}`, display: 'flex', gap: 10}}>
-          <button onClick={callWaiter}
+          <button onClick={openCallModal}
             style={{flex: 1, padding: '12px', borderRadius: 12, border: `1.5px solid ${themeColor}`, background: 'transparent', color: themeColor, fontWeight: 700, fontSize: 14, cursor: 'pointer'}}>
             🔔 Garson Çağır
           </button>
@@ -367,7 +438,6 @@ export function PublicMenuPage() {
         </div>
       )}
 
-      {/* Footer */}
       {!tableId && (
         <div className="text-center px-4 py-6" style={{borderTop: `1px solid ${cardBorder}`}}>
           <a href={contactLink} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold mb-4" style={{background: themeColor, color: 'white'}}>
@@ -382,7 +452,7 @@ export function PublicMenuPage() {
         </div>
       )}
 
-      {/* Ürün Detay Modal */}
+      {/* Ürün detay modal */}
       {selectedProduct && (
         <div style={{position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.7)'}}
           onClick={() => setSelectedProduct(null)}>
@@ -421,17 +491,15 @@ export function PublicMenuPage() {
       {cartOpen && (
         <div style={{position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.7)'}}
           onClick={() => setCartOpen(false)}>
-          <div style={{width: '100%', maxWidth: 480, background: cardBg, borderRadius: '24px 24px 0 0', overflow: 'hidden', maxHeight: '85vh', display: 'flex', flexDirection: 'column'}}
+          <div style={{width: '100%', maxWidth: 480, background: cardBg, borderRadius: '24px 24px 0 0', overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column'}}
             onClick={e => e.stopPropagation()}>
 
-            {/* Sepet header */}
             <div style={{padding: '20px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${cardBorder}`}}>
               <h3 style={{fontWeight: 700, fontSize: 18, color: textColor, fontFamily: 'Georgia, serif'}}>Siparişim</h3>
               <button onClick={() => setCartOpen(false)}
                 style={{width: 32, height: 32, borderRadius: '50%', border: 'none', background: darkMode ? '#334155' : '#F1F5F9', color: textMuted, cursor: 'pointer', fontSize: 14}}>✕</button>
             </div>
 
-            {/* Sepet içeriği */}
             <div style={{flex: 1, overflowY: 'auto', padding: '12px 20px'}}>
               {cart.length === 0 ? (
                 <div style={{textAlign: 'center', padding: '40px 0'}}>
@@ -439,36 +507,101 @@ export function PublicMenuPage() {
                   <p style={{color: textMuted, fontSize: 14}}>Sepetiniz boş</p>
                 </div>
               ) : (
-                cart.map(item => (
-                  <div key={item.product_id} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${cardBorder}`}}>
-                    <div style={{flex: 1}}>
-                      <div style={{fontWeight: 600, fontSize: 14, color: textColor}}>{item.name}</div>
-                      <div style={{fontSize: 12, color: themeColor, fontWeight: 700}}>{formatPrice(item.price_int * item.quantity)}</div>
-                    </div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-                      <button onClick={() => removeFromCart(item.product_id)}
-                        style={{width: 28, height: 28, borderRadius: '50%', border: `1.5px solid ${cardBorder}`, background: 'transparent', color: textColor, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>−</button>
-                      <span style={{fontWeight: 700, fontSize: 15, color: textColor, minWidth: 20, textAlign: 'center'}}>{item.quantity}</span>
-                      <button onClick={() => addToCart({id: item.product_id, name: item.name, price_int: item.price_int})}
-                        style={{width: 28, height: 28, borderRadius: '50%', border: 'none', background: themeColor, color: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>+</button>
-                    </div>
-                  </div>
-                ))
+                <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
+                  {cart.map(item => {
+                    const isNoteOpen = openNoteFor === item.product_id;
+                    const hasNote = item.note && item.note.trim().length > 0;
+
+                    return (
+                      <div key={item.product_id}
+                        style={{
+                          background: darkMode ? '#0F172A' : '#FAFAFA',
+                          borderRadius: 12,
+                          border: `1px solid ${hasNote ? '#F59E0B' : cardBorder}`,
+                          overflow: 'hidden'
+                        }}>
+                        <div style={{padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12}}>
+                          <div style={{flex: 1, minWidth: 0}}>
+                            <div style={{fontWeight: 600, fontSize: 14, color: textColor}}>{item.name}</div>
+                            <div style={{fontSize: 12, color: themeColor, fontWeight: 700}}>{formatPrice(item.price_int * item.quantity)}</div>
+                          </div>
+                          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                            <button onClick={() => removeFromCart(item.product_id)}
+                              style={{width: 28, height: 28, borderRadius: '50%', border: `1.5px solid ${cardBorder}`, background: 'transparent', color: textColor, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>−</button>
+                            <span style={{fontWeight: 700, fontSize: 15, color: textColor, minWidth: 20, textAlign: 'center'}}>{item.quantity}</span>
+                            <button onClick={() => addToCart({id: item.product_id, name: item.name, price_int: item.price_int})}
+                              style={{width: 28, height: 28, borderRadius: '50%', border: 'none', background: themeColor, color: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>+</button>
+                          </div>
+                        </div>
+
+                        {hasNote && !isNoteOpen && (
+                          <div style={{
+                            padding: '8px 12px',
+                            background: '#FFFBEB',
+                            borderTop: '1px solid #FDE68A',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8
+                          }}>
+                            <div style={{fontSize: 12, color: '#92400E', flex: 1, minWidth: 0}}>
+                              📝 <strong>{item.note}</strong>
+                            </div>
+                            <button onClick={() => setOpenNoteFor(item.product_id)}
+                              style={{fontSize: 12, fontWeight: 600, color: '#B45309', background: 'transparent', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap'}}>
+                              Düzenle
+                            </button>
+                          </div>
+                        )}
+
+                        {!hasNote && !isNoteOpen && (
+                          <div style={{padding: '0 12px 10px'}}>
+                            <button onClick={() => setOpenNoteFor(item.product_id)}
+                              style={{fontSize: 12, fontWeight: 600, color: themeColor, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0}}>
+                              📝 + Bu ürüne özel not ekle
+                            </button>
+                          </div>
+                        )}
+
+                        {isNoteOpen && (
+                          <div style={{padding: '10px 12px 12px', background: darkMode ? '#1E293B' : '#F8FAFC', borderTop: `1px solid ${cardBorder}`}}>
+                            <OrderNoteTemplates
+                              value={item.note ?? ''}
+                              onChange={(newNote) => updateItemNote(item.product_id, newNote)}
+                              label={`📝 ${item.name} İçin Not`}
+                              placeholder="Bu ürüne özel istek (örn: sıcak olsun)..."
+                              rows={2}
+                            />
+                            <button onClick={() => setOpenNoteFor(null)}
+                              style={{
+                                marginTop: 8, width: '100%', padding: '8px',
+                                borderRadius: 8, border: 'none',
+                                background: '#0F172A', color: 'white',
+                                fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                              }}>
+                              ✓ Tamam
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
 
-              {/* Not alanı */}
               {cart.length > 0 && (
-                <div style={{marginTop: 12}}>
-                  <label style={{fontSize: 12, fontWeight: 600, color: textMuted, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em'}}>Not (opsiyonel)</label>
+                <div style={{marginTop: 16, paddingTop: 16, borderTop: `1px dashed ${cardBorder}`}}>
+                  <label style={{fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                    📋 Sipariş Geneli Not (opsiyonel)
+                  </label>
+                  <p style={{fontSize: 11, color: textMuted, marginBottom: 8}}>
+                    Tüm sipariş için geçerli notlar (örn: "kapı kenarında oturuyoruz")
+                  </p>
                   <textarea value={orderNote} onChange={e => setOrderNote(e.target.value)}
-                    placeholder="Örn: Soğansız olsun, az baharatlı..."
+                    placeholder="Genel not..."
                     rows={2}
                     style={{width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${cardBorder}`, background: darkMode ? '#334155' : '#F8FAFC', color: textColor, fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box'}} />
                 </div>
               )}
             </div>
 
-            {/* Sipariş gönder */}
             {cart.length > 0 && (
               <div style={{padding: '12px 20px 24px', borderTop: `1px solid ${cardBorder}`}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 12}}>
@@ -481,6 +614,138 @@ export function PublicMenuPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* ÇAĞRI MODAL — bottom sheet, 12 tür grid */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {callModalOpen && (
+        <div style={{position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.7)'}}
+          onClick={() => !callLoading && setCallModalOpen(false)}>
+          <div style={{
+            width: '100%', maxWidth: 480, background: cardBg,
+            borderRadius: '24px 24px 0 0', overflow: 'hidden',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column'
+          }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{
+              padding: '20px 20px 12px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              borderBottom: `1px solid ${cardBorder}`
+            }}>
+              <div>
+                <h3 style={{fontWeight: 700, fontSize: 18, color: textColor, fontFamily: 'Georgia, serif'}}>
+                  🔔 Garson Çağır
+                </h3>
+                <p style={{fontSize: 12, color: textMuted, marginTop: 2}}>
+                  Ne istediğinizi seçin
+                </p>
+              </div>
+              <button onClick={() => !callLoading && setCallModalOpen(false)}
+                disabled={callLoading}
+                style={{width: 32, height: 32, borderRadius: '50%', border: 'none',
+                  background: darkMode ? '#334155' : '#F1F5F9', color: textMuted,
+                  cursor: callLoading ? 'not-allowed' : 'pointer', fontSize: 14,
+                  opacity: callLoading ? 0.5 : 1}}>
+                ✕
+              </button>
+            </div>
+
+            {/* Çağrı türleri grid */}
+            <div style={{flex: 1, overflowY: 'auto', padding: 16}}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 10
+              }}>
+                {CALL_TYPES.map(ct => {
+                  const isSelected = selectedCallType === ct.code;
+                  return (
+                    <button key={ct.code}
+                      onClick={() => setSelectedCallType(ct.code)}
+                      style={{
+                        padding: '16px 8px',
+                        borderRadius: 14,
+                        border: `2px solid ${isSelected ? themeColor : cardBorder}`,
+                        background: isSelected ? `${themeColor}15` : (darkMode ? '#0F172A' : '#FAFAFA'),
+                        color: textColor,
+                        cursor: 'pointer',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 6,
+                        transition: 'all 0.15s',
+                        minHeight: 90
+                      }}>
+                      <div style={{fontSize: 28, lineHeight: 1}}>{ct.emoji}</div>
+                      <div style={{
+                        fontSize: 11,
+                        fontWeight: isSelected ? 700 : 600,
+                        color: isSelected ? themeColor : textColor,
+                        textAlign: 'center',
+                        lineHeight: 1.2
+                      }}>
+                        {ct.label}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* "Diğer" seçilince serbest text */}
+              {selectedCallType === 'other' && (
+                <div style={{marginTop: 16}}>
+                  <label style={{
+                    fontSize: 12, fontWeight: 700, color: textMuted,
+                    display: 'block', marginBottom: 6,
+                    textTransform: 'uppercase', letterSpacing: '0.05em'
+                  }}>
+                    Açıklama (zorunlu, en az 3 karakter)
+                  </label>
+                  <textarea value={callNote}
+                    onChange={e => setCallNote(e.target.value)}
+                    placeholder="Ne istediğinizi yazın..."
+                    rows={3}
+                    autoFocus
+                    style={{
+                      width: '100%', padding: '10px 12px',
+                      borderRadius: 10,
+                      border: `1.5px solid ${callNote.trim().length < 3 ? '#FECACA' : cardBorder}`,
+                      background: darkMode ? '#334155' : '#F8FAFC',
+                      color: textColor, fontSize: 13,
+                      resize: 'none', outline: 'none',
+                      boxSizing: 'border-box'
+                    }} />
+                  {callNote.trim().length < 3 && callNote.length > 0 && (
+                    <div style={{fontSize: 11, color: '#DC2626', marginTop: 4}}>
+                      En az 3 karakter yazın
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Gönder butonu */}
+            <div style={{padding: '12px 20px 24px', borderTop: `1px solid ${cardBorder}`}}>
+              <button onClick={sendCall}
+                disabled={!canSendCall || callLoading}
+                style={{
+                  width: '100%', padding: '14px',
+                  borderRadius: 12, border: 'none',
+                  background: (canSendCall && !callLoading) ? themeColor : '#94A3B8',
+                  color: 'white', fontWeight: 700, fontSize: 16,
+                  cursor: (canSendCall && !callLoading) ? 'pointer' : 'not-allowed'
+                }}>
+                {callLoading ? 'Gönderiliyor...' : '🔔 Çağrıyı Gönder'}
+              </button>
+              {!selectedCallType && (
+                <p style={{fontSize: 11, color: textMuted, textAlign: 'center', marginTop: 8}}>
+                  Önce bir seçenek seçin
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}

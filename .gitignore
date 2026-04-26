@@ -4,10 +4,15 @@ node_modules/
 
 # Environment files
 .env
+.env.*
 .env.local
 .env.production
+.env.test
+.env.*.backup
 apps/api/.env
+apps/api/.env.*
 apps/web/.env
+apps/web/.env.*
 
 # Build outputs
 dist/

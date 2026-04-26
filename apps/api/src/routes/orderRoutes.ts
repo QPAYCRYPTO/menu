@@ -1,5 +1,6 @@
 // apps/api/src/routes/orderRoutes.ts
-// GÜNCEL: delivered_at alanı eklendi (sipariş hazırlama süresi için)
+// CHANGELOG:
+// - GET / sorgusunda oi.note seçiliyor (admin sipariş kartlarında ürün başına not)
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -79,7 +80,7 @@ orderRoutes.get('/stream', (req, res) => {
   });
 });
 
-// Siparişleri listele - delivered_at eklendi
+// Siparişleri listele - oi.note SELECT'e eklendi
 orderRoutes.get('/', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { status } = req.query;
@@ -87,8 +88,11 @@ orderRoutes.get('/', async (req, res) => {
   let query = `
     SELECT 
       o.id, o.table_id, o.table_name, o.status, o.note, o.type, 
+      o.call_type,    
       o.created_at, o.delivered_at,
       o.cancelled_at, o.cancel_reason,
+      o.waiter_id,
+      w.name AS waiter_name,
       COALESCE(
         json_agg(
           json_build_object(
@@ -96,13 +100,15 @@ orderRoutes.get('/', async (req, res) => {
             'product_id', oi.product_id,
             'product_name', oi.product_name,
             'quantity', oi.quantity,
-            'price_int', oi.price_int
+            'price_int', oi.price_int,
+            'note', oi.note
           ) ORDER BY oi.created_at
         ) FILTER (WHERE oi.id IS NOT NULL),
         '[]'
       ) as items
     FROM orders o
     LEFT JOIN order_items oi ON oi.order_id = o.id
+    LEFT JOIN waiters w ON w.id = o.waiter_id
     WHERE o.business_id = $1
   `;
 
@@ -115,13 +121,13 @@ orderRoutes.get('/', async (req, res) => {
     query += ` AND o.status NOT IN ('delivered', 'cancelled')`;
   }
 
-  query += ` GROUP BY o.id ORDER BY o.created_at DESC LIMIT 100`;
+  query += ` GROUP BY o.id, w.name ORDER BY o.created_at DESC LIMIT 100`;
 
   const result = await pool.query(query, params);
   res.status(200).json(result.rows);
 });
 
-// Sipariş durumunu güncelle - delivered_at yazma eklendi
+// Sipariş durumunu güncelle
 orderRoutes.put('/:id', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { id } = req.params;
@@ -160,17 +166,13 @@ orderRoutes.put('/:id', async (req, res) => {
       return;
     }
 
-    // delivered_at'i özenle yönet:
-    // - delivered oluyorsa NOW() yaz
-    // - delivered'dan çıkıyorsa NULL yap (geri alma senaryosu)
-    // - diğer durumlarda dokunma
     let deliveredAtClause: string;
     if (newStatus === 'delivered' && currentStatus !== 'delivered') {
       deliveredAtClause = 'delivered_at = NOW()';
     } else if (currentStatus === 'delivered' && newStatus !== 'delivered') {
       deliveredAtClause = 'delivered_at = NULL';
     } else {
-      deliveredAtClause = 'delivered_at = delivered_at'; // no-op
+      deliveredAtClause = 'delivered_at = delivered_at';
     }
 
     const updateResult = await client.query(

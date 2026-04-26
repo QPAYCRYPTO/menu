@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { pool } from '../db/postgres.js';
 import { env } from '../config/env.js';
+import { setWaiterModuleEnabled } from '../services/waiterService.js';
 
 const createBusinessSchema = z.object({
   business_name: z.string().min(1).max(120),
@@ -51,7 +52,7 @@ superAdminRoutes.use(requireSuperAdmin);
 superAdminRoutes.get('/businesses', async (_req, res) => {
   const result = await pool.query(`
     SELECT 
-      b.id, b.name, b.slug, b.is_active, b.created_at,
+      b.id, b.name, b.slug, b.is_active, b.waiter_module_enabled, b.created_at,
       (
         SELECT u.email 
         FROM users u 
@@ -317,4 +318,36 @@ superAdminRoutes.put('/businesses/:id/owners/:userId/reset-password', async (req
   }
 
   res.status(200).json({ message: 'Şifre güncellendi.' });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// GARSON MODÜLÜ FLAG AÇ/KAPAT
+// ─────────────────────────────────────────────────────────────────
+
+const setWaiterModuleSchema = z.object({
+  enabled: z.boolean()
+});
+
+// PATCH /api/superadmin/businesses/:id/waiter-module
+// SuperAdmin bir işletme için garson modülünü açar veya kapatır
+superAdminRoutes.patch('/businesses/:id/waiter-module', async (req, res) => {
+  const idParsed = z.string().uuid().safeParse(req.params.id);
+  if (!idParsed.success) {
+    res.status(400).json({ message: 'Geçersiz işletme id.' });
+    return;
+  }
+
+  const bodyParsed = setWaiterModuleSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ message: 'Geçersiz parametre (enabled: true/false).' });
+    return;
+  }
+
+  const ok = await setWaiterModuleEnabled(idParsed.data, bodyParsed.data.enabled);
+  if (!ok) {
+    res.status(404).json({ message: 'İşletme bulunamadı.' });
+    return;
+  }
+
+  res.status(200).json({ ok: true, enabled: bodyParsed.data.enabled });
 });

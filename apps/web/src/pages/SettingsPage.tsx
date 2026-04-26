@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
-const API_BASE_URL = 'https://api.atlasqrmenu.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
 type FormState = { name: string; logo_url: string; theme_color: string; bg_color: string; dark_mode: boolean; description: string; contact_phone: string; contact_whatsapp: string; contact_instagram: string; };
