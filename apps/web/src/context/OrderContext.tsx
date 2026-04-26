@@ -1,8 +1,7 @@
 // apps/web/src/context/OrderContext.tsx
-// CHANGELOG v3:
-// - Güncelleme uyarıları KALICI — admin "Gördüm" diyene kadar yanıp söner
-// - Her güncelleme için detay tutuluyor: ne değişti, kim, ne zaman
-// - acknowledgeUpdate(orderId) — admin onaylayınca kaldırır
+// CHANGELOG v4:
+// - 'call_taken' SSE event handler eklendi
+//   Garson "İlgilendim" basınca admin'den anında siliniyor (60sn syncInterval beklenmeden)
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
@@ -45,7 +44,6 @@ export type CancelReasonCode =
   | 'out_of_stock'
   | 'other';
 
-// Tek bir değişiklik kaydı
 export type OrderChange = {
   action: 'added' | 'quantity_changed' | 'removed';
   product_name: string;
@@ -54,7 +52,6 @@ export type OrderChange = {
   new_quantity?: number;
 };
 
-// Bir sipariş için biriken güncelleme bildirimi
 export type OrderUpdate = {
   order_id: string;
   table_name: string;
@@ -67,8 +64,8 @@ type OrderContextValue = {
   activeOrders: Order[];
   pendingCount: number;
   callCount: number;
-  pendingUpdates: Map<string, OrderUpdate>; // YENİ: Onay bekleyen güncellemeler
-  acknowledgeUpdate: (orderId: string) => void; // YENİ: Admin "Gördüm" der
+  pendingUpdates: Map<string, OrderUpdate>;
+  acknowledgeUpdate: (orderId: string) => void;
   unlockAudio: () => void;
   refreshActive: () => Promise<void>;
   fetchDelivered: () => Promise<Order[]>;
@@ -158,10 +155,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     tokenRef.current = accessToken;
   }, [accessToken]);
 
-  /**
-   * Bir sipariş için yeni güncelleme kaydet.
-   * Aynı sipariş için zaten kayıt varsa, yeni değişiklikleri MEVCUT'a ekle (birikme).
-   */
   const addUpdate = useCallback((
     orderId: string,
     tableName: string,
@@ -173,14 +166,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const existing = next.get(orderId);
 
       if (existing) {
-        // Mevcut güncellemeye yeni değişiklikleri ekle
         next.set(orderId, {
           ...existing,
           changes: [...existing.changes, ...newChanges],
           timestamp: Date.now()
         });
       } else {
-        // Yeni kayıt
         next.set(orderId, {
           order_id: orderId,
           table_name: tableName,
@@ -194,10 +185,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  /**
-   * Admin "Gördüm" der → güncelleme kaydı kaldırılır.
-   * Kart normale döner.
-   */
   const acknowledgeUpdate = useCallback((orderId: string) => {
     setPendingUpdates(prev => {
       const next = new Map(prev);
@@ -247,7 +234,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
     if (status === 'delivered') {
       setActiveOrders(prev => prev.filter(o => o.id !== orderId));
-      // Teslim edilince update bildirimi de kaldırılsın
       acknowledgeUpdate(orderId);
     } else {
       setActiveOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
@@ -274,7 +260,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     setActiveOrders(prev => prev.filter(o => o.id !== orderId));
-    acknowledgeUpdate(orderId); // İptal edilince update kaydını sil
+    acknowledgeUpdate(orderId);
 
     try {
       await apiRequest(`/admin/orders/${orderId}/cancel`, {
@@ -368,6 +354,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                           setActiveOrders(fresh);
                         } catch {}
                       }
+                    }
+                  }
+                  // ─── ÇAĞRI ALINDI (garson "İlgilendim" bastı) ─
+                  // YENİ v4: Anında state'ten sil, 60sn bekleme yok
+                  else if (data.type === 'call_taken') {
+                    if (data.order_id) {
+                      setActiveOrders(prev => prev.filter(o => o.id !== data.order_id));
+                      acknowledgeUpdate(data.order_id);
+                      console.log(`[SSE] Çağrı alındı: ${data.taken_by_waiter_name || 'garson'}`);
                     }
                   }
                   // ─── İPTAL ─────────────────────────────────────
