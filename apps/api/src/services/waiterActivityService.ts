@@ -1,6 +1,7 @@
 // apps/api/src/services/waiterActivityService.ts
-// Garson hareketlerini loglayan servis
-// Her garson işlemi (sipariş, silme, masa değişimi) buraya kaydedilir.
+// CHANGELOG:
+// - 'call_created' action type eklendi (müşteri çağrı oluşturma)
+// - waiterId artık nullable (müşteri çağrısı için garson yok)
 
 import { PoolClient } from 'pg';
 import { pool } from '../db/postgres.js';
@@ -13,6 +14,7 @@ export type WaiterActionType =
   | 'item_note_added'        // Not ekledi
   | 'table_transferred'      // Masa transferi
   | 'tables_merged'          // Masa birleştirdi
+  | 'call_created'           // YENİ: Müşteri çağrı oluşturdu
   | 'call_answered'          // Çağrıya cevap verdi
   | 'break_start'
   | 'break_end'
@@ -23,7 +25,7 @@ export type WaiterTargetType = 'order' | 'order_item' | 'table' | 'session' | 'c
 
 export type LogWaiterActivityInput = {
   businessId: string;
-  waiterId: string;
+  waiterId: string | null;     // YENİ: nullable (müşteri çağrısı için garson yok)
   waiterName: string;
   action: WaiterActionType;
   targetType?: WaiterTargetType;
@@ -38,6 +40,8 @@ export type LogWaiterActivityInput = {
  * Garson hareketini loglar.
  * Transaction içinde çalışabilir (client verilirse).
  * Hata fırlatmaz — loglama işin başarısını engellememeli.
+ *
+ * NOT: waiterId NULL olabilir (müşteri çağrı oluşturma gibi sistem-tarafı action'lar için).
  */
 export async function logWaiterActivity(
   input: LogWaiterActivityInput,

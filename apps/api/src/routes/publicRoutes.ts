@@ -1,9 +1,8 @@
 // apps/api/src/routes/publicRoutes.ts
 // CHANGELOG:
-// - POST /call/:slug body'de call_type kabul eder (12 enum değer + 'other')
-// - INSERT INTO orders'a call_type yazılıyor
-// - SSE event'inde call_type ve note yayınlanıyor
-// - 'other' seçilirse note serbest text içerir (zorunlu min 3 karakter)
+// - POST /call/:slug → çağrı oluşturulunca waiter_activity_log'a kaydediliyor
+// - waiter_id NULL (müşteri yapıyor), waiter_name = "Müşteri (MASA X)"
+// - metadata: call_type, label, note, source
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -14,6 +13,7 @@ import { getPublicMenuBySlug } from '../services/menuService.js';
 import { pool } from '../db/postgres.js';
 import { publishOrder } from '../db/redisPubSub.js';
 import { getOrCreateOpenSession } from '../services/sessionService.js';
+import { logWaiterActivity } from '../services/waiterActivityService.js';
 
 const slugParamsSchema = z.object({
   slug: z.string().min(1).max(120)
@@ -31,21 +31,28 @@ const createPublicOrderSchema = z.object({
   })).optional()
 });
 
-// YENİ: Çağrı türleri
+// Çağrı türleri
 const CALL_TYPES = [
-  'waiter',           // 👤 Garson
-  'baby_chair',       // 🪑 Mama Sandalyesi
-  'charger',          // 🔌 Şarj
-  'bill',             // 🧾 Hesap
-  'package',          // 📦 Paket
-  'ashtray',          // 🚬 Küllük
-  'lighter',          // 🔥 Çakmak
-  'cigarette',        // 🚬 Sigara
-  'water',            // 💧 Su
-  'missing_service',  // ❌ Servis eksik
-  'clean_table',      // 🧽 Masa silinsin
-  'other'             // ✏️ Diğer (yaz)
+  'waiter', 'baby_chair', 'charger', 'bill', 'package',
+  'ashtray', 'lighter', 'cigarette', 'water',
+  'missing_service', 'clean_table', 'other'
 ] as const;
+
+// Çağrı türü → label (loglama için)
+const CALL_TYPE_LABELS: Record<string, string> = {
+  waiter: 'Garson',
+  water: 'Su',
+  bill: 'Hesap',
+  package: 'Paket',
+  baby_chair: 'Mama Sandalyesi',
+  charger: 'Şarj',
+  ashtray: 'Küllük',
+  lighter: 'Çakmak',
+  cigarette: 'Sigara',
+  clean_table: 'Masa Silinsin',
+  missing_service: 'Servis Eksik',
+  other: 'Diğer'
+};
 
 const createCallSchema = z.object({
   table_id: z.string().uuid(),
@@ -89,7 +96,7 @@ publicRoutes.get('/qr/:slug', (req, res) => {
   res.status(200).type('html').send(html);
 });
 
-// Müşteri sipariş oluşturur (mevcut, dokunulmadı)
+// Müşteri sipariş oluşturur
 publicRoutes.post('/order/:slug', async (req, res) => {
   const slugParsed = slugParamsSchema.safeParse(req.params);
   if (!slugParsed.success) {
@@ -216,7 +223,7 @@ publicRoutes.post('/order/:slug', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// GARSON ÇAĞIR — call_type ile
+// GARSON ÇAĞIR — call_type ile + LOGLAMA
 // ─────────────────────────────────────────────────────────────
 
 publicRoutes.post('/call/:slug', async (req, res) => {
@@ -256,11 +263,10 @@ publicRoutes.post('/call/:slug', async (req, res) => {
 
   const table = tableResult.rows[0];
 
-  // call_type yoksa default "waiter"
   const finalCallType = call_type ?? 'waiter';
   const finalNote = note?.trim() || null;
 
-  // Çağrı insert — call_type kolonu eklendi
+  // Çağrı insert
   const callResult = await pool.query(
     `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, call_type, created_at, updated_at)
      VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, 'call', $5, NOW(), NOW())
@@ -271,7 +277,32 @@ publicRoutes.post('/call/:slug', async (req, res) => {
   const callId = callResult.rows[0].id;
   const callCreatedAt = callResult.rows[0].created_at;
 
-  // Redis Pub/Sub — call_type da yayınlansın
+  // ───────────────────────────────────────────────
+  // LOGLAMA — Patron sonradan rapor görsün
+  // ───────────────────────────────────────────────
+  const callLabel = CALL_TYPE_LABELS[finalCallType] || finalCallType;
+
+  await logWaiterActivity({
+    businessId,
+    waiterId: null,                              // Müşteri yapıyor, garson yok
+    waiterName: `Müşteri (${table.name})`,       // Loglarda görünür
+    action: 'call_created',
+    targetType: 'call',
+    targetId: callId,
+    targetName: `${table.name} - ${callLabel}`,
+    metadata: {
+      table_name: table.name,
+      table_id: table.id,
+      call_type: finalCallType,
+      call_label: callLabel,
+      note: finalNote,
+      source: 'customer'
+    },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent')
+  });
+
+  // Redis Pub/Sub
   await publishOrder(businessId, {
     type: 'call',
     table_name: table.name,
