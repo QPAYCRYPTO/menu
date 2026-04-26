@@ -1,10 +1,14 @@
 // apps/web/src/pages/waiter/WaiterTableDetailPage.tsx
-// CHANGELOG v5:
-// - Her ürünün altında item.note görüntüleniyor (sarı şerit)
+// CHANGELOG v6:
+// - Çağrı kartı artık call_type kullanıyor (büyük emoji + label)
+// - Kritik türler kırmızı kart
+// - "Diğer" türü için müşteri açıklaması gösteriliyor
+// - Birden fazla çağrı varsa hepsi ayrı kart
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
+import { getCallInfo } from '../../context/WaiterCallsContext';
 import {
   WaiterTableDetail,
   CANCEL_REASON_OPTIONS,
@@ -179,15 +183,74 @@ export function WaiterTableDetailPage() {
         </button>
       </div>
 
+      {/* ─────────────────────────────────────────────── */}
+      {/* ÇAĞRILAR — call_type ile zenginleştirilmiş      */}
+      {/* ─────────────────────────────────────────────── */}
       {data.active_calls.length > 0 && (
-        <div className="mb-4 p-4 rounded-2xl"
-          style={{ background: '#FEE2E2', border: '2px solid #DC2626' }}>
-          <div className="font-bold text-sm" style={{ color: '#991B1B' }}>
-            🔔 {data.active_calls.length} Garson Çağrısı
-          </div>
-          <div className="text-xs mt-1" style={{ color: '#991B1B' }}>
-            Müşteri sizi çağırıyor.
-          </div>
+        <div className="space-y-2 mb-4">
+          {data.active_calls.map(call => {
+            const info = getCallInfo(call.call_type);
+            const cardBg = info.critical ? '#FEF2F2' : '#FFFBEB';
+            const cardBorder = info.critical ? '#FECACA' : '#FDE68A';
+            const titleColor = info.critical ? '#991B1B' : '#92400E';
+            const accentColor = info.critical ? '#DC2626' : '#B45309';
+
+            return (
+              <div key={call.id}
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: cardBg,
+                  border: `2px solid ${cardBorder}`
+                }}>
+                <div style={{
+                  padding: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12
+                }}>
+                  <div style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>
+                    {info.emoji}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.05em',
+                      color: accentColor, marginBottom: 2
+                    }}>
+                      {info.critical ? '⚠️ Acil İstek' : 'Müşteri Çağrısı'}
+                    </div>
+                    <div style={{
+                      fontSize: 16, fontWeight: 800,
+                      color: titleColor, lineHeight: 1.2,
+                      fontFamily: 'Georgia, serif'
+                    }}>
+                      {info.label}
+                    </div>
+                    {call.note && call.note.trim() && (
+                      <div style={{
+                        fontSize: 13, color: '#0F172A',
+                        marginTop: 6, padding: '6px 8px',
+                        background: 'white', borderRadius: 6,
+                        border: `1px solid ${cardBorder}`
+                      }}>
+                        📝 {call.note}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{
+                  padding: '8px 14px',
+                  background: 'rgba(255,255,255,0.5)',
+                  borderTop: `1px solid ${cardBorder}`,
+                  fontSize: 11,
+                  color: '#64748B',
+                  textAlign: 'center'
+                }}>
+                  💡 İlgilenmek için Çağrılar sekmesine git
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
