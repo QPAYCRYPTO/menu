@@ -1,8 +1,13 @@
 // apps/web/src/pages/ProductsPage.tsx
+// CHANGELOG:
+// - Görsel yükleme alanı ImageUploadField komponentine geçti
+// - Drag & drop, preview, değiştir/kaldır desteği
+
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { ImageUploadField } from '../components/ImageUploadField';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -29,7 +34,6 @@ export function ProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductResponse | null>(null);
   const [form, setForm] = useState<ProductFormState>(initialForm);
-  const [uploading, setUploading] = useState(false);
 
   const sortedCategories = useMemo(() => [...categories].filter(c => c.is_active).sort((a, b) => a.sort_order - b.sort_order), [categories]);
 
@@ -77,19 +81,33 @@ export function ProductsPage() {
 
   function closeModal() { setIsModalOpen(false); setEditingItem(null); setForm(initialForm); }
 
-  async function onUploadImage(file: File | null) {
-    if (!file || !accessToken) return;
+  // Görseli yükle ve form state'ine yaz
+  async function handleImageUpload(file: File): Promise<string | null> {
+    if (!accessToken) return null;
     const formData = new FormData();
     formData.append('file', file);
     try {
-      setUploading(true);
-      const response = await fetch(`${API_BASE_URL}/admin/upload`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: formData });
-      if (!response.ok) { const p = (await response.json().catch(() => ({}))) as { message?: string }; throw new Error(p.message ?? 'Görsel yüklenemedi.'); }
+      const response = await fetch(`${API_BASE_URL}/admin/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData
+      });
+      if (!response.ok) {
+        const p = (await response.json().catch(() => ({}))) as { message?: string };
+        throw new Error(p.message ?? 'Görsel yüklenemedi.');
+      }
       const data = (await response.json()) as UploadResponse;
       setForm(prev => ({ ...prev, image_url: data.image_url }));
       showToast('Görsel yüklendi.', 'success');
-    } catch (e) { showToast(e instanceof Error ? e.message : 'Görsel yüklenemedi.', 'error'); }
-    finally { setUploading(false); }
+      return data.image_url;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Görsel yüklenemedi.', 'error');
+      return null;
+    }
+  }
+
+  function handleImageRemove() {
+    setForm(prev => ({ ...prev, image_url: '' }));
   }
 
   async function saveProduct() {
@@ -195,7 +213,7 @@ export function ProductsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
               <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>
@@ -243,18 +261,16 @@ export function ProductsPage() {
                   rows={2} placeholder="Açıklama..." />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Görsel</label>
-                <input type="file" accept="image/*" onChange={e => onUploadImage(e.target.files?.[0] ?? null)}
-                  className="w-full px-4 py-2 rounded-xl text-sm"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#64748B'}} />
-                {uploading && <p className="text-xs mt-1" style={{color: '#0D9488'}}>Yükleniyor...</p>}
-                {form.image_url && (
-                  <div className="mt-2 w-20 h-20 rounded-xl overflow-hidden" style={{border: '1px solid #E2E8F0'}}>
-                    <img src={form.image_url} alt="Önizleme" className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
+              {/* YENİ: Görsel yükleme komponenti */}
+              <ImageUploadField
+                value={form.image_url}
+                onUpload={handleImageUpload}
+                onRemove={handleImageRemove}
+                label="Ürün Fotoğrafı"
+                hint="PNG, JPG · max 5MB · kare öneri"
+                themeColor="#EC4899"
+                previewSize={80}
+              />
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <div className="relative">
