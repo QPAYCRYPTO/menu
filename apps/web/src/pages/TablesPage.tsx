@@ -1,10 +1,12 @@
 // apps/web/src/pages/TablesPage.tsx
-// CHANGELOG v2: Toast komponentine geçti
+// CHANGELOG v3:
+// - Browser confirm() yerine ortak ConfirmModal komponenti
 
 import { useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -69,6 +71,7 @@ export function TablesPage() {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [newName, setNewName] = useState('');
   const [toast, setToast] = useState<ToastState>(null);
+  const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -146,15 +149,24 @@ export function TablesPage() {
     }
   }
 
-  async function deleteTable(id: string) {
-    if (!confirm('Bu masayı silmek istediğinize emin misiniz?')) return;
-    try {
-      await apiRequest(`/admin/tables/${id}`, { method: 'DELETE', token: accessToken });
-      await loadTables();
-      showToast('Masa silindi.', 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Silinemedi.', 'error');
-    }
+  // YENİ: Browser confirm() kaldırıldı, custom modal kullanılıyor
+  function askDeleteTable(table: Table) {
+    setConfirm({
+      title: 'Masayı Sil?',
+      message: <><strong>{table.name}</strong> kalıcı olarak pasif yapılacak. Geçmiş siparişler korunur.</>,
+      confirmText: 'Evet, Sil',
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          await apiRequest(`/admin/tables/${table.id}`, { method: 'DELETE', token: accessToken });
+          await loadTables();
+          showToast('Masa silindi.', 'success');
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : 'Silinemedi.', 'error');
+          throw e; // ConfirmModal hata gelirse açık kalır
+        }
+      }
+    });
   }
 
   async function openDetail(sessionId: string) {
@@ -208,6 +220,7 @@ export function TablesPage() {
   return (
     <div>
       <Toast state={toast} />
+      <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
       <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm max-w-2xl" style={{border: '1px solid #E2E8F0'}}>
         <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{color: '#64748B'}}>Yeni Masa Ekle</h2>
@@ -263,7 +276,7 @@ export function TablesPage() {
             onSaveEdit={() => saveTable(table)}
             onCancelEdit={() => { setEditingId(null); setEditingName(''); }}
             onToggleActive={() => toggleActive(table)}
-            onDelete={() => deleteTable(table.id)}
+            onDelete={() => askDeleteTable(table)}
             onOpenDetail={() => table.session && openDetail(table.session.id)}
             onCloseSession={() => table.session && tryCloseSession(table.session.id, table.name)}
           />
