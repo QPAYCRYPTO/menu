@@ -1,17 +1,27 @@
 // apps/api/src/services/uploadService.ts
+// CHANGELOG:
+// - 5MB limit (frontend ve multer ile uyumlu)
+// - GIF eklendi
+// - Tüm formatlar zaten WebP'ye dönüşüyor (sharp yapıyor)
+
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import { uploadToS3 } from './storageService.js';
 
-const maxBytes = 3 * 1024 * 1024;
-const allowedContentTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const maxBytes = 5 * 1024 * 1024;
+const allowedContentTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif'
+]);
 
 export function validateUpload(fileSize: number, contentType: string): void {
   if (fileSize > maxBytes) {
-    throw new Error('Dosya boyutu 3MB sınırını aşıyor.');
+    throw new Error('Dosya boyutu 5MB sınırını aşıyor.');
   }
   if (!allowedContentTypes.has(contentType)) {
-    throw new Error('Desteklenmeyen dosya türü.');
+    throw new Error(`Desteklenmeyen dosya türü: ${contentType}. Sadece JPG, PNG, WebP, GIF kabul edilir.`);
   }
 }
 
