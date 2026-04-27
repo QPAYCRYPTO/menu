@@ -1,7 +1,6 @@
 // apps/web/src/pages/ProductsPage.tsx
-// CHANGELOG:
-// - Görsel yükleme alanı ImageUploadField komponentine geçti
-// - Drag & drop, preview, değiştir/kaldır desteği
+// CHANGELOG v2:
+// - ImageUploadField pembe (#EC4899) → mor (#A855F7) tema
 
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
@@ -81,7 +80,6 @@ export function ProductsPage() {
 
   function closeModal() { setIsModalOpen(false); setEditingItem(null); setForm(initialForm); }
 
-  // Görseli yükle ve form state'ine yaz
   async function handleImageUpload(file: File): Promise<string | null> {
     if (!accessToken) return null;
     const formData = new FormData();
@@ -148,7 +146,6 @@ export function ProductsPage() {
         </div>
       )}
 
-      {/* Toolbar */}
       <div className="flex items-center gap-3 mb-6">
         <select
           value={selectedCategoryId}
@@ -166,7 +163,6 @@ export function ProductsPage() {
         </button>
       </div>
 
-      {/* Grid */}
       <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))'}}>
         {items.map(item => (
           <div key={item.id} className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{border: '1px solid #E2E8F0'}}>
@@ -209,12 +205,10 @@ export function ProductsPage() {
         )}
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
           <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
 
-            {/* Modal Header */}
             <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
               <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>
                 {editingItem ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
@@ -222,7 +216,6 @@ export function ProductsPage() {
               <button onClick={closeModal} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 space-y-4 overflow-y-auto" style={{maxHeight: '70vh'}}>
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Kategori</label>
@@ -261,14 +254,14 @@ export function ProductsPage() {
                   rows={2} placeholder="Açıklama..." />
               </div>
 
-              {/* YENİ: Görsel yükleme komponenti */}
+              {/* MOR tema (pembe yerine) */}
               <ImageUploadField
                 value={form.image_url}
                 onUpload={handleImageUpload}
                 onRemove={handleImageRemove}
                 label="Ürün Fotoğrafı"
-                hint="JPG, PNG, WebP, GIF · max 5MB · kare format"
-                themeColor="#EC4899"
+                hint="JPG, PNG, WebP, GIF · max 5MB · kare öneri"
+                themeColor="#A855F7"
                 previewSize={80}
               />
 
@@ -283,7 +276,6 @@ export function ProductsPage() {
               </label>
             </div>
 
-            {/* Modal Footer */}
             <div className="px-6 py-4 flex gap-3" style={{borderTop: '1px solid #E2E8F0'}}>
               <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{background: '#F1F5F9', color: '#64748B'}}>İptal</button>
               <button onClick={saveProduct} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{background: '#0F172A'}}>Kaydet</button>

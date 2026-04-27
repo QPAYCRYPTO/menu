@@ -1,8 +1,7 @@
 // apps/web/src/pages/AdminDashboardPage.tsx
-// CHANGELOG:
-// - 4 → 8 kart (Siparişler, Masalar, Garsonlar eklendi)
-// - Sol panel ile aynı renk paleti (Stil 4 — Soft Pill)
-// - Her kart kendi rengine sahip, sol kenar 3px renkli şerit
+// CHANGELOG v2:
+// - Ürünler kartı pembe (#EC4899) → mor (#A855F7)
+// - Garsonlar kartı turkuaz (#0D9488) — imza renk
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -49,7 +48,6 @@ export function AdminDashboardPage() {
       .map(o => o.table_id)
   ).size;
 
-  // Sol panel ile AYNI renk paleti (Stil 4)
   const cards = [
     {
       to: '/admin/orders',
@@ -80,16 +78,18 @@ export function AdminDashboardPage() {
       to: '/admin/products',
       label: 'Ürünler',
       desc: stats.products > 0 ? `${stats.products} ürün` : 'Henüz yok',
-      color: '#EC4899', textPasif: '#9D174D', bgPasif: 'rgba(236,72,153,0.10)',
-      borderColor: 'rgba(236,72,153,0.35)',
+      // PEMBE → MOR
+      color: '#A855F7', textPasif: '#6D28D9', bgPasif: 'rgba(168,85,247,0.10)',
+      borderColor: 'rgba(168,85,247,0.35)',
       icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
     },
     {
       to: '/admin/waiters',
       label: 'Garsonlar',
       desc: stats.waiters > 0 ? `${stats.waiters} garson` : 'Henüz yok',
-      color: '#14B8A6', textPasif: '#0F766E', bgPasif: 'rgba(20,184,166,0.10)',
-      borderColor: 'rgba(20,184,166,0.35)',
+      // İmza turkuaz
+      color: '#0D9488', textPasif: '#0F766E', bgPasif: 'rgba(13,148,136,0.10)',
+      borderColor: 'rgba(13,148,136,0.35)',
       icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     },
     {
@@ -125,7 +125,6 @@ export function AdminDashboardPage() {
             <h2 className="font-bold text-base" style={{ fontFamily: 'Georgia, serif' }}>{stats.businessName || 'Yükleniyor...'}</h2>
           </div>
 
-          {/* Anlık durum rozeti */}
           {(pendingCount > 0 || callCount > 0) && (
             <div className="flex flex-col items-end gap-1">
               {pendingCount > 0 && (
@@ -171,7 +170,6 @@ export function AdminDashboardPage() {
             }}
             className="hover:shadow-md hover:-translate-y-0.5">
 
-            {/* Üst — icon + badge */}
             <div className="flex items-center justify-between">
               <div style={{
                 width: 36,
@@ -200,7 +198,6 @@ export function AdminDashboardPage() {
               )}
             </div>
 
-            {/* Orta — label + desc */}
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: '#0F172A', marginBottom: 2 }}>
                 {card.label}
@@ -210,7 +207,6 @@ export function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Alt — git oku */}
             <div style={{
               fontSize: 11,
               color: '#94A3B8',
