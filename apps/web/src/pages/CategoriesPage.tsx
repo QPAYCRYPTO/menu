@@ -1,10 +1,11 @@
 // apps/web/src/pages/CategoriesPage.tsx
+// CHANGELOG v2: Ortak Toast komponentine geçti
+
 import type { CategoryResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-
-type ToastState = { message: string; type: 'error' | 'success' } | null;
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 export function CategoriesPage() {
   const { accessToken } = useAuth();
@@ -16,6 +17,10 @@ export function CategoriesPage() {
 
   const sortedItems = useMemo(() => [...items].sort((a, b) => a.sort_order - b.sort_order), [items]);
 
+  function showToast(message: string, type: 'error' | 'success') {
+    showToastHelper(message, type, setToast);
+  }
+
   async function loadCategories() {
     try {
       const data = await apiRequest<CategoryResponse[]>('/admin/categories', { token: accessToken });
@@ -26,11 +31,6 @@ export function CategoriesPage() {
   }
 
   useEffect(() => { loadCategories().catch(() => undefined); }, [accessToken]);
-
-  function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 2200);
-  }
 
   async function addCategory() {
     const name = newName.trim();
@@ -96,12 +96,7 @@ export function CategoriesPage() {
 
   return (
     <div className="max-w-2xl">
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
-          {toast.message}
-        </div>
-      )}
+      <Toast state={toast} />
 
       {/* Ekle */}
       <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm" style={{border: '1px solid #E2E8F0'}}>
@@ -131,14 +126,12 @@ export function CategoriesPage() {
         {sortedItems.map((item, index) => (
           <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3"
             style={{border: `1px solid ${item.is_active ? '#E2E8F0' : '#FEE2E2'}`, opacity: item.is_active ? 1 : 0.7}}>
-            
-            {/* Sıra numarası */}
+
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
               style={{background: item.is_active ? '#CCFBF1' : '#FEE2E2', color: item.is_active ? '#0F766E' : '#DC2626'}}>
               {item.sort_order}
             </div>
 
-            {/* İsim */}
             <div className="flex-1">
               {editingId === item.id ? (
                 <input
@@ -156,7 +149,6 @@ export function CategoriesPage() {
               )}
             </div>
 
-            {/* Butonlar */}
             <div className="flex items-center gap-2">
               {editingId === item.id ? (
                 <>
@@ -177,7 +169,6 @@ export function CategoriesPage() {
                 </>
               )}
 
-              {/* Sıralama */}
               <div className="flex flex-col gap-1">
                 <button disabled={index === 0} onClick={() => moveCategory(index, 'up')}
                   className="w-6 h-5 rounded flex items-center justify-center text-xs disabled:opacity-30"

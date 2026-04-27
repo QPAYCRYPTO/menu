@@ -1,16 +1,13 @@
 // apps/web/src/pages/OrdersPage.tsx
-// CHANGELOG v6:
-// - CallCard'a çağrı türü gösterimi: büyük emoji + label
-// - Kritik türler kırmızı vurgulu (servis_eksik, masa_silinsin)
-// - "Diğer" türü için note serbest text gösteriliyor
+// CHANGELOG v7: Ortak Toast komponentine geçti
 
 import { useEffect, useState } from 'react';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 const FILTER_STORAGE_KEY = 'atlasqr:orders:filter';
 
 type FilterType = 'active' | 'delivered';
-type ToastState = { message: string; type: 'error' | 'success' } | null;
 
 const CANCEL_REASONS: { code: CancelReasonCode; label: string; hint?: string }[] = [
   { code: 'customer_cancelled', label: 'Müşteri vazgeçti' },
@@ -22,7 +19,6 @@ const CANCEL_REASONS: { code: CancelReasonCode; label: string; hint?: string }[]
   { code: 'other', label: 'Diğer', hint: 'Açıklama zorunludur' }
 ];
 
-// YENİ: Çağrı türü etiketleri
 const CALL_TYPE_LABELS: Record<string, { emoji: string; label: string; critical: boolean }> = {
   waiter:          { emoji: '👤', label: 'Garson',           critical: false },
   water:           { emoji: '💧', label: 'Su',               critical: false },
@@ -53,17 +49,11 @@ function parseReasonLabel(reasonString: string | null | undefined): { code: stri
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('tr-TR', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
+  return new Date(dateStr).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-
 function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('tr-TR', {
-    hour: '2-digit', minute: '2-digit'
-  });
+  return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
-
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (diff < 60) return `${diff}sn önce`;
@@ -71,7 +61,6 @@ function timeAgo(dateStr: string): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)}sa önce`;
   return `${Math.floor(diff / 86400)}g önce`;
 }
-
 function formatDuration(totalSeconds: number): string {
   if (totalSeconds < 0) totalSeconds = 0;
   const h = Math.floor(totalSeconds / 3600);
@@ -99,11 +88,8 @@ function staticDuration(from: string, to: string): string {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Bekliyor',
-  preparing: 'Hazırlanıyor',
-  ready: 'Hazır',
-  delivered: 'Teslim Edildi',
-  cancelled: 'İptal Edildi'
+  pending: 'Bekliyor', preparing: 'Hazırlanıyor', ready: 'Hazır',
+  delivered: 'Teslim Edildi', cancelled: 'İptal Edildi'
 };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -114,19 +100,13 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   cancelled: { bg: '#FEE2E2', color: '#991B1B' }
 };
 
-function priceIntToTl(value: number): string {
-  return (value / 100).toFixed(2);
-}
-
-function orderTotal(items: OrderItem[]): number {
-  return items.reduce((sum, item) => sum + item.price_int * item.quantity, 0);
-}
+function priceIntToTl(value: number): string { return (value / 100).toFixed(2); }
+function orderTotal(items: OrderItem[]): number { return items.reduce((sum, item) => sum + item.price_int * item.quantity, 0); }
 
 function OrderSourceBadge({ order }: { order: Order }) {
   if (order.waiter_name) {
     return (
-      <span
-        className="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
+      <span className="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
         style={{ background: '#F0FDFA', color: '#0D9488', border: '1px solid #99F6E4' }}
         title={`Garson: ${order.waiter_name}`}>
         👤 {order.waiter_name}
@@ -134,8 +114,7 @@ function OrderSourceBadge({ order }: { order: Order }) {
     );
   }
   return (
-    <span
-      className="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
       style={{ background: '#F1F5F9', color: '#94A3B8' }}
       title="Müşteri tarafından QR ile verilen sipariş">
       📱 Müşteri
@@ -166,12 +145,9 @@ function LiveTimerBadge({ dateStr }: { dateStr: string }) {
   );
 }
 
-function StaticTimerBadge({ duration, bg, color, title }: {
-  duration: string; bg: string; color: string; title: string;
-}) {
+function StaticTimerBadge({ duration, bg, color, title }: { duration: string; bg: string; color: string; title: string; }) {
   return (
-    <span className="font-mono text-xs font-bold px-2 py-1 rounded-lg"
-      style={{ background: bg, color }} title={title}>
+    <span className="font-mono text-xs font-bold px-2 py-1 rounded-lg" style={{ background: bg, color }} title={title}>
       ⏱ {duration}
     </span>
   );
@@ -182,16 +158,12 @@ function OrderTimerBadge({ order }: { order: Order }) {
     return <LiveTimerBadge dateStr={order.created_at} />;
   }
   if (order.status === 'delivered' && order.delivered_at) {
-    return <StaticTimerBadge
-      duration={staticDuration(order.created_at, order.delivered_at)}
-      bg="#F0FDF4" color="#16A34A"
-      title="Hazırlama süresi (sipariş → teslim)" />;
+    return <StaticTimerBadge duration={staticDuration(order.created_at, order.delivered_at)}
+      bg="#F0FDF4" color="#16A34A" title="Hazırlama süresi (sipariş → teslim)" />;
   }
   if (order.status === 'cancelled' && order.cancelled_at) {
-    return <StaticTimerBadge
-      duration={staticDuration(order.created_at, order.cancelled_at)}
-      bg="#FEE2E2" color="#991B1B"
-      title="İptal olana kadar geçen süre" />;
+    return <StaticTimerBadge duration={staticDuration(order.created_at, order.cancelled_at)}
+      bg="#FEE2E2" color="#991B1B" title="İptal olana kadar geçen süre" />;
   }
   return null;
 }
@@ -232,40 +204,25 @@ function ChangeRow({ change }: { change: OrderChange }) {
   return null;
 }
 
-function UpdatePanel({ update, onAcknowledge }: {
-  update: OrderUpdate;
-  onAcknowledge: () => void;
-}) {
+function UpdatePanel({ update, onAcknowledge }: { update: OrderUpdate; onAcknowledge: () => void; }) {
   return (
     <div className="px-3 py-2.5 mb-2"
-      style={{
-        background: 'linear-gradient(90deg, #FEF3C7, #FDE68A)',
-        borderTop: '2px solid #F59E0B',
-        borderBottom: '2px solid #F59E0B'
-      }}>
+      style={{ background: 'linear-gradient(90deg, #FEF3C7, #FDE68A)',
+        borderTop: '2px solid #F59E0B', borderBottom: '2px solid #F59E0B' }}>
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-1.5">
           <span className="text-base animate-pulse">🔔</span>
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#92400E' }}>
-            Güncelleme
-          </span>
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#92400E' }}>Güncelleme</span>
           {update.waiter_name && (
-            <span className="text-xs font-semibold" style={{ color: '#92400E' }}>
-              · 👤 {update.waiter_name}
-            </span>
+            <span className="text-xs font-semibold" style={{ color: '#92400E' }}>· 👤 {update.waiter_name}</span>
           )}
         </div>
         <button onClick={onAcknowledge}
           className="px-2 py-1 rounded-lg text-xs font-bold text-white active:scale-95 transition-transform"
-          style={{ background: '#16A34A' }}
-          title="Bu uyarıyı kapat">
-          ✓ Gördüm
-        </button>
+          style={{ background: '#16A34A' }} title="Bu uyarıyı kapat">✓ Gördüm</button>
       </div>
       <div className="space-y-1 pl-5">
-        {update.changes.map((change, idx) => (
-          <ChangeRow key={idx} change={change} />
-        ))}
+        {update.changes.map((change, idx) => <ChangeRow key={idx} change={change} />)}
       </div>
     </div>
   );
@@ -303,8 +260,7 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(15, 23, 42, 0.6)' }}
-      onClick={onClose}>
+      style={{ background: 'rgba(15, 23, 42, 0.6)' }} onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
@@ -315,33 +271,24 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1">
-          <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>
-            İptal Sebebi
-          </label>
+          <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>İptal Sebebi</label>
           <div className="mt-3 space-y-2">
             {CANCEL_REASONS.map(reason => {
               const selected = selectedCode === reason.code;
               return (
-                <button key={reason.code} type="button"
-                  onClick={() => setSelectedCode(reason.code)}
+                <button key={reason.code} type="button" onClick={() => setSelectedCode(reason.code)}
                   className="w-full text-left px-3 py-3 rounded-xl transition-all"
-                  style={{
-                    background: selected ? '#FEF2F2' : '#F8FAFC',
-                    border: `2px solid ${selected ? '#DC2626' : '#E2E8F0'}`
-                  }}>
+                  style={{ background: selected ? '#FEF2F2' : '#F8FAFC',
+                    border: `2px solid ${selected ? '#DC2626' : '#E2E8F0'}` }}>
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
-                      style={{
-                        background: selected ? '#DC2626' : 'white',
-                        border: `2px solid ${selected ? '#DC2626' : '#CBD5E1'}`
-                      }}>
+                      style={{ background: selected ? '#DC2626' : 'white',
+                        border: `2px solid ${selected ? '#DC2626' : '#CBD5E1'}` }}>
                       {selected && <div className="w-2 h-2 rounded-full" style={{ background: 'white' }} />}
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>{reason.label}</div>
-                      {reason.hint && (
-                        <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>{reason.hint}</div>
-                      )}
+                      {reason.hint && <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>{reason.hint}</div>}
                     </div>
                   </div>
                 </button>
@@ -354,15 +301,12 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
               <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>
                 {isOther ? 'Açıklama (zorunlu)' : 'Ek Açıklama (opsiyonel)'}
               </label>
-              <textarea value={reasonText}
-                onChange={e => setReasonText(e.target.value)}
+              <textarea value={reasonText} onChange={e => setReasonText(e.target.value)}
                 rows={3} maxLength={500}
                 placeholder={isOther ? 'Lütfen iptal sebebini yazınız...' : 'İsteğe bağlı not...'}
                 className="w-full mt-2 px-3 py-2 rounded-xl text-sm resize-none outline-none"
-                style={{
-                  border: `1px solid ${needsReasonText ? '#FECACA' : '#E2E8F0'}`,
-                  background: '#F8FAFC', color: '#0F172A'
-                }} />
+                style={{ border: `1px solid ${needsReasonText ? '#FECACA' : '#E2E8F0'}`,
+                  background: '#F8FAFC', color: '#0F172A' }} />
               <div className="flex justify-between mt-1">
                 <span className="text-xs" style={{ color: needsReasonText ? '#DC2626' : '#94A3B8' }}>
                   {needsReasonText ? 'En az 3 karakter' : ''}
@@ -374,18 +318,14 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
 
           {error && (
             <div className="mt-3 px-3 py-2 rounded-xl text-xs"
-              style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' }}>
-              {error}
-            </div>
+              style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' }}>{error}</div>
           )}
         </div>
 
         <div className="px-5 py-4 flex gap-2" style={{ borderTop: '1px solid #E2E8F0', background: '#F8FAFC' }}>
           <button onClick={onClose} disabled={submitting}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold active:scale-95 transition-transform disabled:opacity-60"
-            style={{ background: '#F1F5F9', color: '#0F172A' }}>
-            Vazgeç
-          </button>
+            style={{ background: '#F1F5F9', color: '#0F172A' }}>Vazgeç</button>
           <button onClick={handleSubmit} disabled={!canSubmit}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white active:scale-95 transition-transform disabled:opacity-50"
             style={{ background: '#DC2626' }}>
@@ -410,18 +350,14 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
   const reasonInfo = isCancelled ? parseReasonLabel(order.cancel_reason) : null;
   const hasUpdate = !!pendingUpdate;
 
-  const baseBorder = isCancelled ? '#FECACA' :
-    order.status === 'pending' ? '#FDE68A' : '#E2E8F0';
+  const baseBorder = isCancelled ? '#FECACA' : order.status === 'pending' ? '#FDE68A' : '#E2E8F0';
   const borderColor = hasUpdate ? '#F59E0B' : baseBorder;
   const borderWidth = hasUpdate ? '3px' : '1px';
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden"
-      style={{
-        border: `${borderWidth} solid ${borderColor}`,
-        opacity: isCancelled ? 0.8 : 1,
-        animation: hasUpdate ? 'pulse-update 1.5s ease-in-out infinite' : undefined
-      }}>
+      style={{ border: `${borderWidth} solid ${borderColor}`, opacity: isCancelled ? 0.8 : 1,
+        animation: hasUpdate ? 'pulse-update 1.5s ease-in-out infinite' : undefined }}>
 
       <style>{`
         @keyframes pulse-update {
@@ -431,11 +367,8 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
       `}</style>
 
       <div className="px-4 py-3"
-        style={{
-          background: isCancelled ? '#FEF2F2' :
-            order.status === 'pending' ? '#FFFBEB' : '#F8FAFC',
-          borderBottom: '1px solid #E2E8F0'
-        }}>
+        style={{ background: isCancelled ? '#FEF2F2' : order.status === 'pending' ? '#FFFBEB' : '#F8FAFC',
+          borderBottom: '1px solid #E2E8F0' }}>
         <div className="flex items-start justify-between gap-2">
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="font-bold text-sm" style={{ color: '#0F172A' }}>{order.table_name}</div>
@@ -452,37 +385,24 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
         </div>
       </div>
 
-      {pendingUpdate && (
-        <UpdatePanel update={pendingUpdate} onAcknowledge={onAcknowledge} />
-      )}
+      {pendingUpdate && <UpdatePanel update={pendingUpdate} onAcknowledge={onAcknowledge} />}
 
       <div className="px-4 py-3">
         {isCancelled && reasonInfo && (
           <div className="mb-3 px-3 py-2 rounded-lg" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-            <div className="text-xs font-semibold" style={{ color: '#991B1B' }}>
-              ❌ {reasonInfo.label}
-            </div>
-            {reasonInfo.text && (
-              <div className="text-xs mt-1" style={{ color: '#7F1D1D' }}>{reasonInfo.text}</div>
-            )}
+            <div className="text-xs font-semibold" style={{ color: '#991B1B' }}>❌ {reasonInfo.label}</div>
+            {reasonInfo.text && <div className="text-xs mt-1" style={{ color: '#7F1D1D' }}>{reasonInfo.text}</div>}
           </div>
         )}
 
         {order.items.map(item => (
-          <div key={item.id} className="py-1.5"
-            style={{ borderBottom: '1px solid #F1F5F9' }}>
+          <div key={item.id} className="py-1.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                  style={{ background: isCancelled ? '#94A3B8' : '#0D9488' }}>
-                  {item.quantity}
-                </span>
-                <span className="text-sm" style={{
-                  color: '#0F172A',
-                  textDecoration: isCancelled ? 'line-through' : 'none'
-                }}>
-                  {item.product_name}
-                </span>
+                  style={{ background: isCancelled ? '#94A3B8' : '#0D9488' }}>{item.quantity}</span>
+                <span className="text-sm" style={{ color: '#0F172A',
+                  textDecoration: isCancelled ? 'line-through' : 'none' }}>{item.product_name}</span>
               </div>
               <span className="text-xs font-semibold flex-shrink-0" style={{ color: '#64748B' }}>
                 {priceIntToTl(item.price_int * item.quantity)} TL
@@ -491,11 +411,7 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
 
             {item.note && item.note.trim() && (
               <div className="mt-1 ml-8 px-2 py-1 rounded-lg text-xs"
-                style={{
-                  background: '#FFFBEB',
-                  color: '#92400E',
-                  border: '1px solid #FDE68A'
-                }}>
+                style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
                 📝 {item.note}
               </div>
             )}
@@ -510,10 +426,8 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
 
         <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: '1px solid #E2E8F0' }}>
           <span className="text-xs font-semibold" style={{ color: '#64748B' }}>Toplam</span>
-          <span className="font-bold text-sm" style={{
-            color: isCancelled ? '#94A3B8' : '#0D9488',
-            textDecoration: isCancelled ? 'line-through' : 'none'
-          }}>
+          <span className="font-bold text-sm" style={{ color: isCancelled ? '#94A3B8' : '#0D9488',
+            textDecoration: isCancelled ? 'line-through' : 'none' }}>
             {priceIntToTl(orderTotal(order.items))} TL
           </span>
         </div>
@@ -524,46 +438,32 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
           {order.status === 'pending' && (
             <button onClick={() => onUpdate(order, 'preparing')}
               className="flex-1 py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
-              style={{ background: '#0369A1' }}>
-              Hazırlanıyor
-            </button>
+              style={{ background: '#0369A1' }}>Hazırlanıyor</button>
           )}
           {order.status === 'preparing' && (
             <button onClick={() => onUpdate(order, 'ready')}
               className="flex-1 py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
-              style={{ background: '#059669' }}>
-              Hazır
-            </button>
+              style={{ background: '#059669' }}>Hazır</button>
           )}
           {order.status === 'ready' && (
             <button onClick={() => onUpdate(order, 'delivered')}
               className="flex-1 py-2 rounded-xl text-xs font-semibold text-white active:scale-95 transition-transform"
-              style={{ background: '#64748B' }}>
-              Teslim Edildi ✓
-            </button>
+              style={{ background: '#64748B' }}>Teslim Edildi ✓</button>
           )}
           {order.status === 'delivered' && (
             <div className="flex-1 py-2 rounded-xl text-xs font-semibold text-center"
-              style={{ background: '#F1F5F9', color: '#64748B' }}>
-              Tamamlandı
-            </div>
+              style={{ background: '#F1F5F9', color: '#64748B' }}>Tamamlandı</div>
           )}
 
           <button onClick={() => onCancel(order)}
             className="px-3 py-2 rounded-xl text-xs font-semibold active:scale-95 transition-transform"
             style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
-            title="Siparişi iptal et">
-            ❌
-          </button>
+            title="Siparişi iptal et">❌</button>
         </div>
       )}
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// ÇAĞRI KARTI — call_type ile büyük emoji + label gösteriyor
-// ─────────────────────────────────────────────────────────────
 
 type CallCardProps = {
   order: Order;
@@ -574,84 +474,40 @@ type CallCardProps = {
 function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
   const callInfo = getCallTypeInfo(order.call_type);
 
-  // Kritik çağrı türleri için kırmızı vurgu, diğerleri için sarı
   const cardBg = callInfo.critical ? '#FEF2F2' : '#FFFBEB';
   const cardBorder = callInfo.critical ? '#FECACA' : '#FDE68A';
   const accentColor = callInfo.critical ? '#DC2626' : '#B45309';
   const titleColor = callInfo.critical ? '#991B1B' : '#92400E';
 
   return (
-    <div className="rounded-2xl overflow-hidden"
-      style={{ background: cardBg, border: `2px solid ${cardBorder}` }}>
-
-      {/* Üst — büyük emoji + label */}
-      <div style={{
-        padding: '16px',
-        background: callInfo.critical
-          ? 'linear-gradient(135deg, #FEE2E2, #FECACA)'
-          : 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
-        borderBottom: `1px solid ${cardBorder}`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14
-      }}>
-        <div style={{
-          fontSize: 40,
-          lineHeight: 1,
-          flexShrink: 0
-        }}>
-          {callInfo.emoji}
-        </div>
+    <div className="rounded-2xl overflow-hidden" style={{ background: cardBg, border: `2px solid ${cardBorder}` }}>
+      <div style={{ padding: '16px',
+        background: callInfo.critical ? 'linear-gradient(135deg, #FEE2E2, #FECACA)' : 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
+        borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0 }}>{callInfo.emoji}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: accentColor,
-            marginBottom: 2
-          }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+            color: accentColor, marginBottom: 2 }}>
             {callInfo.critical ? '⚠️ Acil İstek' : 'Çağrı'}
           </div>
-          <div style={{
-            fontSize: 17,
-            fontWeight: 800,
-            color: titleColor,
-            fontFamily: 'Georgia, serif',
-            lineHeight: 1.2
-          }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: titleColor, fontFamily: 'Georgia, serif', lineHeight: 1.2 }}>
             {callInfo.label}
           </div>
-          <div className="font-bold text-sm mt-0.5" style={{ color: '#0F172A' }}>
-            📍 {order.table_name}
-          </div>
+          <div className="font-bold text-sm mt-0.5" style={{ color: '#0F172A' }}>📍 {order.table_name}</div>
         </div>
-        <div style={{ flexShrink: 0 }}>
-          <OrderTimerBadge order={order} />
-        </div>
+        <div style={{ flexShrink: 0 }}><OrderTimerBadge order={order} /></div>
       </div>
 
-      {/* "Diğer" türü için serbest not */}
       {order.call_type === 'other' && order.note && (
-        <div style={{
-          padding: '10px 16px',
-          background: 'white',
-          borderBottom: `1px solid ${cardBorder}`
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 700, color: '#64748B',
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-            marginBottom: 4
-          }}>
+        <div style={{ padding: '10px 16px', background: 'white', borderBottom: `1px solid ${cardBorder}` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B',
+            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
             📝 Müşteri Açıklaması
           </div>
-          <div style={{ fontSize: 14, color: '#0F172A', lineHeight: 1.4 }}>
-            {order.note}
-          </div>
+          <div style={{ fontSize: 14, color: '#0F172A', lineHeight: 1.4 }}>{order.note}</div>
         </div>
       )}
 
-      {/* Diğer türlerde note varsa (örn: serbest not eklemiş) */}
       {order.call_type !== 'other' && order.note && order.note.trim() && (
         <div style={{ padding: '8px 16px' }}>
           <div className="text-xs px-2 py-1 rounded-lg" style={{ background: 'white', color: '#92400E', border: '1px solid #FDE68A' }}>
@@ -660,7 +516,6 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
         </div>
       )}
 
-      {/* Tarih/saat */}
       <div style={{ padding: '8px 16px', borderTop: `1px solid ${cardBorder}` }}>
         <div className="flex items-center gap-1.5 flex-wrap text-xs" style={{ color: '#64748B' }}>
           <span className="font-mono">📅 {formatDate(order.created_at)}</span>
@@ -671,37 +526,23 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
         </div>
       </div>
 
-      {/* Aksiyon butonları */}
       <div style={{ padding: '8px 16px 16px', display: 'flex', gap: 8 }}>
         <button onClick={() => onUpdate(order, 'delivered')}
           className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white active:scale-95 transition-transform"
-          style={{ background: callInfo.critical ? '#DC2626' : '#16A34A' }}>
-          ✓ İlgilendim
-        </button>
+          style={{ background: callInfo.critical ? '#DC2626' : '#16A34A' }}>✓ İlgilendim</button>
         <button onClick={() => onCancel(order)}
           className="px-3 py-2.5 rounded-xl text-xs font-semibold active:scale-95 transition-transform"
           style={{ background: 'white', color: '#DC2626', border: '1px solid #FECACA' }}
-          title="Çağrıyı iptal et">
-          ❌
-        </button>
+          title="Çağrıyı iptal et">❌</button>
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// ANA SAYFA
-// ─────────────────────────────────────────────────────────────
-
 export function OrdersPage() {
   const {
-    activeOrders,
-    refreshActive,
-    fetchDelivered,
-    updateOrderStatus,
-    cancelOrder,
-    pendingUpdates,
-    acknowledgeUpdate
+    activeOrders, refreshActive, fetchDelivered, updateOrderStatus, cancelOrder,
+    pendingUpdates, acknowledgeUpdate
   } = useOrders();
 
   const [filter, setFilter] = useState<FilterType>(() => {
@@ -714,6 +555,10 @@ export function OrdersPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
+
+  function showToast(message: string, type: 'error' | 'success') {
+    showToastHelper(message, type, setToast);
+  }
 
   useEffect(() => {
     localStorage.setItem(FILTER_STORAGE_KEY, filter);
@@ -730,11 +575,6 @@ export function OrdersPage() {
     });
     return () => { cancelled = true; };
   }, [filter, fetchDelivered]);
-
-  function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 3000);
-  }
 
   async function handleUpdateStatus(order: Order, status: Order['status']) {
     try {
@@ -777,7 +617,6 @@ export function OrdersPage() {
   const foodOrders = displayedOrders.filter(o => o.type === 'order');
   const updateCount = pendingUpdates.size;
 
-  // Kritik çağrı sayısı (servis_eksik, masa_silinsin)
   const criticalCallCount = callOrders.filter(o => {
     const info = getCallTypeInfo(o.call_type);
     return info.critical;
@@ -785,16 +624,7 @@ export function OrdersPage() {
 
   return (
     <div>
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{
-            background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4',
-            color: toast.type === 'error' ? '#DC2626' : '#16A34A',
-            border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`
-          }}>
-          {toast.message}
-        </div>
-      )}
+      <Toast state={toast} />
 
       {cancelTarget && (
         <CancelModal order={cancelTarget}
@@ -812,9 +642,7 @@ export function OrdersPage() {
           )}
           {updateCount > 0 && filter === 'active' && (
             <span className="px-2.5 py-1 rounded-full text-xs font-bold text-white animate-pulse"
-              style={{ background: '#F59E0B' }}>
-              🔔 {updateCount} güncelleme
-            </span>
+              style={{ background: '#F59E0B' }}>🔔 {updateCount} güncelleme</span>
           )}
         </div>
         <div className="flex gap-2">
@@ -842,15 +670,12 @@ export function OrdersPage() {
             🔔 Müşteri Çağrıları ({callOrders.length})
             {criticalCallCount > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white animate-pulse"
-                style={{ background: '#DC2626' }}>
-                ⚠️ {criticalCallCount} acil
-              </span>
+                style={{ background: '#DC2626' }}>⚠️ {criticalCallCount} acil</span>
             )}
           </h3>
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
             {callOrders.map(order => (
-              <CallCard key={order.id} order={order}
-                onUpdate={handleUpdateStatus} onCancel={setCancelTarget} />
+              <CallCard key={order.id} order={order} onUpdate={handleUpdateStatus} onCancel={setCancelTarget} />
             ))}
           </div>
         </div>

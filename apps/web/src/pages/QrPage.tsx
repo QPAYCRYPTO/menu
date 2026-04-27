@@ -1,14 +1,16 @@
 // apps/web/src/pages/QrPage.tsx
+// CHANGELOG v2: Ortak Toast komponentine geçti
+
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
 
 type Table = { id: string; name: string; is_active: boolean; };
-type ToastState = { message: string; type: 'error' | 'success' } | null;
 
 export function QrPage() {
   const { accessToken } = useAuth();
@@ -25,8 +27,7 @@ export function QrPage() {
   const [tableQrLoading, setTableQrLoading] = useState(false);
 
   function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 2200);
+    showToastHelper(message, type, setToast);
   }
 
   useEffect(() => {
@@ -101,12 +102,7 @@ export function QrPage() {
 
   return (
     <div className="max-w-2xl">
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
-          {toast.message}
-        </div>
-      )}
+      <Toast state={toast} />
 
       {/* Genel Menü QR */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6" style={{border: '1px solid #E2E8F0'}}>

@@ -1,18 +1,15 @@
 // apps/web/src/pages/SettingsPage.tsx
-// CHANGELOG:
-// - Logo yükleme alanı ImageUploadField komponentine geçti
-// - Drag & drop, preview, değiştir/kaldır desteği
-// - Logo yuvarlak preview (rounded=true)
+// CHANGELOG v3: Ortak Toast komponentine geçti
 
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
-type ToastState = { message: string; type: 'error' | 'success' } | null;
 type FormState = {
   name: string; logo_url: string; theme_color: string; bg_color: string;
   dark_mode: boolean; description: string;
@@ -30,8 +27,7 @@ export function SettingsPage() {
   });
 
   function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 2400);
+    showToastHelper(message, type, setToast);
   }
 
   async function loadSettings() {
@@ -51,7 +47,6 @@ export function SettingsPage() {
 
   useEffect(() => { loadSettings().catch(() => undefined); }, [accessToken]);
 
-  // Logo yükle ve form state'ine yaz
   async function handleLogoUpload(file: File): Promise<string | null> {
     if (!accessToken) return null;
     const formData = new FormData();
@@ -101,12 +96,7 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-3xl">
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{ background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}` }}>
-          {toast.message}
-        </div>
-      )}
+      <Toast state={toast} />
 
       <div className="grid gap-6">
 
@@ -152,7 +142,6 @@ export function SettingsPage() {
                 rows={2} placeholder="Kısa açıklama..." />
             </div>
 
-            {/* YENİ: Logo yükleme komponenti (yuvarlak preview) */}
             <ImageUploadField
               value={form.logo_url}
               onUpload={handleLogoUpload}
