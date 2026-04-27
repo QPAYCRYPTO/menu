@@ -1,5 +1,8 @@
 // apps/web/src/pages/waiter/WaiterLoginPage.tsx
-// Garson giriş sayfası — QR token (URL'den) veya email/şifre (manuel)
+// CHANGELOG v2 — KRİTİK GÜVENLİK FİX:
+// - URL'de token varsa "isAuthenticated kontrolü" KALDIRILDI
+// - URL token her zaman önceliklidir, eski oturum üzerine yazılır
+// - Cross-tenant izolasyon bug'ı çözüldü
 
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -22,22 +25,26 @@ export function WaiterLoginPage() {
   // URL'den gelen token ile otomatik giriş
   useEffect(() => {
     if (!urlToken || isChecking) return;
-    if (isAuthenticated) return;
+    // KALDIRILDI: if (isAuthenticated) return;
+    // Sebep: URL'de yeni token varsa, eski oturum üzerine yazmalıyız.
+    // Aksi halde A işletmesinin garsonu, B işletmesinin garson linkini açtığında
+    // hâlâ A'nın oturumunda kalır → cross-tenant data leak.
 
     (async () => {
       setLoading(true);
       setError(null);
+      // loginWithToken artık eski oturumu temizleyip yeni token ile giriş yapar
       const result = await loginWithToken(urlToken);
       if (result.ok) {
         navigate('/garson', { replace: true });
       } else {
         setError(reasonToMessage(result.error as any) ?? 'Giriş yapılamadı.');
-        setMode('email'); // Email girişe fallback
+        setMode('email');
       }
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlToken, isChecking, isAuthenticated]);
+  }, [urlToken, isChecking]);
 
   // Context yüklenene kadar bekle
   if (isChecking) {
@@ -48,8 +55,9 @@ export function WaiterLoginPage() {
     );
   }
 
-  // Zaten giriş yapmış
-  if (isAuthenticated) {
+  // Zaten giriş yapmış VE URL'de token YOKSA (yani "/garson-login" gibi geldiyse)
+  // → /garson'a yönlendir. URL'de token VARSA → useEffect onu işliyor, bekle.
+  if (isAuthenticated && !urlToken) {
     return <Navigate to="/garson" replace />;
   }
 
@@ -63,21 +71,8 @@ export function WaiterLoginPage() {
 
     const result = await loginByEmail(email.trim(), password);
     if (result.ok) {
-      // Context'te saklamak için — token yok ama waiter var
-      // loginWithToken gibi direkt kaydetmiyoruz çünkü bu email yolu
-      // Şu an sadece state'e al, sayfa yenilenince tekrar email girmesi gerekir
-      // (İleride JWT sistemini eklersek persistence eklenir)
-
-      // Geçici çözüm: localStorage'a email+şifre HASH'LİYEREK yazmak YANLIŞ
-      // Bunun yerine: bu yolu kullanan garsonlara "her seferinde giriş" deriz
-      // Veya backend'den JWT alırız — şimdilik MVP için her seferinde giriş
-
-      // Context'i manuel güncelle (token yok, sayfa yenileninde auth düşer)
-      // Bunun için context'e ayrı bir `loginWithEmailSuccess` eklemek gerek
-      // Ama basit tutalım: sayfa yenileyene kadar aktif
       setLoading(false);
       alert('Email ile giriş şu an geçici. Sayfayı yenilerseniz tekrar girmeniz gerekir. Yöneticinizden QR isteyin.');
-      // Not: Gerçek çözüm için WaiterAuthContext'e loginWithEmailSuccess eklenmeli
       return;
     } else {
       setError(reasonToMessage(result.reason));
@@ -89,7 +84,6 @@ export function WaiterLoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
       <div className="w-full max-w-md">
 
-        {/* Logo + başlık */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: '#0D9488' }}>
