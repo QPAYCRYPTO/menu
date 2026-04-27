@@ -1,16 +1,18 @@
 // apps/web/src/pages/ProductsPage.tsx
-// CHANGELOG v2:
-// - ImageUploadField pembe (#EC4899) → mor (#A855F7) tema
+// CHANGELOG v3:
+// - Inline toast div KALDIRILDI
+// - Ortak <Toast /> komponenti kullanılıyor
+// - showToast helper fonksiyonu
 
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
-type ToastState = { message: string; type: 'error' | 'success' } | null;
 type ProductFormState = {
   category_id: string; name: string; description: string;
   priceTl: string; image_url: string; sort_order: string; is_active: boolean;
@@ -36,6 +38,11 @@ export function ProductsPage() {
 
   const sortedCategories = useMemo(() => [...categories].filter(c => c.is_active).sort((a, b) => a.sort_order - b.sort_order), [categories]);
 
+  // Kısa kullanım için sayfa içinde wrapper
+  function showToast(message: string, type: 'error' | 'success') {
+    showToastHelper(message, type, setToast);
+  }
+
   async function loadCategories() {
     const data = await apiRequest<CategoryResponse[]>('/admin/categories', { token: accessToken });
     setCategories(data);
@@ -46,11 +53,6 @@ export function ProductsPage() {
     if (categoryId) query.set('category_id', categoryId);
     const data = await apiRequest<ProductResponse[]>(`/admin/products?${query.toString()}`, { token: accessToken });
     setItems(data);
-  }
-
-  function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 2400);
   }
 
   useEffect(() => {
@@ -139,12 +141,8 @@ export function ProductsPage() {
 
   return (
     <div>
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
-          {toast.message}
-        </div>
-      )}
+      {/* Inline toast div KALDIRILDI, ortak komponent: */}
+      <Toast state={toast} />
 
       <div className="flex items-center gap-3 mb-6">
         <select
@@ -254,7 +252,6 @@ export function ProductsPage() {
                   rows={2} placeholder="Açıklama..." />
               </div>
 
-              {/* MOR tema (pembe yerine) */}
               <ImageUploadField
                 value={form.image_url}
                 onUpload={handleImageUpload}
