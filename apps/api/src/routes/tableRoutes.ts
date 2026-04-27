@@ -1,4 +1,9 @@
 // apps/api/src/routes/tableRoutes.ts
+// CHANGELOG v2:
+// - DELETE artık HARD DELETE değil, SOFT DELETE (is_active=FALSE)
+// - Sebep: Masaya bağlı sessions/orders varsa FK constraint hatası
+// - Geçmiş veriler korunur, masa listede "Pasif" olarak kalır
+
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
@@ -81,12 +86,17 @@ tableRoutes.put('/:id', async (req, res) => {
   res.status(200).json(result.rows[0]);
 });
 
-// Masa sil
+// Masa sil — SOFT DELETE (is_active = FALSE)
+// Geçmiş siparişler/sessions korunur, masa "Pasif" olarak listede kalır.
 tableRoutes.delete('/:id', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const { id } = req.params;
   const result = await pool.query(
-    `DELETE FROM tables WHERE id = $1 AND business_id = $2 RETURNING id`,
+    `UPDATE tables
+     SET is_active = FALSE,
+         updated_at = NOW()
+     WHERE id = $1 AND business_id = $2
+     RETURNING id`,
     [id, businessId]
   );
   if (result.rowCount !== 1) {
