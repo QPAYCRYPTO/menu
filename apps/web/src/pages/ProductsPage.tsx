@@ -267,7 +267,7 @@ export function ProductsPage() {
                 onUpload={handleImageUpload}
                 onRemove={handleImageRemove}
                 label="Ürün Fotoğrafı"
-                hint="PNG, JPG · max 5MB · kare öneri"
+                hint="JPG, PNG, WebP, GIF · max 5MB · kare format"
                 themeColor="#EC4899"
                 previewSize={80}
               />

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import QRCode from 'qrcode';
 import { z } from 'zod';
+import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
 import { invalidateBusinessMenuCache } from '../services/menuService.js';
@@ -9,14 +10,57 @@ import { processImage, processLogo, validateUpload } from '../services/uploadSer
 import { sanitizeText } from '../utils/sanitize.js';
 import { env } from '../config/env.js';
 
+// ─────────────────────────────────────────────────────────────
+// MULTER CONFIG (Düzeltildi)
+// - GIF eklendi
+// - Limit 3MB → 5MB (frontend ile uyumlu)
+// - Reddedildiğinde net hata mesajı
+// ─────────────────────────────────────────────────────────────
+
+const ALLOWED_IMAGE_MIMETYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif'
+]);
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
-    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
-    callback(null, allowed.has(file.mimetype));
+    if (ALLOWED_IMAGE_MIMETYPES.has(file.mimetype)) {
+      callback(null, true);
+    } else {
+      callback(new Error(
+        `Desteklenmeyen dosya türü: ${file.mimetype}. Sadece JPG, PNG, WebP, GIF kabul edilir.`
+      ));
+    }
   }
 });
+
+// Multer hata yakalayıcı middleware
+function handleUploadError(
+  err: any,
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ message: 'Dosya 5MB\'dan büyük olamaz.' });
+      return;
+    }
+    res.status(400).json({ message: err.message });
+    return;
+  }
+  if (err instanceof Error) {
+    res.status(400).json({ message: err.message });
+    return;
+  }
+  next(err);
+}
+
+// ─────────────────────────────────────────────────────────────
 
 const createCategorySchema = z.object({
   name: z.string().min(1).max(120)
@@ -328,8 +372,8 @@ adminRoutes.delete('/categories/:id', async (req, res) => {
   res.status(204).send();
 });
 
-// Ürün görseli upload
-adminRoutes.post('/upload', upload.single('file'), async (req, res) => {
+// Ürün görseli upload (handleUploadError eklendi)
+adminRoutes.post('/upload', upload.single('file'), handleUploadError, async (req, res) => {
   const businessId = req.ctx!.businessId!;
   if (!req.file) { res.status(400).json({ message: 'Dosya zorunludur.' }); return; }
   validateUpload(req.file.size, req.file.mimetype);
@@ -337,8 +381,8 @@ adminRoutes.post('/upload', upload.single('file'), async (req, res) => {
   res.status(200).json({ image_url: image.imageUrl, thumb_url: image.thumbUrl });
 });
 
-// Logo upload — ayrı endpoint
-adminRoutes.post('/upload/logo', upload.single('file'), async (req, res) => {
+// Logo upload — ayrı endpoint (handleUploadError eklendi)
+adminRoutes.post('/upload/logo', upload.single('file'), handleUploadError, async (req, res) => {
   const businessId = req.ctx!.businessId!;
   if (!req.file) { res.status(400).json({ message: 'Dosya zorunludur.' }); return; }
   validateUpload(req.file.size, req.file.mimetype);

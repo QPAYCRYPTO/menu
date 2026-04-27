@@ -158,7 +158,7 @@ export function SettingsPage() {
               onUpload={handleLogoUpload}
               onRemove={handleLogoRemove}
               label="İşletme Logosu"
-              hint="PNG önerilir · max 2MB · kare format"
+              hint="JPG, PNG, WebP, GIF · max 5MB · kare format"
               themeColor={form.theme_color}
               previewSize={72}
               rounded={true}
