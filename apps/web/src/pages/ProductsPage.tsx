@@ -1,8 +1,5 @@
 // apps/web/src/pages/ProductsPage.tsx
-// CHANGELOG v3:
-// - Inline toast div KALDIRILDI
-// - Ortak <Toast /> komponenti kullanılıyor
-// - showToast helper fonksiyonu
+// CHANGELOG v4: Browser confirm() yerine ortak ConfirmModal komponenti
 
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
@@ -10,6 +7,7 @@ import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -32,13 +30,13 @@ export function ProductsPage() {
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [toast, setToast] = useState<ToastState>(null);
+  const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductResponse | null>(null);
   const [form, setForm] = useState<ProductFormState>(initialForm);
 
   const sortedCategories = useMemo(() => [...categories].filter(c => c.is_active).sort((a, b) => a.sort_order - b.sort_order), [categories]);
 
-  // Kısa kullanım için sayfa içinde wrapper
   function showToast(message: string, type: 'error' | 'success') {
     showToastHelper(message, type, setToast);
   }
@@ -130,19 +128,30 @@ export function ProductsPage() {
     } catch (e) { showToast(e instanceof Error ? e.message : 'Ürün kaydedilemedi.', 'error'); }
   }
 
-  async function deleteProduct(item: ProductResponse) {
-    if (!confirm(`"${item.name}" silinsin mi?`)) return;
-    try {
-      await apiRequest(`/admin/products/${item.id}`, { method: 'DELETE', token: accessToken });
-      showToast('Ürün silindi.', 'success');
-      await loadProducts();
-    } catch (e) { showToast(e instanceof Error ? e.message : 'Silinemedi.', 'error'); }
+  // YENİ: Browser confirm() kaldırıldı, ConfirmModal kullanılıyor
+  function askDeleteProduct(item: ProductResponse) {
+    setConfirm({
+      title: 'Ürünü Sil?',
+      message: <><strong>{item.name}</strong> pasif yapılacak. Geçmiş siparişlerde görünmeye devam eder.</>,
+      confirmText: 'Evet, Sil',
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          await apiRequest(`/admin/products/${item.id}`, { method: 'DELETE', token: accessToken });
+          showToast('Ürün silindi.', 'success');
+          await loadProducts();
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : 'Silinemedi.', 'error');
+          throw e;
+        }
+      }
+    });
   }
 
   return (
     <div>
-      {/* Inline toast div KALDIRILDI, ortak komponent: */}
       <Toast state={toast} />
+      <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
       <div className="flex items-center gap-3 mb-6">
         <select
@@ -185,7 +194,7 @@ export function ProductsPage() {
                   style={{background: '#F1F5F9', color: '#0F172A'}}>
                   Düzenle
                 </button>
-                <button onClick={() => deleteProduct(item)}
+                <button onClick={() => askDeleteProduct(item)}
                   className="py-1.5 px-2 rounded-lg text-xs font-semibold"
                   style={{background: '#FEF2F2', color: '#DC2626'}}>
                   Sil

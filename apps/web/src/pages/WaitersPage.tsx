@@ -1,5 +1,7 @@
 // apps/web/src/pages/WaitersPage.tsx
-// CHANGELOG v3: Toast komponentine geçti
+// CHANGELOG v4:
+// - Browser confirm() yerine ortak ConfirmModal komponenti
+// - Garson silme özel modal'ı kaldırıldı, ConfirmModal'a geçti
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
@@ -20,6 +22,7 @@ import {
   revokeWaiterSession
 } from '../api/waiterAdminApi';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
 const DURATION_OPTIONS = [1, 2, 4, 6, 8, 10, 12];
@@ -44,6 +47,7 @@ export function WaitersPage() {
 
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [toast, setToast] = useState<ToastState>(null);
+  const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [loading, setLoading] = useState(false);
 
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
@@ -60,8 +64,6 @@ export function WaitersPage() {
   const [selectedHours, setSelectedHours] = useState(8);
 
   const [qrResult, setQrResult] = useState<WaiterTokenResponse | null>(null);
-
-  const [deleteConfirmWaiter, setDeleteConfirmWaiter] = useState<Waiter | null>(null);
 
   useEffect(() => {
     if (accessToken) loadWaiters();
@@ -183,30 +185,53 @@ export function WaitersPage() {
     }
   }
 
-  async function handleRevokeActiveSessions(waiter: Waiter) {
-    if (!accessToken) return;
-    if (!confirm(`${waiter.name} için aktif tüm QR oturumlarını iptal etmek istediğine emin misin?`)) return;
-    try {
-      const sessions = await listWaiterSessions(accessToken, waiter.id);
-      for (const s of sessions) {
-        await revokeWaiterSession(accessToken, s.id);
+  // YENİ: Browser confirm() kaldırıldı, ConfirmModal kullanılıyor (warning tonu)
+  function askRevokeActiveSessions(waiter: Waiter) {
+    setConfirm({
+      title: 'QR Oturumlarını İptal Et?',
+      message: <><strong>{waiter.name}</strong> için aktif tüm QR oturumları kapatılacak. Garson tekrar QR ile girmek için yeni QR oluşturmanız gerekir.</>,
+      confirmText: 'Evet, İptal Et',
+      tone: 'warning',
+      onConfirm: async () => {
+        if (!accessToken) return;
+        try {
+          const sessions = await listWaiterSessions(accessToken, waiter.id);
+          for (const s of sessions) {
+            await revokeWaiterSession(accessToken, s.id);
+          }
+          showToast(`${sessions.length} oturum iptal edildi.`, 'success');
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : 'Hata.', 'error');
+          throw e;
+        }
       }
-      showToast(`${sessions.length} oturum iptal edildi.`, 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Hata.', 'error');
-    }
+    });
   }
 
-  async function handleDelete() {
-    if (!accessToken || !deleteConfirmWaiter) return;
-    try {
-      await apiDeleteWaiter(accessToken, deleteConfirmWaiter.id);
-      showToast('Garson kalıcı olarak silindi.', 'success');
-      setDeleteConfirmWaiter(null);
-      await loadWaiters();
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Hata.', 'error');
-    }
+  // YENİ: Eski deleteConfirmWaiter modal'ı kaldırıldı, ConfirmModal'a geçti
+  function askDeleteWaiter(waiter: Waiter) {
+    setConfirm({
+      title: 'Garsonu Kalıcı Sil?',
+      message: (
+        <>
+          <strong>{waiter.name}</strong> kalıcı olarak silinecek.<br/>
+          Bu işlem geri alınamaz. İpucu: silmek yerine "Pasif" veya "İzinli" durumuna alabilirsiniz.
+        </>
+      ),
+      confirmText: 'Evet, Kalıcı Sil',
+      tone: 'danger',
+      onConfirm: async () => {
+        if (!accessToken) return;
+        try {
+          await apiDeleteWaiter(accessToken, waiter.id);
+          showToast('Garson kalıcı olarak silindi.', 'success');
+          await loadWaiters();
+        } catch (e) {
+          showToast(e instanceof Error ? e.message : 'Hata.', 'error');
+          throw e;
+        }
+      }
+    });
   }
 
   function waiterLoginUrl(token: string): string {
@@ -236,6 +261,7 @@ export function WaitersPage() {
   return (
     <div>
       <Toast state={toast} />
+      <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -293,7 +319,7 @@ export function WaitersPage() {
                       style={{ background: '#F0FDF4', color: '#16A34A' }}>
                       📱 QR
                     </button>
-                    <button onClick={() => handleRevokeActiveSessions(w)}
+                    <button onClick={() => askRevokeActiveSessions(w)}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                       style={{ background: '#FEF3C7', color: '#B45309' }}
                       title="Aktif QR'ları iptal et">
@@ -321,7 +347,7 @@ export function WaitersPage() {
                   <option value="on_leave">🟡 İzinli</option>
                   <option value="inactive">🔴 Pasif</option>
                 </select>
-                <button onClick={() => setDeleteConfirmWaiter(w)}
+                <button onClick={() => askDeleteWaiter(w)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                   style={{ background: '#FEF2F2', color: '#DC2626' }}
                   title="Kalıcı sil">
@@ -586,36 +612,6 @@ export function WaitersPage() {
               <button onClick={() => setQrResult(null)}
                 className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#0F172A' }}>
                 Kapat
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deleteConfirmWaiter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#DC2626', fontFamily: 'Georgia, serif' }}>
-                🗑️ Garsonu Kalıcı Sil
-              </h2>
-            </div>
-            <div className="p-6">
-              <p className="text-sm" style={{ color: '#0F172A' }}>
-                <b>{deleteConfirmWaiter.name}</b> kalıcı olarak silinecek. Bu işlem geri alınamaz.
-              </p>
-              <p className="text-xs mt-2" style={{ color: '#64748B' }}>
-                İpucu: Silmek yerine "Pasif" veya "İzinli" durumuna alabilirsiniz. Geçmiş siparişler etkilenmez.
-              </p>
-            </div>
-            <div className="px-6 py-4 flex gap-3" style={{ borderTop: '1px solid #E2E8F0' }}>
-              <button onClick={() => setDeleteConfirmWaiter(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#64748B' }}>
-                İptal
-              </button>
-              <button onClick={handleDelete}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#DC2626' }}>
-                Kalıcı Sil
               </button>
             </div>
           </div>
