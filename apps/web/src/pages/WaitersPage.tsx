@@ -1,6 +1,5 @@
 // apps/web/src/pages/WaitersPage.tsx
-// Admin tarafı garson yönetim sayfası — v2
-// Yetki toggle'ları, email/şifre, telefon, status, WhatsApp link, detay modalı
+// CHANGELOG v3: Toast komponentine geçti
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
@@ -20,41 +19,20 @@ import {
   listWaiterSessions,
   revokeWaiterSession
 } from '../api/waiterAdminApi';
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
 const DURATION_OPTIONS = [1, 2, 4, 6, 8, 10, 12];
 
-type ToastState = { message: string; type: 'error' | 'success' } | null;
-
-// Yetki etiketleri (UI'da gösterilecek açıklamalar)
 const PERMISSION_LABELS: Record<keyof WaiterPermissions, { label: string; desc: string }> = {
-  can_delete_items: {
-    label: 'Sipariş silebilir',
-    desc: 'Adisyondan ürün silebilir (admin onayına düşer)'
-  },
-  can_merge_tables: {
-    label: 'Masa birleştirme/ayırma',
-    desc: 'İki masayı tek adisyon yapabilir veya ayırabilir'
-  },
-  can_transfer_table: {
-    label: 'Masa transferi',
-    desc: 'Bir adisyonu başka bir masaya taşıyabilir'
-  },
-  can_see_other_tables: {
-    label: 'Diğer masaları görebilir',
-    desc: 'Başka garsonun açtığı masaları da görür'
-  },
-  can_add_note: {
-    label: 'Adisyona not ekleyebilir',
-    desc: 'Ürünlere not ekleyebilir (az pişmiş, soğansız vb.)'
-  },
-  can_use_break: {
-    label: 'Mola/vardiya kullanabilir',
-    desc: 'İşe giriş / mola / çıkış butonlarını kullanır'
-  }
+  can_delete_items: { label: 'Sipariş silebilir', desc: 'Adisyondan ürün silebilir (admin onayına düşer)' },
+  can_merge_tables: { label: 'Masa birleştirme/ayırma', desc: 'İki masayı tek adisyon yapabilir veya ayırabilir' },
+  can_transfer_table: { label: 'Masa transferi', desc: 'Bir adisyonu başka bir masaya taşıyabilir' },
+  can_see_other_tables: { label: 'Diğer masaları görebilir', desc: 'Başka garsonun açtığı masaları da görür' },
+  can_add_note: { label: 'Adisyona not ekleyebilir', desc: 'Ürünlere not ekleyebilir (az pişmiş, soğansız vb.)' },
+  can_use_break: { label: 'Mola/vardiya kullanabilir', desc: 'İşe giriş / mola / çıkış butonlarını kullanır' }
 };
 
-// WhatsApp mesaj oluştur
 function whatsappLink(phone: string, loginUrl: string, waiterName: string, businessName: string) {
   const message = `Merhaba ${waiterName}, ${businessName} sistem girişin için link:\n${loginUrl}`;
   const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -68,29 +46,21 @@ export function WaitersPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [loading, setLoading] = useState(false);
 
-  // Yeni/düzenle modal
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
+    name: '', phone: '', email: '', password: '',
     permissions: { ...DEFAULT_PERMISSIONS } as WaiterPermissions
   });
   const [editingWaiter, setEditingWaiter] = useState<Waiter | null>(null);
 
-  // Şifre sıfırlama modal
   const [passwordModalWaiter, setPasswordModalWaiter] = useState<Waiter | null>(null);
   const [newPasswordValue, setNewPasswordValue] = useState('');
 
-  // QR üret modal (süre seç)
   const [tokenModalWaiter, setTokenModalWaiter] = useState<Waiter | null>(null);
   const [selectedHours, setSelectedHours] = useState(8);
 
-  // QR göster modal
   const [qrResult, setQrResult] = useState<WaiterTokenResponse | null>(null);
 
-  // Silme onay
   const [deleteConfirmWaiter, setDeleteConfirmWaiter] = useState<Waiter | null>(null);
 
   useEffect(() => {
@@ -99,8 +69,7 @@ export function WaitersPage() {
   }, [accessToken]);
 
   function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 3000);
+    showToastHelper(message, type, setToast);
   }
 
   async function loadWaiters() {
@@ -116,13 +85,7 @@ export function WaitersPage() {
   function openCreateForm() {
     setFormMode('create');
     setEditingWaiter(null);
-    setFormData({
-      name: '',
-      phone: '',
-      email: '',
-      password: '',
-      permissions: { ...DEFAULT_PERMISSIONS }
-    });
+    setFormData({ name: '', phone: '', email: '', password: '', permissions: { ...DEFAULT_PERMISSIONS } });
   }
 
   function openEditForm(w: Waiter) {
@@ -132,7 +95,7 @@ export function WaitersPage() {
       name: w.name,
       phone: w.phone ?? '',
       email: w.email ?? '',
-      password: '', // şifre burada değişmez — ayrı modal
+      password: '',
       permissions: { ...w.permissions }
     });
   }
@@ -144,18 +107,12 @@ export function WaitersPage() {
 
   async function handleSave() {
     if (!accessToken) return;
-    if (!formData.name.trim()) {
-      showToast('Ad Soyad boş olamaz.', 'error');
-      return;
-    }
-    // Email varsa şifre zorunlu (sadece create için)
+    if (!formData.name.trim()) { showToast('Ad Soyad boş olamaz.', 'error'); return; }
     if (formMode === 'create' && formData.email.trim() && !formData.password) {
-      showToast('Email girdiyseniz şifre de belirlemelisiniz.', 'error');
-      return;
+      showToast('Email girdiyseniz şifre de belirlemelisiniz.', 'error'); return;
     }
     if (formData.password && formData.password.length < 8) {
-      showToast('Şifre en az 8 karakter olmalı.', 'error');
-      return;
+      showToast('Şifre en az 8 karakter olmalı.', 'error'); return;
     }
 
     setLoading(true);
@@ -192,7 +149,7 @@ export function WaitersPage() {
     try {
       await apiSetStatus(accessToken, waiter.id, newStatus);
       const statusLabel = newStatus === 'active' ? 'Aktif' : newStatus === 'on_leave' ? 'İzinli' : 'Pasif';
-      showToast(`${waiter.name}${statusLabel.toLowerCase()} yapıldı.`, 'success');
+      showToast(`${waiter.name} ${statusLabel.toLowerCase()} yapıldı.`, 'success');
       await loadWaiters();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Hata.', 'error');
@@ -202,8 +159,7 @@ export function WaitersPage() {
   async function handleSetPassword() {
     if (!accessToken || !passwordModalWaiter) return;
     if (newPasswordValue.length < 8) {
-      showToast('Şifre en az 8 karakter olmalı.', 'error');
-      return;
+      showToast('Şifre en az 8 karakter olmalı.', 'error'); return;
     }
     try {
       await apiSetPassword(accessToken, passwordModalWaiter.id, newPasswordValue);
@@ -279,15 +235,8 @@ export function WaitersPage() {
 
   return (
     <div>
+      <Toast state={toast} />
 
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{ background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}` }}>
-          {toast.message}
-        </div>
-      )}
-
-      {/* Üst başlık */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-bold text-xl" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
@@ -304,7 +253,6 @@ export function WaitersPage() {
         </button>
       </div>
 
-      {/* Garson listesi */}
       <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
         {waiters.length === 0 && (
           <div className="text-center py-16">
@@ -322,7 +270,6 @@ export function WaitersPage() {
           <div key={w.id} className="px-4 py-3"
             style={{ borderBottom: '1px solid #F1F5F9', background: w.status === 'active' ? 'white' : '#FAFBFC' }}>
 
-            {/* Üst satır: avatar + isim + durum + aksiyonlar */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                 style={{ background: w.status === 'active' ? '#0D9488' : '#94A3B8' }}>
@@ -365,7 +312,6 @@ export function WaitersPage() {
                   title="Şifre belirle/sıfırla">
                   🔑
                 </button>
-                {/* Status dropdown */}
                 <select
                   value={w.status}
                   onChange={(e) => handleStatusChange(w, e.target.value as WaiterStatus)}
@@ -399,8 +345,6 @@ export function WaitersPage() {
                 className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh' }}>
-
-              {/* Ad Soyad */}
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
                   Ad Soyad <span style={{ color: '#DC2626' }}>*</span>
@@ -412,7 +356,6 @@ export function WaitersPage() {
                   style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
               </div>
 
-              {/* Telefon */}
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
                   Telefon (WhatsApp için)
@@ -427,7 +370,6 @@ export function WaitersPage() {
                 </p>
               </div>
 
-              {/* Email */}
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
                   Email (opsiyonel)
@@ -442,7 +384,6 @@ export function WaitersPage() {
                 </p>
               </div>
 
-              {/* Şifre - sadece create modunda */}
               {formMode === 'create' && (
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
@@ -456,7 +397,6 @@ export function WaitersPage() {
                 </div>
               )}
 
-              {/* YETKİLER */}
               <div>
                 <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#64748B' }}>
                   Yetkiler
@@ -486,7 +426,6 @@ export function WaitersPage() {
                   ))}
                 </div>
               </div>
-
             </div>
             <div className="px-6 py-4 flex gap-3" style={{ borderTop: '1px solid #E2E8F0' }}>
               <button onClick={closeForm}
@@ -503,7 +442,6 @@ export function WaitersPage() {
         </div>
       )}
 
-      {/* ŞİFRE MODAL */}
       {passwordModalWaiter && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -546,7 +484,6 @@ export function WaitersPage() {
         </div>
       )}
 
-      {/* QR ÜRETME MODAL (süre seç) */}
       {tokenModalWaiter && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -593,7 +530,6 @@ export function WaitersPage() {
         </div>
       )}
 
-      {/* QR GÖSTER MODAL (üretim sonrası) */}
       {qrResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -635,7 +571,6 @@ export function WaitersPage() {
                 </div>
               </div>
 
-              {/* WhatsApp butonu (telefon varsa) */}
               {qrResult.waiter_phone && (
                 <a
                   href={whatsappLink(qrResult.waiter_phone, waiterLoginUrl(qrResult.token), qrResult.waiter_name, 'AtlasQR')}
@@ -657,7 +592,6 @@ export function WaitersPage() {
         </div>
       )}
 
-      {/* SİLME ONAYI */}
       {deleteConfirmWaiter && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">

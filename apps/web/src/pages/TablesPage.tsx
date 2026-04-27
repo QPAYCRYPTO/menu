@@ -1,7 +1,10 @@
 // apps/web/src/pages/TablesPage.tsx
+// CHANGELOG v2: Toast komponentine geçti
+
 import { useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -37,8 +40,6 @@ type SessionDetail = {
   }>;
 };
 
-type ToastState = { message: string; type: 'error' | 'success' } | null;
-
 function formatPrice(priceInt: number): string {
   return `${(priceInt / 100).toFixed(2)} TL`;
 }
@@ -71,19 +72,16 @@ export function TablesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
-  // Detay modal
   const [detailOpen, setDetailOpen] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<SessionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Masa kapatma modal (pending var durumunda seçenek)
   const [closeModal, setCloseModal] = useState<{ sessionId: string; tableName: string; pendingCount: number } | null>(null);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function showToast(message: string, type: 'error' | 'success') {
-    setToast({ message, type });
-    window.setTimeout(() => setToast(null), 2400);
+    showToastHelper(message, type, setToast);
   }
 
   async function loadTables() {
@@ -99,15 +97,12 @@ export function TablesPage() {
     try {
       const data = await apiRequest<SessionInfo[]>('/admin/sessions', { token: accessToken });
       setSessions(data);
-    } catch {
-      // Sessiz geç, polling tekrar dener
-    }
+    } catch {}
   }
 
   useEffect(() => {
     loadTables();
     loadSessions();
-    // 10 saniyede bir session bilgilerini tazele
     pollingRef.current = setInterval(loadSessions, 10000);
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -180,15 +175,11 @@ export function TablesPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/sessions/${sessionId}/close`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
       });
 
       if (res.status === 409) {
-        // Pending siparişler var, kullanıcıya sor
         const body = await res.json();
         setCloseModal({ sessionId, tableName, pendingCount: body.pending_count });
         return;
@@ -209,7 +200,6 @@ export function TablesPage() {
     }
   }
 
-  // Masaları session bilgisiyle birleştir
   const tablesWithSession = tables.map(t => {
     const session = sessions.find(s => s.table_id === t.id);
     return { ...t, session };
@@ -217,14 +207,8 @@ export function TablesPage() {
 
   return (
     <div>
-      {toast && (
-        <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
-          style={{background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4', color: toast.type === 'error' ? '#DC2626' : '#16A34A', border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`}}>
-          {toast.message}
-        </div>
-      )}
+      <Toast state={toast} />
 
-      {/* Yeni Masa Ekle */}
       <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm max-w-2xl" style={{border: '1px solid #E2E8F0'}}>
         <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{color: '#64748B'}}>Yeni Masa Ekle</h2>
         <div className="flex gap-3">
@@ -244,7 +228,6 @@ export function TablesPage() {
         </div>
       </div>
 
-      {/* Özet sayaçlar */}
       {tables.length > 0 && (
         <div className="flex gap-3 mb-4 flex-wrap">
           <div className="px-4 py-2 rounded-xl" style={{background: '#ECFDF5', border: '1px solid #A7F3D0'}}>
@@ -267,9 +250,7 @@ export function TablesPage() {
         </div>
       )}
 
-      {/* Masa Kartları — Grid */}
-      <div className="grid gap-4"
-        style={{gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'}}>
+      <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'}}>
         {tablesWithSession.map(table => (
           <TableCard
             key={table.id}
@@ -297,7 +278,6 @@ export function TablesPage() {
         )}
       </div>
 
-      {/* Detay Modalı */}
       {detailOpen && (
         <div style={{position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', padding: 16}}
           onClick={() => { setDetailOpen(null); setDetailData(null); }}>
@@ -319,7 +299,6 @@ export function TablesPage() {
                 </div>
               ) : detailData ? (
                 <>
-                  {/* Özet */}
                   <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16}}>
                     <div style={{padding: 10, background: '#F0FDFA', borderRadius: 10, textAlign: 'center'}}>
                       <div style={{fontSize: 10, color: '#0F766E', textTransform: 'uppercase', fontWeight: 600}}>Adisyon</div>
@@ -341,7 +320,6 @@ export function TablesPage() {
                     </div>
                   </div>
 
-                  {/* Siparişler */}
                   {detailData.orders.length === 0 ? (
                     <p style={{textAlign: 'center', color: '#94A3B8', fontSize: 13, padding: 20}}>Henüz sipariş yok.</p>
                   ) : (
@@ -394,7 +372,6 @@ export function TablesPage() {
         </div>
       )}
 
-      {/* Pending Sipariş Uyarı Modalı */}
       {closeModal && (
         <div style={{position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.7)', padding: 16}}
           onClick={() => setCloseModal(null)}>
@@ -434,8 +411,6 @@ export function TablesPage() {
   );
 }
 
-// --- Masa Kart Komponenti ---
-
 type TableCardProps = {
   table: Table;
   session: SessionInfo | undefined;
@@ -460,10 +435,8 @@ function TableCard({
   const isOccupied = !!session;
   const isPassive = !table.is_active;
 
-  // Kronometre — sadece dolu ise
   const duration = session ? useDuration(session.opened_at) : null;
 
-  // Renk paleti
   const colors = isPassive
     ? { bg: '#F8FAFC', border: '#E2E8F0', accent: '#94A3B8', chipBg: '#F1F5F9', chipText: '#64748B' }
     : isOccupied
@@ -481,7 +454,6 @@ function TableCard({
       flexDirection: 'column'
     }}>
 
-      {/* Üst şerit — durum */}
       <div style={{
         padding: '8px 14px',
         background: colors.accent,
@@ -494,15 +466,12 @@ function TableCard({
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span>
-          {isPassive ? 'Pasif' : isOccupied ? '● Dolu' : '○ Boş'}
-        </span>
+        <span>{isPassive ? 'Pasif' : isOccupied ? '● Dolu' : '○ Boş'}</span>
         {isOccupied && duration && (
           <span style={{fontFamily: 'monospace', fontWeight: 700}}>⏱ {duration}</span>
         )}
       </div>
 
-      {/* Ana içerik */}
       <div style={{padding: 16, flex: 1}}>
         {editing ? (
           <input
@@ -520,7 +489,6 @@ function TableCard({
           </div>
         )}
 
-        {/* Dolu ise session bilgileri */}
         {isOccupied && session && (
           <div style={{display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12}}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'white', borderRadius: 8, border: '1px solid rgba(0,0,0,0.04)'}}>
@@ -542,7 +510,6 @@ function TableCard({
           </div>
         )}
 
-        {/* Boş ise minimal bilgi */}
         {!isOccupied && !editing && !isPassive && (
           <div style={{padding: '14px 8px', textAlign: 'center', background: 'white', borderRadius: 10, border: '1px dashed #A7F3D0', marginBottom: 12}}>
             <div style={{fontSize: 11, color: '#065F46', fontWeight: 600}}>Müşteri bekleniyor</div>
@@ -550,10 +517,8 @@ function TableCard({
         )}
       </div>
 
-      {/* Alt butonlar */}
       <div style={{padding: '10px 14px 14px', borderTop: '1px solid rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 6}}>
 
-        {/* Dolu masa için hesap butonları */}
         {isOccupied && !editing && (
           <div style={{display: 'flex', gap: 6}}>
             <button onClick={onOpenDetail}
@@ -567,7 +532,6 @@ function TableCard({
           </div>
         )}
 
-        {/* Yönetim butonları */}
         <div style={{display: 'flex', gap: 6, flexWrap: 'wrap'}}>
           {editing ? (
             <>
