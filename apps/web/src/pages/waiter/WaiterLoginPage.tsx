@@ -1,8 +1,8 @@
 // apps/web/src/pages/waiter/WaiterLoginPage.tsx
-// CHANGELOG v2 — KRİTİK GÜVENLİK FİX:
-// - URL'de token varsa "isAuthenticated kontrolü" KALDIRILDI
-// - URL token her zaman önceliklidir, eski oturum üzerine yazılır
-// - Cross-tenant izolasyon bug'ı çözüldü
+// CHANGELOG v3 — Tab-bound session:
+// - URL'deki swap_token loginWithToken'a verilir → exchange yapılır
+// - URL temizleme: history.replaceState ile token URL'den kaldırılır
+// - isAuthenticated kontrolü kaldırıldı (URL token öncelikli)
 
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -18,24 +18,31 @@ export function WaiterLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Email form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // URL'den gelen token ile otomatik giriş
+  // URL'den gelen token ile exchange yap
   useEffect(() => {
     if (!urlToken || isChecking) return;
-    // KALDIRILDI: if (isAuthenticated) return;
-    // Sebep: URL'de yeni token varsa, eski oturum üzerine yazmalıyız.
-    // Aksi halde A işletmesinin garsonu, B işletmesinin garson linkini açtığında
-    // hâlâ A'nın oturumunda kalır → cross-tenant data leak.
 
     (async () => {
       setLoading(true);
       setError(null);
-      // loginWithToken artık eski oturumu temizleyip yeni token ile giriş yapar
+
+      // loginWithToken artık:
+      // 1) Eski sessionStorage'ı temizler
+      // 2) Yeni tab_id üretir
+      // 3) Backend'e exchange isteği gönderir
+      // 4) sessionStorage'a yazar
       const result = await loginWithToken(urlToken);
+
       if (result.ok) {
+        // URL'deki token'ı temizle (geçmiş & paylaşma riski için)
+        try {
+          window.history.replaceState({}, '', '/garson');
+        } catch {
+          // replaceState desteklemiyorsa sorun değil
+        }
         navigate('/garson', { replace: true });
       } else {
         setError(reasonToMessage(result.error as any) ?? 'Giriş yapılamadı.');
@@ -55,8 +62,8 @@ export function WaiterLoginPage() {
     );
   }
 
-  // Zaten giriş yapmış VE URL'de token YOKSA (yani "/garson-login" gibi geldiyse)
-  // → /garson'a yönlendir. URL'de token VARSA → useEffect onu işliyor, bekle.
+  // Zaten giriş yapmış VE URL'de token YOKSA → /garson'a yönlendir
+  // URL'de token VARSA → useEffect onu işliyor, bekle
   if (isAuthenticated && !urlToken) {
     return <Navigate to="/garson" replace />;
   }

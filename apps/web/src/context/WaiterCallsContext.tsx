@@ -1,4 +1,10 @@
 // apps/web/src/context/WaiterCallsContext.tsx
+// CHANGELOG v2 — Tab-bound session:
+// - tabId useWaiterAuth'tan alınıyor
+// - listActiveCalls(token, tabId)
+// - takeCallApi(token, tabId, callId)
+// - SSE URL'ine ?tab_id=X eklendi
+//
 // Garson çağrı yönetimi: SSE bağlantısı + ses + state
 //
 // Davranış:
@@ -25,7 +31,7 @@ type WaiterCallsContextValue = {
 const WaiterCallsContext = createContext<WaiterCallsContextValue | null>(null);
 
 export function WaiterCallsProvider({ children }: { children: ReactNode }) {
-  const { token, isAuthenticated } = useWaiterAuth();
+  const { token, tabId, isAuthenticated } = useWaiterAuth();
   const [calls, setCalls] = useState<WaiterActiveCall[]>([]);
   const [loading, setLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -62,23 +68,23 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
 
   // İlk yükleme
   const refresh = useCallback(async () => {
-    if (!token || !isAuthenticated) return;
+    if (!token || !tabId || !isAuthenticated) return;
     setLoading(true);
     try {
-      const data = await listActiveCalls(token);
+      const data = await listActiveCalls(token, tabId);
       setCalls(data);
     } catch (err) {
       console.error('listActiveCalls failed:', err);
     } finally {
       setLoading(false);
     }
-  }, [token, isAuthenticated]);
+  }, [token, tabId, isAuthenticated]);
 
   // Çağrıyı al
   const takeCall = useCallback(async (callId: string): Promise<{ ok: boolean; error?: string }> => {
-    if (!token) return { ok: false, error: 'Token yok' };
+    if (!token || !tabId) return { ok: false, error: 'Token yok' };
     try {
-      await takeCallApi(token, callId);
+      await takeCallApi(token, tabId, callId);
       // Optimistic: state'ten sil (SSE de gelecek ama bekleme)
       setCalls(prev => prev.filter(c => c.id !== callId));
       return { ok: true };
@@ -90,11 +96,11 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
       }
       return { ok: false, error: msg };
     }
-  }, [token]);
+  }, [token, tabId]);
 
   // SSE bağlantısı
   useEffect(() => {
-    if (!token || !isAuthenticated) {
+    if (!token || !tabId || !isAuthenticated) {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
@@ -106,8 +112,8 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
     // İlk veriyi çek
     refresh();
 
-    // SSE bağlan
-    const url = `${API_BASE_URL}/public/waiter/stream?token=${encodeURIComponent(token)}`;
+    // SSE bağlan — token + tab_id query param ile
+    const url = `${API_BASE_URL}/public/waiter/stream?token=${encodeURIComponent(token)}&tab_id=${encodeURIComponent(tabId)}`;
     const es = new EventSource(url, { withCredentials: false });
     eventSourceRef.current = es;
 
@@ -152,7 +158,7 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
       es.close();
       eventSourceRef.current = null;
     };
-  }, [token, isAuthenticated, refresh]);
+  }, [token, tabId, isAuthenticated, refresh]);
 
   return (
     <WaiterCallsContext.Provider value={{ calls, refresh, takeCall, loading }}>

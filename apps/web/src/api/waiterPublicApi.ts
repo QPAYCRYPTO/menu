@@ -1,8 +1,10 @@
 // apps/web/src/api/waiterPublicApi.ts
-// CHANGELOG v7:
-// - WaiterCall type'a call_type, table_id, table_name eklendi
-// - listActiveCalls(token) — tüm aktif çağrıları getirir (paylaşımlı kuyruk)
-// - takeCall(token, callId) — garson çağrıyı üstlenir
+// CHANGELOG v8:
+// - Tüm yetkili isteklere X-Tab-ID header'ı eklendi
+// - waiterHeaders artık (token, tabId) alıyor
+// - Yeni: exchangeToken (swap_token + tab_id ile yeni session başlat)
+// - Yeni: logoutTab (sekme kapatılırken çağrılır)
+// - Eski authByToken korundu (geriye uyumluluk için, frontend geçince kaldırılır)
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -54,13 +56,11 @@ export type WaiterOrder = {
   items: WaiterOrderItem[];
 };
 
-// Çağrı türü kodu (backend ile aynı)
 export type CallTypeCode =
   | 'waiter' | 'baby_chair' | 'charger' | 'bill' | 'package'
   | 'ashtray' | 'lighter' | 'cigarette' | 'water'
   | 'missing_service' | 'clean_table' | 'other';
 
-// Tek çağrı objesi (table detail içinde de aynı)
 export type WaiterCall = {
   id: string;
   note: string | null;
@@ -68,7 +68,6 @@ export type WaiterCall = {
   created_at: string;
 };
 
-// Aktif çağrılar listesi için (table_name dahil)
 export type WaiterActiveCall = {
   id: string;
   table_id: string;
@@ -136,7 +135,7 @@ export type WaiterAuthSuccess = {
 
 export type WaiterAuthFailure = {
   ok: false;
-  reason: 'invalid_token' | 'expired' | 'revoked' | 'waiter_inactive' | 'business_suspended' | 'module_disabled' | 'invalid_credentials' | 'network_error' | 'no_token';
+  reason: 'invalid_token' | 'expired' | 'revoked' | 'waiter_inactive' | 'business_suspended' | 'module_disabled' | 'invalid_credentials' | 'invalid_tab' | 'network_error' | 'no_token';
 };
 
 export type WaiterAuthResponse = WaiterAuthSuccess | WaiterAuthFailure;
@@ -153,10 +152,14 @@ async function handleAuthResponse(res: Response): Promise<WaiterAuthResponse> {
   }
 }
 
-function waiterHeaders(token: string) {
+/**
+ * YENİ: token + tab_id header'lı request için
+ */
+function waiterHeaders(token: string, tabId: string) {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`
+    'Authorization': `Bearer ${token}`,
+    'X-Tab-ID': tabId
   };
 }
 
@@ -168,7 +171,51 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-// AUTH
+// ============================================================================
+// AUTH — Yeni güvenli yol
+// ============================================================================
+
+/**
+ * YENİ: Swap token + tab_id ile session başlat.
+ * /g/{token} sayfası açıldığında çağrılır.
+ */
+export async function exchangeToken(token: string, tabId: string): Promise<WaiterAuthResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/waiter/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, tab_id: tabId })
+    });
+    return handleAuthResponse(res);
+  } catch {
+    return { ok: false, reason: 'network_error' };
+  }
+}
+
+/**
+ * YENİ: Tab'ı revoke et (sekme kapatılırken).
+ */
+export async function logoutTab(tabId: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/public/waiter/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tab_id: tabId }),
+      keepalive: true // sekme kapanırken bile request gitsin
+    });
+  } catch {
+    // Logout hatası önemsiz
+  }
+}
+
+// ============================================================================
+// AUTH — Eski yol (geriye uyumluluk)
+// ============================================================================
+
+/**
+ * ESKİ: Sadece token ile auth (tab_id olmadan).
+ * Yeni kod exchangeToken kullanmalı.
+ */
 export async function authByToken(token: string): Promise<WaiterAuthResponse> {
   try {
     const res = await fetch(`${API_BASE_URL}/public/waiter/auth`, {
@@ -195,69 +242,68 @@ export async function loginByEmail(email: string, password: string): Promise<Wai
   }
 }
 
-// TABLES
-export async function listTables(token: string): Promise<WaiterTable[]> {
+// ============================================================================
+// TABLES (artık tabId zorunlu)
+// ============================================================================
+
+export async function listTables(token: string, tabId: string): Promise<WaiterTable[]> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/tables`, {
-    headers: waiterHeaders(token)
+    headers: waiterHeaders(token, tabId)
   });
   return handleResponse<WaiterTable[]>(res);
 }
 
-export async function getTableDetail(token: string, tableId: string): Promise<WaiterTableDetail> {
+export async function getTableDetail(token: string, tabId: string, tableId: string): Promise<WaiterTableDetail> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/tables/${tableId}`, {
-    headers: waiterHeaders(token)
+    headers: waiterHeaders(token, tabId)
   });
   return handleResponse<WaiterTableDetail>(res);
 }
 
+// ============================================================================
 // MENU
-export async function getMenu(token: string): Promise<WaiterMenu> {
+// ============================================================================
+
+export async function getMenu(token: string, tabId: string): Promise<WaiterMenu> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/menu`, {
-    headers: waiterHeaders(token)
+    headers: waiterHeaders(token, tabId)
   });
   return handleResponse<WaiterMenu>(res);
 }
 
-// ─────────────────────────────────────────────────────────────
-// ÇAĞRILAR — paylaşımlı kuyruk
-// ─────────────────────────────────────────────────────────────
+// ============================================================================
+// ÇAĞRILAR
+// ============================================================================
 
-/**
- * Aktif çağrıları listeler (tüm garsonlar için aynı liste).
- */
-export async function listActiveCalls(token: string): Promise<WaiterActiveCall[]> {
+export async function listActiveCalls(token: string, tabId: string): Promise<WaiterActiveCall[]> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/calls`, {
-    headers: waiterHeaders(token)
+    headers: waiterHeaders(token, tabId)
   });
   return handleResponse<WaiterActiveCall[]>(res);
 }
 
-/**
- * Garson çağrıyı üstleniyor.
- * Başarı: çağrı listeden silinir, SSE ile herkese duyurulur.
- * 409: Başka garson zaten almış (hata gösterilmeli).
- */
-export async function takeCall(token: string, callId: string): Promise<{ message: string; call_id: string }> {
+export async function takeCall(token: string, tabId: string, callId: string): Promise<{ message: string; call_id: string }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/calls/${callId}/take`, {
     method: 'POST',
-    headers: waiterHeaders(token)
+    headers: waiterHeaders(token, tabId)
   });
   return handleResponse(res);
 }
 
-// ─────────────────────────────────────────────────────────────
+// ============================================================================
 // SİPARİŞLER
-// ─────────────────────────────────────────────────────────────
+// ============================================================================
 
 export async function createOrder(
   token: string,
+  tabId: string,
   tableId: string,
   items: Array<{ product_id: string; quantity: number; note?: string }>,
   note?: string
 ): Promise<{ order_id: string; total_int: number; item_count: number }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/tables/${tableId}/orders`, {
     method: 'POST',
-    headers: waiterHeaders(token),
+    headers: waiterHeaders(token, tabId),
     body: JSON.stringify({ items, note })
   });
   return handleResponse(res);
@@ -265,12 +311,13 @@ export async function createOrder(
 
 export async function addItemsToOrder(
   token: string,
+  tabId: string,
   orderId: string,
   items: Array<{ product_id: string; quantity: number; note?: string }>
 ): Promise<{ message: string; added_count: number }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/orders/${orderId}/items`, {
     method: 'POST',
-    headers: waiterHeaders(token),
+    headers: waiterHeaders(token, tabId),
     body: JSON.stringify({ items })
   });
   return handleResponse(res);
@@ -278,12 +325,13 @@ export async function addItemsToOrder(
 
 export async function updateItemQuantity(
   token: string,
+  tabId: string,
   itemId: string,
   quantity: number
 ): Promise<{ message: string }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/order-items/${itemId}`, {
     method: 'PATCH',
-    headers: waiterHeaders(token),
+    headers: waiterHeaders(token, tabId),
     body: JSON.stringify({ quantity })
   });
   return handleResponse(res);
@@ -291,6 +339,7 @@ export async function updateItemQuantity(
 
 export async function cancelOrder(
   token: string,
+  tabId: string,
   orderId: string,
   reasonCode: CancelReasonCode,
   reasonText?: string
@@ -300,7 +349,7 @@ export async function cancelOrder(
 }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/orders/${orderId}/cancel`, {
     method: 'POST',
-    headers: waiterHeaders(token),
+    headers: waiterHeaders(token, tabId),
     body: JSON.stringify({
       reason_code: reasonCode,
       reason_text: reasonText
@@ -318,6 +367,7 @@ export function reasonToMessage(reason: WaiterAuthFailure['reason']): string {
     case 'business_suspended': return 'İşletme geçici olarak hizmet dışı.';
     case 'module_disabled': return 'Garson modülü kapalı.';
     case 'invalid_credentials': return 'Email veya şifre hatalı.';
+    case 'invalid_tab': return 'Oturum geçersiz. Lütfen tekrar QR ile girin.';
     case 'network_error': return 'Bağlantı hatası. Tekrar deneyin.';
     case 'no_token': return 'Oturum yok. Lütfen giriş yapın.';
     default: return 'Bir hata oluştu.';

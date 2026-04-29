@@ -26,7 +26,7 @@ function formatPrice(priceInt: number): string {
 
 export function WaiterTableDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { token, waiter, logout } = useWaiterAuth();
+  const { token, tabId, waiter, logout } = useWaiterAuth();
   const navigate = useNavigate();
 
   const [data, setData] = useState<WaiterTableDetail | null>(null);
@@ -43,10 +43,9 @@ export function WaiterTableDetailPage() {
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
-    if (!token || !id) return;
+    if (!token || !tabId || !id) return;
     loadDetail();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, id]);
+  }, [token, tabId, id]);
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
@@ -54,11 +53,11 @@ export function WaiterTableDetailPage() {
   }
 
   async function loadDetail() {
-    if (!token || !id) return;
+    if (!token || !tabId || !id) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await getTableDetail(token, id);
+      const result = await getTableDetail(token, tabId, id);
       setData(result);
     } catch (e) {
       if (e instanceof Error && e.message.includes('reason')) {
@@ -72,12 +71,12 @@ export function WaiterTableDetailPage() {
   }
 
   async function handleQuantityChange(itemId: string, currentQty: number, delta: number) {
-    if (!token) return;
+    if (!token || !tabId) return;
     const newQty = currentQty + delta;
     if (newQty < 1) return;
 
     try {
-      await updateItemQuantity(token, itemId, newQty);
+      await updateItemQuantity(token, tabId, itemId, newQty);
       showToast('Adet güncellendi', 'success');
       await loadDetail();
     } catch (e) {
@@ -92,7 +91,7 @@ export function WaiterTableDetailPage() {
   }
 
   async function handleCancelOrder() {
-    if (!token || !cancelModal) return;
+    if (!token || !tabId || !cancelModal) return;
 
     if (cancelReason === 'other' && cancelText.trim().length < 3) {
       showToast('"Diğer" sebebi için açıklama yazmalısınız (min 3 karakter).', 'error');
@@ -103,6 +102,7 @@ export function WaiterTableDetailPage() {
     try {
       const result = await cancelOrder(
         token,
+        tabId,
         cancelModal.orderId,
         cancelReason,
         cancelText.trim() || undefined

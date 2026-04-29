@@ -1,5 +1,7 @@
 // apps/web/src/pages/waiter/WaiterTablesPage.tsx
-// Garson ana ekranı — Admin masa görüntüsü ile AYNI tasarım (sadeleştirilmiş)
+// CHANGELOG v2:
+// - listTables(token, tabId) — yeni API imzası
+// - tabId useWaiterAuth'tan alınıyor
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -32,23 +34,22 @@ function useDuration(openedAt: string) {
 }
 
 export function WaiterTablesPage() {
-  const { waiter, token, logout } = useWaiterAuth();
+  const { waiter, token, tabId, logout } = useWaiterAuth();
   const [tables, setTables] = useState<WaiterTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !tabId) return;
     loadTables();
 
-    // Her 10 sn'de bir otomatik yenile (admin ile aynı)
     const interval = setInterval(() => {
       loadTables(true);
     }, 10000);
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, tabId]);
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
@@ -56,10 +57,10 @@ export function WaiterTablesPage() {
   }
 
   async function loadTables(silent = false) {
-    if (!token) return;
+    if (!token || !tabId) return;
     if (!silent) setLoading(true);
     try {
-      const data = await listTables(token);
+      const data = await listTables(token, tabId);
       setTables(data);
     } catch (e) {
       if (e instanceof Error && e.message.includes('reason')) {
@@ -76,7 +77,6 @@ export function WaiterTablesPage() {
 
   if (!waiter) return null;
 
-  // Sıralama: çağrı > dolu > boş
   const sortedTables = [...tables].sort((a, b) => {
     if (a.active_calls > 0 && b.active_calls === 0) return -1;
     if (a.active_calls === 0 && b.active_calls > 0) return 1;
@@ -104,7 +104,6 @@ export function WaiterTablesPage() {
         </div>
       )}
 
-      {/* Mola butonları (yetki varsa) */}
       {waiter.permissions.can_use_break && (
         <div className="mb-4 bg-white rounded-2xl p-3" style={{ border: '1px solid #E2E8F0' }}>
           <div className="flex gap-2">
@@ -124,7 +123,6 @@ export function WaiterTablesPage() {
         </div>
       )}
 
-      {/* Başlık + yenile */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold text-lg" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
           🍽️ Masalar
@@ -136,7 +134,6 @@ export function WaiterTablesPage() {
         </button>
       </div>
 
-      {/* Özet sayaçlar (admin ile aynı stil) */}
       {tables.length > 0 && (
         <div className="flex gap-2 mb-4 flex-wrap">
           <div className="px-3 py-1.5 rounded-xl" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
@@ -159,7 +156,6 @@ export function WaiterTablesPage() {
         </div>
       )}
 
-      {/* Yükleniyor */}
       {loading && tables.length === 0 && (
         <div className="text-center py-16">
           <div className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-3"
@@ -168,7 +164,6 @@ export function WaiterTablesPage() {
         </div>
       )}
 
-      {/* Boş durum */}
       {!loading && tables.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl" style={{ border: '1px dashed #E2E8F0' }}>
           <div className="text-4xl mb-3">🪑</div>
@@ -179,7 +174,6 @@ export function WaiterTablesPage() {
         </div>
       )}
 
-      {/* Masalar Grid — Admin ile AYNI tasarım */}
       {tables.length > 0 && (
         <div className="grid gap-3"
           style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
@@ -192,18 +186,12 @@ export function WaiterTablesPage() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// MASA KART — Admin ile AYNI tasarım
-// ─────────────────────────────────────────────────────────────
-
 function WaiterTableCard({ table }: { table: WaiterTable }) {
   const isOccupied = table.has_active_session;
   const hasCall = table.active_calls > 0;
 
-  // Kronometre — sadece dolu ise
   const duration = isOccupied && table.opened_at ? useDuration(table.opened_at) : null;
 
-  // Renk paleti — admin ile aynı
   const colors = hasCall
     ? { bg: '#FEE2E2', border: '#DC2626', accent: '#DC2626' }
     : isOccupied
@@ -224,7 +212,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
         position: 'relative'
       }}>
 
-      {/* Çağrı rozeti */}
       {hasCall && (
         <div style={{
           position: 'absolute', top: -8, right: -8,
@@ -238,7 +225,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
         </div>
       )}
 
-      {/* Üst şerit — durum (admin ile aynı) */}
       <div style={{
         padding: '8px 14px',
         background: colors.accent,
@@ -259,7 +245,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
         )}
       </div>
 
-      {/* Ana içerik */}
       <div style={{ padding: 16, flex: 1 }}>
         <h3 style={{
           fontWeight: 700, fontSize: 20, color: '#0F172A',
@@ -269,7 +254,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
           {table.name}
         </h3>
 
-        {/* Dolu ise session bilgileri — admin ile aynı */}
         {isOccupied && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{
@@ -313,7 +297,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
           </div>
         )}
 
-        {/* Boş ise minimal bilgi */}
         {!isOccupied && !hasCall && (
           <div style={{
             padding: '14px 8px', textAlign: 'center',
@@ -326,7 +309,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
           </div>
         )}
 
-        {/* Sadece çağrı varsa (boş masa + çağrı durumu nadirdir ama olabilir) */}
         {!isOccupied && hasCall && (
           <div style={{
             padding: '14px 8px', textAlign: 'center',
@@ -340,7 +322,6 @@ function WaiterTableCard({ table }: { table: WaiterTable }) {
         )}
       </div>
 
-      {/* Alt aksiyon — masaya git (basitçe tüm kart zaten tıklanabilir, alt kısım vurgu) */}
       <div style={{
         padding: '10px 14px',
         borderTop: '1px solid rgba(0,0,0,0.04)',

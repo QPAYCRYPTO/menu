@@ -51,7 +51,7 @@ const FAVORITES_CAT_ID = '__favorites__';
 
 export function WaiterMenuPage() {
   const { id: tableId } = useParams<{ id: string }>();
-  const { token, waiter, logout } = useWaiterAuth();
+  const { token, tabId, waiter, logout } = useWaiterAuth();
   const navigate = useNavigate();
 
   const [tableName, setTableName] = useState<string>('');
@@ -81,10 +81,10 @@ export function WaiterMenuPage() {
   }, [waiter]);
 
   useEffect(() => {
-    if (!token || !tableId) return;
+    if (!token || !tabId || !tableId) return;
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, tableId]);
+  }, [token, tabId, tableId]);
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
@@ -92,12 +92,12 @@ export function WaiterMenuPage() {
   }
 
   async function loadData() {
-    if (!token || !tableId) return;
+    if (!token || !tabId || !tableId) return;
     setLoading(true);
     try {
       const [menuData, tableData] = await Promise.all([
-        getMenu(token),
-        getTableDetail(token, tableId)
+        getMenu(token, tabId),
+        getTableDetail(token, tabId, tableId)
       ]);
 
       setCategories(menuData.categories);
@@ -218,7 +218,7 @@ export function WaiterMenuPage() {
   const cartItemCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   async function handleSendOrder() {
-    if (!token || !tableId || cart.length === 0 || sending) return;
+    if (!token || !tabId || !tableId || cart.length === 0 || sending) return;
     setSending(true);
 
     try {
@@ -230,9 +230,9 @@ export function WaiterMenuPage() {
       }));
 
       if (activeOrderId) {
-        await addItemsToOrder(token, activeOrderId, items);
+        await addItemsToOrder(token, tabId, activeOrderId, items);
       } else {
-        await createOrder(token, tableId, items, note.trim() || undefined);
+        await createOrder(token, tabId, tableId, items, note.trim() || undefined);
       }
 
       setCartOpen(false);
