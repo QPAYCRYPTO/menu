@@ -4,6 +4,8 @@
 // - POST /calls/:id/take — garson çağrıyı üstlenir, status=delivered
 // - Garson aldıktan sonra SSE ile herkese 'call_taken' event yayınlanır
 // - Admin + diğer garsonların listesinden çağrı kaybolur
+// CHANGELOG v10 (defense-in-depth):
+// - maybeAutoCloseSession UPDATE table_sessions sorgusuna business_id filtresi eklendi
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -46,8 +48,8 @@ async function maybeAutoCloseSession(
          closed_at = NOW(),
          cached_total_int = 0,
          updated_at = NOW()
-     WHERE id = $1 AND status = 'open'`,
-    [sessionId]
+     WHERE id = $1 AND business_id = $2 AND status = 'open'`,
+    [sessionId, businessId]
   );
 
   return true;

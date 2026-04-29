@@ -1,6 +1,11 @@
 // apps/api/src/routes/sessionRoutes.ts
 // Admin tarafı masa oturumu (session) endpoint'leri
 // Bu dosya mevcut orderRoutes.ts'e dokunmadan eklenmiştir
+// CHANGELOG (defense-in-depth):
+// - GET /:id table SELECT'ine business_id filtresi
+// - POST /:id/close pending orders SELECT'ine business_id filtresi
+// - POST /:id/close transfer UPDATE'ine business_id filtresi
+// - POST /:id/close cancel_pending UPDATE'ine business_id filtresi
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -55,10 +60,10 @@ sessionRoutes.get('/:id', async (req, res) => {
     throw new AppError('Oturum bulunamadı.', 404, APP_ERROR_CODES.NOT_FOUND);
   }
 
-  // Masa bilgisini de ekle
+  // Masa bilgisini de ekle (defense-in-depth: business_id filtresi de var)
   const tableResult = await pool.query(
-    `SELECT id, name FROM tables WHERE id = $1`,
-    [data.session.table_id]
+    `SELECT id, name FROM tables WHERE id = $1 AND business_id = $2`,
+    [data.session.table_id, businessId]
   );
 
   res.status(200).json({
@@ -105,12 +110,14 @@ sessionRoutes.post('/:id/close', async (req, res) => {
     const session = sessionResult.rows[0];
 
     // Pending (delivered/cancelled olmamış) siparişleri kontrol et
+    // (defense-in-depth: business_id filtresi de var)
     const pendingResult = await client.query(
       `SELECT id FROM orders 
        WHERE session_id = $1 
+         AND business_id = $2
          AND type = 'order'
          AND status IN ('pending', 'preparing', 'ready')`,
-      [id]
+      [id, businessId]
     );
 
     const pendingCount = pendingResult.rowCount ?? 0;
@@ -155,12 +162,13 @@ sessionRoutes.post('/:id/close', async (req, res) => {
         const newSession = newSessionResult.rows[0];
 
         // 3) Pending siparişleri yeni session'a taşı
+        // (defense-in-depth: business_id filtresi de var)
         if (pendingIds.length > 0) {
           await client.query(
             `UPDATE orders 
              SET session_id = $1, updated_at = NOW()
-             WHERE id = ANY($2::uuid[])`,
-            [newSession.id, pendingIds]
+             WHERE id = ANY($2::uuid[]) AND business_id = $3`,
+            [newSession.id, pendingIds, businessId]
           );
         }
 
@@ -176,6 +184,7 @@ sessionRoutes.post('/:id/close', async (req, res) => {
 
       if (action === 'cancel_pending') {
         // Pending siparişleri iptal et, sonra session'ı kapat
+        // (defense-in-depth: business_id filtresi de var)
         await client.query(
           `UPDATE orders 
            SET status = 'cancelled',
@@ -183,8 +192,8 @@ sessionRoutes.post('/:id/close', async (req, res) => {
                cancelled_by = $1,
                cancel_reason = 'Masa kapatılırken iptal edildi',
                updated_at = NOW()
-           WHERE id = ANY($2::uuid[])`,
-          [userId, pendingIds]
+           WHERE id = ANY($2::uuid[]) AND business_id = $3`,
+          [userId, pendingIds, businessId]
         );
 
         await client.query(
