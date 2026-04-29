@@ -14,7 +14,9 @@ import { requireWaiterAuth } from '../middleware/waiterAuth.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import {
   authenticateWaiterByToken,
-  authenticateWaiterByEmail
+  authenticateWaiterByEmail,
+  registerSessionTab,
+  revokeSessionTab
 } from '../services/waiterService.js';
 import { getOrCreateOpenSession, decrementSessionTotal } from '../services/sessionService.js';
 import { publishOrder } from '../db/redisPubSub.js';
@@ -107,6 +109,62 @@ waiterPublicRoutes.post('/login', publicMenuRateLimit, async (req, res) => {
     },
     session_id: result.session_id
   });
+});
+
+// ─────────────────────────────────────────────────────────────
+// EXCHANGE — Token + tab_id ile yeni tab kaydı yarat
+// ─────────────────────────────────────────────────────────────
+
+const exchangeBodySchema = z.object({
+  token: z.string().min(10).max(200),
+  tab_id: z.string().uuid()
+});
+
+waiterPublicRoutes.post('/exchange', publicMenuRateLimit, async (req, res) => {
+  const parsed = exchangeBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+
+  const result = await registerSessionTab(parsed.data.token, parsed.data.tab_id, {
+    user_agent: req.get('user-agent') ?? undefined,
+    ip_address: req.ip
+  });
+
+  if (!result.ok) {
+    res.status(401).json({ ok: false, reason: result.reason });
+    return;
+  }
+
+  res.status(200).json({
+    ok: true,
+    waiter: {
+      id: result.waiter.id,
+      business_id: result.waiter.business_id,
+      name: result.waiter.name,
+      permissions: result.waiter.permissions
+    },
+    session_id: result.session_id
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// LOGOUT — Tab'ı revoke et
+// ─────────────────────────────────────────────────────────────
+
+const logoutBodySchema = z.object({
+  tab_id: z.string().uuid()
+});
+
+waiterPublicRoutes.post('/logout', async (req, res) => {
+  const parsed = logoutBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false });
+    return;
+  }
+
+  await revokeSessionTab(parsed.data.tab_id);
+  res.status(200).json({ ok: true });
 });
 
 // ─────────────────────────────────────────────────────────────
