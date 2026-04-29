@@ -1,4 +1,10 @@
 // apps/web/src/auth/AuthContext.tsx
+// CHANGELOG v2 — Admin tab izolasyonu:
+// - localStorage → sessionStorage
+// - Sebep: Aynı tarayıcıda farklı sekmelerde 2 farklı işletme admin'i çalışabilsin
+// - Etki: Tarayıcı kapanınca admin tekrar email/şifre ile giriş yapacak
+//   (eskiden hatırlıyordu, ama bu güvenlik için daha iyi)
+
 import type { LoginResponse } from '@menu/shared';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { apiRequest, configureAuthClient } from '../api/client';
@@ -34,41 +40,41 @@ function parseStoredRole(value: string | null): UserRole | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(ACCESS_TOKEN_KEY));
-  const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(REFRESH_TOKEN_KEY));
-  const [role, setRole] = useState<UserRole | null>(() => parseStoredRole(localStorage.getItem(ROLE_KEY)));
-  const [email, setEmail] = useState<string | null>(() => localStorage.getItem(EMAIL_KEY));
-  const [businessId, setBusinessId] = useState<string | null>(() => localStorage.getItem(BUSINESS_ID_KEY));
-  const [businessName, setBusinessName] = useState<string | null>(() => localStorage.getItem(BUSINESS_NAME_KEY));
+  const [accessToken, setAccessToken] = useState<string | null>(() => sessionStorage.getItem(ACCESS_TOKEN_KEY));
+  const [refreshToken, setRefreshToken] = useState<string | null>(() => sessionStorage.getItem(REFRESH_TOKEN_KEY));
+  const [role, setRole] = useState<UserRole | null>(() => parseStoredRole(sessionStorage.getItem(ROLE_KEY)));
+  const [email, setEmail] = useState<string | null>(() => sessionStorage.getItem(EMAIL_KEY));
+  const [businessId, setBusinessId] = useState<string | null>(() => sessionStorage.getItem(BUSINESS_ID_KEY));
+  const [businessName, setBusinessName] = useState<string | null>(() => sessionStorage.getItem(BUSINESS_NAME_KEY));
 
   useEffect(() => {
-    if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    else localStorage.removeItem(ACCESS_TOKEN_KEY);
+    if (accessToken) sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    else sessionStorage.removeItem(ACCESS_TOKEN_KEY);
   }, [accessToken]);
 
   useEffect(() => {
-    if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    else localStorage.removeItem(REFRESH_TOKEN_KEY);
+    if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    else sessionStorage.removeItem(REFRESH_TOKEN_KEY);
   }, [refreshToken]);
 
   useEffect(() => {
-    if (role) localStorage.setItem(ROLE_KEY, role);
-    else localStorage.removeItem(ROLE_KEY);
+    if (role) sessionStorage.setItem(ROLE_KEY, role);
+    else sessionStorage.removeItem(ROLE_KEY);
   }, [role]);
 
   useEffect(() => {
-    if (email) localStorage.setItem(EMAIL_KEY, email);
-    else localStorage.removeItem(EMAIL_KEY);
+    if (email) sessionStorage.setItem(EMAIL_KEY, email);
+    else sessionStorage.removeItem(EMAIL_KEY);
   }, [email]);
 
   useEffect(() => {
-    if (businessId) localStorage.setItem(BUSINESS_ID_KEY, businessId);
-    else localStorage.removeItem(BUSINESS_ID_KEY);
+    if (businessId) sessionStorage.setItem(BUSINESS_ID_KEY, businessId);
+    else sessionStorage.removeItem(BUSINESS_ID_KEY);
   }, [businessId]);
 
   useEffect(() => {
-    if (businessName) localStorage.setItem(BUSINESS_NAME_KEY, businessName);
-    else localStorage.removeItem(BUSINESS_NAME_KEY);
+    if (businessName) sessionStorage.setItem(BUSINESS_NAME_KEY, businessName);
+    else sessionStorage.removeItem(BUSINESS_NAME_KEY);
   }, [businessName]);
 
   useEffect(() => {
