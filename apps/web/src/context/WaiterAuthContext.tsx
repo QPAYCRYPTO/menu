@@ -1,13 +1,16 @@
 // apps/web/src/context/WaiterAuthContext.tsx
-// CHANGELOG v3 — Tab-bound session mimarisi:
+// CHANGELOG v4 — Sayfa yenileme fix:
+// - checkStoredSession artık exchangeToken kullanıyor (tab_id'yi yeniden kaydediyor)
+// - Bu sayede F5 sonrası tab DB'de yine aktif olur
+// - beforeunload kaldırıldı (gereksiz, expire olunca temizlenir)
+//
+// Önceki CHANGELOG (v3):
 // - localStorage → sessionStorage (sekme bazında izolasyon)
 // - tab_id eklendi (her sekme için unique UUID)
 // - exchangeToken ile yeni session başlatma
-// - Sekme kapatılınca logoutTab çağırılır (beforeunload)
-// - Sayfa yenilenince sessionStorage'dan oku (token + tab_id)
 
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
-import { WaiterSelf, exchangeToken, authByToken, logoutTab } from '../api/waiterPublicApi';
+import { WaiterSelf, exchangeToken, logoutTab } from '../api/waiterPublicApi';
 
 const STORAGE_KEY = 'atlasqr_waiter_session';
 
@@ -45,7 +48,7 @@ export function WaiterAuthProvider({ children }: { children: ReactNode }) {
   const [tabId, setTabId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
-  // sessionStorage'dan oku ve doğrula (sayfa yenilenince çalışır)
+  // sessionStorage'dan oku ve tab kaydını yenile (sayfa yenilenince çalışır)
   const checkStoredSession = useCallback(async () => {
     try {
       // KRİTİK: URL'de yeni token varsa, sessionStorage'ı atla
@@ -68,19 +71,21 @@ export function WaiterAuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Bu tab için backend'i tekrar doğrula
-      // exchangeToken yapma — çünkü swap_token zaten yakılmış olabilir.
-      // Bunun yerine yeni bir auth çağrısı yapıyoruz: authByTokenAndTab pattern
-      // Aslında authByToken kullanıyoruz ama backend X-Tab-ID header'ını da kontrol edecek
-      // Ama burada body'de tab_id göndermiyoruz, sadece token. Backend tab_id yoksa
-      // eski yola düşer ve doğrular. Sonraki istekler tab_id ile yapılacak.
-      //
-      // Daha temiz: authByToken çağrısını da X-Tab-ID header'ı ile yapalım
-      // Ama burada hata: authByToken eski endpoint'i kullanıyor (tab_id'siz)
-      // Bunun için sadece token doğrulanır. Çalışıyorsa devam ederiz.
-      // tab_id zaten DB'de kayıtlı (önceki exchange'de oluşturulmuştu).
-      const result = await authByToken(stored.token);
+      // KRİTİK: exchangeToken ile tab kaydını YENİDEN OLUŞTUR.
+      // Sayfa yenilense bile bu sayede tab DB'de yine aktif olur.
+      // exchangeToken: token doğrular + aynı tab_id'yi DB'ye yeniden yazar
+      // (eski revoked olduysa yenisi yaratılır).
+      const result = await exchangeToken(stored.token, stored.tab_id);
       if (result.ok) {
+        // sessionStorage'ı güncelle (waiter bilgisi değişmiş olabilir)
+        const updatedSession: StoredSession = {
+          token: stored.token,
+          tab_id: stored.tab_id,
+          waiter: result.waiter,
+          stored_at: new Date().toISOString()
+        };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
+
         setWaiter(result.waiter);
         setToken(stored.token);
         setTabId(stored.tab_id);
@@ -99,16 +104,9 @@ export function WaiterAuthProvider({ children }: { children: ReactNode }) {
     checkStoredSession();
   }, [checkStoredSession]);
 
-  // Sekme kapatılırken backend'e logout bildir
-  useEffect(() => {
-    const handleUnload = () => {
-      if (tabId) {
-        logoutTab(tabId);
-      }
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [tabId]);
+  // NOT: beforeunload kaldırıldı.
+  // Sebep: F5 yenileme de beforeunload tetikliyor → tab revoke oluyor →
+  // sayfa açıldığında 401 alıyor. Tab token expire olunca DB'de zaten temizlenir.
 
   const loginWithToken = useCallback(async (newToken: string) => {
     // Bu sekme için yeni tab_id üret
@@ -143,6 +141,7 @@ export function WaiterAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     if (tabId) {
+      // Manuel logout — backend'e bildir
       logoutTab(tabId).catch(() => {});
     }
     sessionStorage.removeItem(STORAGE_KEY);
