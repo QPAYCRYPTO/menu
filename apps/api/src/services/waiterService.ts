@@ -1,6 +1,9 @@
 // apps/api/src/services/waiterService.ts
-// Garson modülü iş mantığı
-// v2: Yetkiler, email/şifre girişi, status (active/on_leave/inactive)
+// CHANGELOG v3:
+// - registerSessionTab: token + tab_id eşleştirmesi (yeni tab kaydı)
+// - authenticateWaiterByTokenAndTab: tab_id ile birlikte doğrulama
+// - revokeSessionTab: bir tab'ı revoke et (logout)
+// - Eski authenticateWaiterByToken FONKSİYONU KORUNDU (geriye uyumlu)
 
 import argon2 from 'argon2';
 import { createHash, randomBytes, randomUUID } from 'crypto';
@@ -59,7 +62,7 @@ export type WaiterWithToken = {
 
 export type WaiterAuthResult =
   | { ok: true; waiter: Waiter; session_id: string | null }
-  | { ok: false; reason: 'invalid_token' | 'expired' | 'revoked' | 'waiter_inactive' | 'business_suspended' | 'module_disabled' | 'invalid_credentials' };
+  | { ok: false; reason: 'invalid_token' | 'expired' | 'revoked' | 'waiter_inactive' | 'business_suspended' | 'module_disabled' | 'invalid_credentials' | 'invalid_tab' };
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -69,7 +72,6 @@ function generateOpaqueToken(): string {
   return randomBytes(48).toString('base64url');
 }
 
-// Waiter row'u normalize et (permissions JSONB olarak gelir)
 function rowToWaiter(row: any): Waiter {
   return {
     id: row.id,
@@ -85,9 +87,10 @@ function rowToWaiter(row: any): Waiter {
   };
 }
 
-/**
- * İşletme için yeni garson oluştur.
- */
+// ============================================================================
+// CRUD (mevcut fonksiyonlar — değişmedi)
+// ============================================================================
+
 export async function createWaiter(
   businessId: string,
   input: {
@@ -151,9 +154,6 @@ export async function createWaiter(
   return rowToWaiter(result.rows[0]);
 }
 
-/**
- * İşletmenin garsonlarını listele.
- */
 export async function listWaiters(
   businessId: string,
   options: { onlyActive?: boolean } = {}
@@ -188,10 +188,6 @@ export async function getWaiterById(
   return result.rowCount === 1 ? rowToWaiter(result.rows[0]) : null;
 }
 
-/**
- * Garson detaylarını güncelle (isim, telefon, email, yetkiler).
- * Şifre ayrı endpoint ile (setWaiterPassword).
- */
 export async function updateWaiterDetails(
   businessId: string,
   waiterId: string,
@@ -242,9 +238,6 @@ export async function updateWaiterDetails(
   return result.rowCount === 1 ? rowToWaiter(result.rows[0]) : null;
 }
 
-/**
- * Garsonun şifresini ayarla/sıfırla (sadece admin).
- */
 export async function setWaiterPassword(
   businessId: string,
   waiterId: string,
@@ -263,9 +256,6 @@ export async function setWaiterPassword(
   return result.rowCount === 1;
 }
 
-/**
- * Garson durumunu değiştir.
- */
 export async function setWaiterStatus(
   businessId: string,
   waiterId: string,
@@ -309,9 +299,6 @@ export async function setWaiterStatus(
   }
 }
 
-/**
- * Garsonu kalıcı sil.
- */
 export async function deleteWaiter(
   businessId: string,
   waiterId: string
@@ -323,9 +310,6 @@ export async function deleteWaiter(
   return result.rowCount === 1;
 }
 
-/**
- * Yeni QR token üret.
- */
 export async function generateWaiterToken(
   businessId: string,
   waiterId: string,
@@ -416,8 +400,13 @@ export async function revokeWaiterSession(
   return result.rowCount === 1;
 }
 
+// ============================================================================
+// AUTH — eski endpoint için korundu (geriye uyumlu)
+// ============================================================================
+
 /**
- * QR token ile doğrulama.
+ * QR token ile doğrulama (ESKİ — geriye uyumluluk için).
+ * Yeni kod authenticateWaiterByTokenAndTab kullanmalı.
  */
 export async function authenticateWaiterByToken(rawToken: string): Promise<WaiterAuthResult> {
   const tokenHash = hashToken(rawToken);
@@ -461,9 +450,6 @@ export async function authenticateWaiterByToken(rawToken: string): Promise<Waite
   };
 }
 
-/**
- * Email + şifre ile garson girişi.
- */
 export async function authenticateWaiterByEmail(
   email: string,
   password: string
@@ -505,9 +491,6 @@ export async function authenticateWaiterByEmail(
   };
 }
 
-/**
- * İşletmenin garson modülünü aç/kapat.
- */
 export async function setWaiterModuleEnabled(
   businessId: string,
   enabled: boolean,
@@ -522,4 +505,169 @@ export async function setWaiterModuleEnabled(
     [enabled, businessId]
   );
   return result.rowCount === 1;
+}
+
+// ============================================================================
+// YENİ — TAB-BOUND SESSION FONKSİYONLARI
+// ============================================================================
+
+/**
+ * Bir token ile yeni bir tab kaydı yarat (exchange).
+ *
+ * Çağrı senaryosu:
+ *   1. Garson QR'ı tarar → URL'de token var
+ *   2. Frontend tab_id üretir → backend'e gönderir
+ *   3. Backend token doğrular → tab kaydı yaratır
+ *   4. Bundan sonra her istek (token + tab_id) ile doğrulanır
+ *
+ * Aynı token ile birden fazla tab kaydı yapılabilir (garson aynı QR ile
+ * 2 sekme açabilir). Ama her tab_id sadece TEK aktif kayıt taşıyabilir.
+ */
+export async function registerSessionTab(
+  rawToken: string,
+  tabId: string,
+  metadata: { user_agent?: string; ip_address?: string } = {}
+): Promise<WaiterAuthResult> {
+  const tokenHash = hashToken(rawToken);
+
+  const result = await pool.query(
+    `SELECT
+       s.id AS session_id,
+       s.expires_at,
+       s.revoked_at,
+       w.*,
+       b.is_active AS business_active,
+       b.waiter_module_enabled
+     FROM waiter_sessions s
+     INNER JOIN waiters w ON w.id = s.waiter_id
+     INNER JOIN businesses b ON b.id = w.business_id
+     WHERE s.token_hash = $1`,
+    [tokenHash]
+  );
+
+  if (result.rowCount !== 1) {
+    return { ok: false, reason: 'invalid_token' };
+  }
+
+  const row = result.rows[0];
+
+  if (row.revoked_at !== null) return { ok: false, reason: 'revoked' };
+  if (new Date(row.expires_at).getTime() <= Date.now()) return { ok: false, reason: 'expired' };
+  if (row.status !== 'active') return { ok: false, reason: 'waiter_inactive' };
+  if (row.business_active !== true) return { ok: false, reason: 'business_suspended' };
+  if (row.waiter_module_enabled !== true) return { ok: false, reason: 'module_disabled' };
+
+  // Tab kaydını yarat veya mevcut tab varsa güncelle
+  // Eğer tab_id daha önce başka bir session'a kayıtlıysa, eski kaydı revoke et
+  await pool.query(
+    `UPDATE waiter_session_tabs
+     SET revoked_at = NOW()
+     WHERE tab_id = $1 AND revoked_at IS NULL`,
+    [tabId]
+  );
+
+  await pool.query(
+    `INSERT INTO waiter_session_tabs
+       (session_id, tab_id, business_id, waiter_id, user_agent, ip_address, created_at, last_seen_at)
+     VALUES
+       ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+    [
+      row.session_id,
+      tabId,
+      row.business_id,
+      row.id,
+      metadata.user_agent ?? null,
+      metadata.ip_address ?? null
+    ]
+  );
+
+  await pool.query(
+    `UPDATE waiter_sessions SET last_used_at = NOW() WHERE id = $1`,
+    [row.session_id]
+  );
+
+  return {
+    ok: true,
+    waiter: rowToWaiter(row),
+    session_id: row.session_id
+  };
+}
+
+/**
+ * Token + tab_id ile doğrulama (her API çağrısında).
+ *
+ * Şunları kontrol eder:
+ *  1) Token var, geçerli, revoke olmamış
+ *  2) Garson aktif, işletme aktif, modül açık
+ *  3) tab_id bu session'a kayıtlı VE revoke olmamış
+ */
+export async function authenticateWaiterByTokenAndTab(
+  rawToken: string,
+  tabId: string
+): Promise<WaiterAuthResult> {
+  const tokenHash = hashToken(rawToken);
+
+  const result = await pool.query(
+    `SELECT
+       s.id AS session_id,
+       s.expires_at,
+       s.revoked_at AS session_revoked_at,
+       t.id AS tab_record_id,
+       t.revoked_at AS tab_revoked_at,
+       w.*,
+       b.is_active AS business_active,
+       b.waiter_module_enabled
+     FROM waiter_sessions s
+     INNER JOIN waiters w ON w.id = s.waiter_id
+     INNER JOIN businesses b ON b.id = w.business_id
+     LEFT JOIN waiter_session_tabs t
+       ON t.session_id = s.id
+       AND t.tab_id = $2
+       AND t.revoked_at IS NULL
+     WHERE s.token_hash = $1`,
+    [tokenHash, tabId]
+  );
+
+  if (result.rowCount !== 1) {
+    return { ok: false, reason: 'invalid_token' };
+  }
+
+  const row = result.rows[0];
+
+  if (row.session_revoked_at !== null) return { ok: false, reason: 'revoked' };
+  if (new Date(row.expires_at).getTime() <= Date.now()) return { ok: false, reason: 'expired' };
+  if (row.status !== 'active') return { ok: false, reason: 'waiter_inactive' };
+  if (row.business_active !== true) return { ok: false, reason: 'business_suspended' };
+  if (row.waiter_module_enabled !== true) return { ok: false, reason: 'module_disabled' };
+
+  // KRİTİK: tab_id bu session'a kayıtlı mı?
+  if (!row.tab_record_id) {
+    return { ok: false, reason: 'invalid_tab' };
+  }
+
+  // last_seen güncelle (background, response'u bekletme)
+  pool.query(
+    `UPDATE waiter_session_tabs SET last_seen_at = NOW() WHERE id = $1`,
+    [row.tab_record_id]
+  ).catch(() => {});
+
+  return {
+    ok: true,
+    waiter: rowToWaiter(row),
+    session_id: row.session_id
+  };
+}
+
+/**
+ * Bir tab'ı revoke et (logout).
+ */
+export async function revokeSessionTab(tabId: string): Promise<boolean> {
+  const result = await pool.query(
+    `UPDATE waiter_session_tabs
+     SET revoked_at = NOW()
+     WHERE tab_id = $1 AND revoked_at IS NULL
+     RETURNING id`,
+    [tabId]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
