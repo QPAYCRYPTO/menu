@@ -39,6 +39,25 @@ function parseStoredRole(value: string | null): UserRole | null {
   return null;
 }
 
+// Eski oturumlardan kalan localStorage kalıntılarını temizle
+// (v2'de localStorage → sessionStorage'a geçildi, eski key'ler hâlâ kalmış olabilir)
+function cleanupLegacyLocalStorage(): void {
+  if (typeof window === 'undefined') return;
+  const legacyKeys = [
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    ROLE_KEY,
+    EMAIL_KEY,
+    BUSINESS_ID_KEY,
+    BUSINESS_NAME_KEY
+  ];
+  for (const key of legacyKeys) {
+    if (localStorage.getItem(key) !== null) {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => sessionStorage.getItem(ACCESS_TOKEN_KEY));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => sessionStorage.getItem(REFRESH_TOKEN_KEY));
@@ -47,6 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [businessId, setBusinessId] = useState<string | null>(() => sessionStorage.getItem(BUSINESS_ID_KEY));
   const [businessName, setBusinessName] = useState<string | null>(() => sessionStorage.getItem(BUSINESS_NAME_KEY));
 
+  // Mount'ta bir kerelik: localStorage kalıntılarını temizle
+  useEffect(() => {
+    cleanupLegacyLocalStorage();
+  }, []);
+  
   useEffect(() => {
     if (accessToken) sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     else sessionStorage.removeItem(ACCESS_TOKEN_KEY);

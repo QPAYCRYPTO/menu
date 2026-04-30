@@ -539,12 +539,6 @@ adminRoutes.put('/products/:id', async (req, res) => {
 });
 
 adminRoutes.delete('/products/:id', async (req, res) => {
-  console.log('[DELETE-PRODUCT-DEBUG]', {
-    id: req.params.id,
-    businessId: req.ctx!.businessId,
-    timestamp: new Date().toISOString()
-  });
-
   const businessId = req.ctx!.businessId!;
   const id = req.params.id;
 
@@ -556,12 +550,6 @@ adminRoutes.delete('/products/:id', async (req, res) => {
      RETURNING id`,
     [id, businessId]
   );
-
-  console.log('[DELETE-PRODUCT-RESULT]', {
-    rowCount: result.rowCount,
-    targetId: id,
-    targetBusinessId: businessId
-  });
 
   if (result.rowCount !== 1) {
     res.status(404).json({ message: 'Ürün bulunamadı.' });
