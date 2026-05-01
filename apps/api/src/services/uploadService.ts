@@ -31,13 +31,13 @@ export async function processImage(buffer: Buffer, businessId: string): Promise<
   const imageKey = `${basePath}/${id}.webp`;
   const thumbKey = `${basePath}/${id}_thumb.webp`;
 
-  const imageBuffer = await sharp(buffer)
+  const imageBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
     .rotate()
     .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();
 
-  const thumbBuffer = await sharp(buffer)
+  const thumbBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
     .rotate()
     .resize({ width: 300, height: 300, fit: 'cover' })
     .webp({ quality: 75 })
@@ -56,7 +56,7 @@ export async function processLogo(buffer: Buffer, businessId: string): Promise<s
   const id = randomUUID();
   const logoKey = `business/${businessId}/logo/${id}.webp`;
 
-  const logoBuffer = await sharp(buffer)
+  const logoBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
     .rotate()
     .resize({ width: 400, height: 400, fit: 'cover' })
     .webp({ quality: 85 })
