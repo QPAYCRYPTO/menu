@@ -23,6 +23,12 @@ import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
 export function createApp() {
   const app = express();
 
+  // Cloudflare + Railway proxy arkasında çalışıyoruz
+  // Trust proxy: gerçek client IP'sini X-Forwarded-For header'ından al
+  // 'true' yerine sayı kullan: Railway → 1 hop, Cloudflare → 1 hop = 2
+  // 1 hop: Railway proxy'sini güven, ama Cloudflare hala doğru IP geçiriyor
+  app.set('trust proxy', 1);
+
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   app.use(cors({
