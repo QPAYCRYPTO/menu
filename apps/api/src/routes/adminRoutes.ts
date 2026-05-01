@@ -376,17 +376,31 @@ adminRoutes.delete('/categories/:id', async (req, res) => {
 adminRoutes.post('/upload', upload.single('file'), handleUploadError, async (req, res) => {
   const businessId = req.ctx!.businessId!;
   if (!req.file) { res.status(400).json({ message: 'Dosya zorunludur.' }); return; }
-  validateUpload(req.file.size, req.file.mimetype);
-  const image = await processImage(req.file.buffer, businessId);
-  res.status(200).json({ image_url: image.imageUrl, thumb_url: image.thumbUrl });
+
+  try {
+    validateUpload(req.file.size, req.file.mimetype);
+    const image = await processImage(req.file.buffer, businessId);
+    res.status(200).json({ image_url: image.imageUrl, thumb_url: image.thumbUrl });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Görsel yüklenemedi.';
+    res.status(400).json({ message: msg });
+  }
 });
 
 // Logo upload — ayrı endpoint (handleUploadError eklendi)
 adminRoutes.post('/upload/logo', upload.single('file'), handleUploadError, async (req, res) => {
   const businessId = req.ctx!.businessId!;
   if (!req.file) { res.status(400).json({ message: 'Dosya zorunludur.' }); return; }
-  validateUpload(req.file.size, req.file.mimetype);
-  const logoUrl = await processLogo(req.file.buffer, businessId);
+
+  let logoUrl: string;
+  try {
+    validateUpload(req.file.size, req.file.mimetype);
+    logoUrl = await processLogo(req.file.buffer, businessId);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Logo yüklenemedi.';
+    res.status(400).json({ message: msg });
+    return;
+  }
 
   // DB'ye kaydet ve cache temizle
   const result = await pool.query(

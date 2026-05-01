@@ -31,17 +31,28 @@ export async function processImage(buffer: Buffer, businessId: string): Promise<
   const imageKey = `${basePath}/${id}.webp`;
   const thumbKey = `${basePath}/${id}_thumb.webp`;
 
-  const imageBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
-    .rotate()
-    .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toBuffer();
+  let imageBuffer: Buffer;
+  let thumbBuffer: Buffer;
 
-  const thumbBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
-    .rotate()
-    .resize({ width: 300, height: 300, fit: 'cover' })
-    .webp({ quality: 75 })
-    .toBuffer();
+  try {
+    imageBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
+      .rotate()
+      .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    thumbBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
+      .rotate()
+      .resize({ width: 300, height: 300, fit: 'cover' })
+      .webp({ quality: 75 })
+      .toBuffer();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('Input image exceeds pixel limit')) {
+      throw new Error('Görsel çok büyük (en fazla 24 megapixel). Lütfen daha küçük bir dosya seçin.');
+    }
+    throw new Error('Görsel işlenemedi. Dosya bozuk veya desteklenmiyor olabilir.');
+  }
 
   const [imageUrl, thumbUrl] = await Promise.all([
     uploadToS3(imageKey, imageBuffer, 'image/webp'),
@@ -56,11 +67,20 @@ export async function processLogo(buffer: Buffer, businessId: string): Promise<s
   const id = randomUUID();
   const logoKey = `business/${businessId}/logo/${id}.webp`;
 
-  const logoBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
-    .rotate()
-    .resize({ width: 400, height: 400, fit: 'cover' })
-    .webp({ quality: 85 })
-    .toBuffer();
+  let logoBuffer: Buffer;
+  try {
+    logoBuffer = await sharp(buffer, { limitInputPixels: 24_000_000, animated: false })
+      .rotate()
+      .resize({ width: 400, height: 400, fit: 'cover' })
+      .webp({ quality: 85 })
+      .toBuffer();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('Input image exceeds pixel limit')) {
+      throw new Error('Logo çok büyük (en fazla 24 megapixel). Lütfen daha küçük bir dosya seçin.');
+    }
+    throw new Error('Logo işlenemedi. Dosya bozuk veya desteklenmiyor olabilir.');
+  }
 
   return uploadToS3(logoKey, logoBuffer, 'image/webp');
 }
