@@ -69,15 +69,19 @@ async function persistErrorLog(input: ErrorLogInput): Promise<void> {
     return;
   }
 
+  // UUID kolonları için boş string'leri null'a çevir + explicit cast
+  const businessIdSafe = input.business_id && input.business_id.length > 0 ? input.business_id : null;
+  const userIdSafe = input.user_id && input.user_id.length > 0 ? input.user_id : null;
+
   await pool.query(
     `INSERT INTO error_log
        (severity, source, business_id, user_id, message, stack, context, fingerprint)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+     VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7::jsonb, $8)`,
     [
       input.severity,
       input.source,
-      input.business_id ?? null,
-      input.user_id ?? null,
+      businessIdSafe,
+      userIdSafe,
       input.message,
       input.stack ?? null,
       contextJson,
@@ -229,9 +233,9 @@ export async function updateErrorStatus(
     `UPDATE error_log
      SET status = $1,
          resolved_at = CASE WHEN $1 IN ('resolved','ignored') THEN NOW() ELSE NULL END,
-         resolved_by = CASE WHEN $1 IN ('resolved','ignored') THEN $2 ELSE NULL END,
+         resolved_by = CASE WHEN $1 IN ('resolved','ignored') THEN $2::uuid ELSE NULL END,
          resolution_note = COALESCE($3, resolution_note)
-     WHERE id = $4
+     WHERE id = $4::uuid
      RETURNING id`,
     [status, userId, resolutionNote ?? null, id]
   );
