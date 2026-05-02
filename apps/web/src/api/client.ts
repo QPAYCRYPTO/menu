@@ -1,10 +1,11 @@
 // apps/web/src/api/client.ts
 import type { RefreshResponse } from '@menu/shared';
+import { reportError } from '../lib/errorReporter';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   token?: string | null;
   retryOn401?: boolean;
@@ -62,6 +63,29 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (newToken) {
       return apiRequest<T>(path, { ...options, token: newToken, retryOn401: false });
     }
+  }
+
+  // 5xx response → backend'de bir sorun var, hata logu'na yaz
+  // 4xx'leri log'lamayız (validation, auth fail vb. — kullanıcı kaynaklı, spam olur)
+  // /error-log endpoint'ine giden istekleri SAKIN log'lama (sonsuz döngü olur)
+  if (response.status >= 500 && !path.startsWith('/error-log')) {
+    const errorBody = (await response
+      .clone()
+      .json()
+      .catch(() => ({}))) as { message?: string; requestId?: string };
+
+    reportError({
+      severity: 'HIGH',
+      message: `API ${response.status}: ${errorBody.message ?? 'Server error'}`,
+      stack: null,
+      context: {
+        type: 'api-5xx',
+        method: options.method ?? 'GET',
+        path,
+        status: response.status,
+        request_id: errorBody.requestId ?? null
+      }
+    });
   }
 
   if (!response.ok) {

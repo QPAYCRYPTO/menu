@@ -19,6 +19,7 @@ import { sessionRoutes } from './routes/sessionRoutes.js';
 import { ownerRoutes } from './routes/ownerRoutes.js';
 import { waiterAdminRoutes } from './routes/waiterAdminRoutes.js';
 import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
+import { errorLogIngestRoutes, superAdminErrorRoutes } from './routes/errorLogRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -66,7 +67,13 @@ export function createApp() {
   app.use('/api/public', publicRoutes);
   app.use('/api/public', customerOrderRoutes);
   app.use('/api/public/waiter', waiterPublicRoutes); 
+
+  // Frontend hata logu kabul endpoint'i (rate-limited, public)
+  app.use('/api/error-log', errorLogIngestRoutes);
+
+  // Süper admin route'ları
   app.use('/api/superadmin', superAdminRoutes);
+  app.use('/api/superadmin/errors', superAdminErrorRoutes);
 
 
   // Owner (patron) route'ları — sadece owner + superadmin erişebilir

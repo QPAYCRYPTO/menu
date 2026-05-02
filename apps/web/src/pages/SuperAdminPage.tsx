@@ -172,6 +172,7 @@ export function SuperAdminPage() {
             {/* Desktop butonlar */}
             <div className="hidden md:flex gap-2 flex-shrink-0">
               <button onClick={loadBusinesses} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#0F172A' }}>🔄 Yenile</button>
+              <button onClick={() => navigate('/superadmin/errors')} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#FEE2E2', color: '#991B1B' }}>⚠️ Hatalar</button>
               <button onClick={() => setShowResetModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#FEF3C7', color: '#92400E' }}>🔑 Admin Şifre</button>
               <button onClick={() => setShowNewModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: '#0D9488' }}>+ Yeni</button>
               <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#FEF2F2', color: '#DC2626' }}>Çıkış</button>
@@ -197,6 +198,10 @@ export function SuperAdminPage() {
               <button onClick={() => { loadBusinesses(); setMenuOpen(false); }}
                 className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#F1F5F9', color: '#0F172A' }}>
                 🔄 Yenile
+              </button>
+              <button onClick={() => { navigate('/superadmin/errors'); setMenuOpen(false); }}
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#FEE2E2', color: '#991B1B' }}>
+                ⚠️ Hata Logu
               </button>
               <button onClick={() => { setShowResetModal(true); setMenuOpen(false); }}
                 className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#FEF3C7', color: '#92400E' }}>

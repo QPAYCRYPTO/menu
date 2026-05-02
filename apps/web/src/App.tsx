@@ -23,6 +23,7 @@ import { ResetPage } from './pages/ResetPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
+import { ErrorLogPage } from './pages/superadmin/ErrorLogPage';
 import { TablesPage } from './pages/TablesPage';
 import { OwnerLayout } from './pages/owner/OwnerLayout';
 import { OwnerDashboardPage } from './pages/owner/OwnerDashboardPage';
@@ -65,6 +66,7 @@ export function App() {
               <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
               <Route path="/m/:slug" element={<PublicMenuPage />} />
               <Route path="/superadmin" element={<SuperAdminPage />} />
+              <Route path="/superadmin/errors" element={<ErrorLogPage />} />
 
               {/* Owner Routes — değişiklik yok */}
               <Route
