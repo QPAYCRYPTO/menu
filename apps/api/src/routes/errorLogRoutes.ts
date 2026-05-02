@@ -20,7 +20,7 @@ import {
   updateErrorStatus,
   getErrorStats
 } from '../services/errorLogService.js';
-import { requireAuth, requireSuperAdmin } from '../middleware/auth.js';
+import { requireAuth, requireSuperAdmin, optionalAuth } from '../middleware/auth.js';
 import { publicMenuRateLimit } from '../middleware/rateLimit.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import type { ErrorSeverity } from '../errors/AppError.js';
@@ -48,7 +48,7 @@ const ingestSchema = z.object({
   user_agent: z.string().max(500).optional().nullable()
 });
 
-errorLogIngestRoutes.post('/', publicMenuRateLimit, async (req, res) => {
+errorLogIngestRoutes.post('/', optionalAuth, publicMenuRateLimit, async (req, res) => {
   const parsed = ingestSchema.safeParse(req.body);
   if (!parsed.success) {
     // Frontend hata gönderme isteği bozuksa sessizce kabul et (404'a düşürmeyelim)

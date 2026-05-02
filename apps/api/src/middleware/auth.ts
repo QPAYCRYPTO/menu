@@ -100,3 +100,50 @@ export function requireRole(...allowedRoles: string[]) {
 export const requireOwner = requireRole('owner', 'superadmin');
 export const requireAdmin = requireRole('admin', 'superadmin');
 export const requireSuperAdmin = requireRole('superadmin');
+
+// ─────────────────────────────────────────────────────────────
+// OPSİYONEL AUTH — Token varsa decode, yoksa anonim devam
+// ─────────────────────────────────────────────────────────────
+// Hata logu gibi public endpoint'ler için — login değilse de
+// hata kabul edilmeli, ama login'se business_id/user_id alınmalı.
+// requireAuth'tan farkı: token yoksa 401 fırlatmaz, sadece next() çağırır.
+
+export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    // Token yok → anonim devam, req.ctx set etme
+    next();
+    return;
+  }
+
+  const token = header.slice(7);
+
+  try {
+    const payload = jwt.verify(token, env.jwtSecret) as SessionUser & { password_version?: number };
+
+    if (!payload.user_id) {
+      // Geçersiz token → anonim devam
+      next();
+      return;
+    }
+
+    // Token geçerli — DB doğrulama YAPMA (perf), sadece JWT'den güven
+    // Hata logu için bu yeterli, security-critical değil
+    req.user = payload as any;
+
+    // business_id boş string ise null yap (UUID için kritik)
+    const bid = payload.business_id;
+    const businessIdSafe = bid && String(bid).length > 0 ? String(bid) : null;
+
+    req.ctx = {
+      requestId: req.requestId || req.ctx?.requestId || '',
+      userId: payload.user_id,
+      businessId: businessIdSafe ?? undefined,
+      role: payload.role
+    } as any;
+    next();
+  } catch {
+    // Token decode hatası → anonim devam
+    next();
+  }
+}
