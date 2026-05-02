@@ -73,12 +73,17 @@ errorLogIngestRoutes.post('/', publicMenuRateLimit, async (req, res) => {
     received_at: new Date().toISOString()
   };
 
+  // Boş string'leri null'a çevir (UUID kolonları için zorunlu — '' UUID olarak kabul edilmez)
+  const ctxBusinessId = req.ctx?.businessId && req.ctx.businessId.length > 0 ? req.ctx.businessId : null;
+  const ctxUserId = req.ctx?.userId && req.ctx.userId.length > 0 ? req.ctx.userId : null;
+  const bodyBusinessId = data.business_id && data.business_id.length > 0 ? data.business_id : null;
+
   logError({
     severity: safeSeverity,
     source: 'frontend',
     // JWT varsa oradan al, yoksa body'deki business_id'yi (kontrolsüz, bilgi amaçlı)
-    business_id: req.ctx?.businessId ?? data.business_id ?? null,
-    user_id: req.ctx?.userId ?? null,
+    business_id: ctxBusinessId ?? bodyBusinessId,
+    user_id: ctxUserId,
     message: data.message,
     stack: data.stack ?? null,
     context: enrichedContext,
@@ -179,7 +184,8 @@ superAdminErrorRoutes.patch('/:id', async (req, res) => {
     throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
 
-  const userId = req.ctx?.userId ?? null;
+  // Boş string'leri null'a çevir (UUID kolonları için)
+  const userId = req.ctx?.userId && req.ctx.userId.length > 0 ? req.ctx.userId : null;
   const updated = await updateErrorStatus(
     idParsed.data.id,
     bodyParsed.data.status,
