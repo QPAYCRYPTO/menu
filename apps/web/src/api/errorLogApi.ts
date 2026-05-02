@@ -15,6 +15,8 @@ export type ErrorLogRow = {
   source: ErrorSource;
   business_id: string | null;
   user_id: string | null;
+  business_name: string | null;
+  user_email: string | null;
   message: string;
   stack: string | null;
   context: Record<string, unknown> | null;

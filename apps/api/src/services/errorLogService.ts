@@ -1,12 +1,7 @@
 // apps/api/src/services/errorLogService.ts
 //
 // Hata logu servisi — error_log tablosuna akıllı insert.
-//
-// Özellikler:
-// - Fingerprint hesaplama (aynı hatayı gruplandırma)
-// - 1 saatlik pencere: aynı fingerprint son 1 saatte varsa güncelle, yoksa yeni satır
-// - Asenkron çağrı (fire-and-forget) — caller'ı bekletmez
-// - Insert hatası kendi hata logu'na yazılmaz (sonsuz döngü riskini önler), console'a düşer
+// Listelemede businesses + users JOIN ile business_name + user_email görünür.
 
 import { createHash } from 'crypto';
 import { pool } from '../db/postgres.js';
@@ -22,28 +17,11 @@ export type ErrorLogInput = {
   context?: Record<string, unknown> | null;
   business_id?: string | null;
   user_id?: string | null;
-  /**
-   * Fingerprint için ek diskriminatör (opsiyonel).
-   * Genelde endpoint veya error type kullanılır.
-   * Verilmezse message + stack'in ilk satırı kullanılır.
-   */
   fingerprint_extra?: string;
 };
 
-/**
- * Fingerprint hesaplaması.
- *
- * Amaç: Aynı hatanın 1000 farklı satır oluşturmasını engellemek.
- * Aynı (message + endpoint + stack ilk satır) hashlenerek tek string yapılır.
- *
- * Stack'in ilk satırı: hata fırlatan dosya/satır bilgisi içerir,
- * "TypeError: undefined" gibi geneller için iyi diskriminatör.
- */
 function computeFingerprint(input: ErrorLogInput): string {
-  // Message'ın ilk 200 karakterini al (uzun stack trace mesajları için)
   const messageNorm = (input.message ?? '').slice(0, 200).trim();
-
-  // Stack'in ilk anlamlı satırı (mesaj satırı hariç)
   const stackFirstLine = input.stack
     ? input.stack
         .split('\n')
@@ -52,31 +30,14 @@ function computeFingerprint(input: ErrorLogInput): string {
         .slice(0, 1)
         .join('')
     : '';
-
-  // Ek diskriminatör (endpoint, error type vs.)
   const extra = input.fingerprint_extra ?? '';
-
   const raw = `${input.source}|${messageNorm}|${stackFirstLine}|${extra}`;
   return createHash('sha256').update(raw).digest('hex').slice(0, 32);
 }
 
-/**
- * Asenkron olarak hata logu yaratır veya günceller.
- *
- * Mantık:
- *  1. Fingerprint hesapla
- *  2. Son 1 saatte aynı fingerprint+status='new' var mı?
- *     - Varsa: occurrence_count++, last_seen_at = NOW(), context'i güncelle
- *     - Yoksa: yeni satır
- *
- * Bu fonksiyon hiçbir zaman caller'a hata fırlatmaz —
- * insert başarısızsa console.error'a düşer ve sessizce devam eder.
- */
 export function logError(input: ErrorLogInput): void {
-  // Asenkron — caller bekletilmez
   setImmediate(() => {
     persistErrorLog(input).catch((err) => {
-      // Sonsuz döngü riski: error_log insert'i kendi kendine log atmasın
       console.error('[errorLogService] Insert failed:', err instanceof Error ? err.message : err);
     });
   });
@@ -86,9 +47,6 @@ async function persistErrorLog(input: ErrorLogInput): Promise<void> {
   const fingerprint = computeFingerprint(input);
   const contextJson = input.context ? JSON.stringify(input.context) : null;
 
-  // Önce: Aynı fingerprint son 1 saatte var mı?
-  // 1 saatlik pencere: aynı hata kümeleri tek satırda toplanır,
-  // ama saatlik trend de korunur (yeni saatte yeni satır açılır).
   const existing = await pool.query(
     `SELECT id FROM error_log
      WHERE fingerprint = $1
@@ -100,12 +58,10 @@ async function persistErrorLog(input: ErrorLogInput): Promise<void> {
   );
 
   if ((existing.rowCount ?? 0) > 0) {
-    // GÜNCELLE: occurrence_count++, last_seen_at = NOW()
     await pool.query(
       `UPDATE error_log
        SET occurrence_count = occurrence_count + 1,
            last_seen_at = NOW(),
-           -- En son context'i sakla (debug için son durumu görmek lazım)
            context = COALESCE($1::jsonb, context)
        WHERE id = $2`,
       [contextJson, existing.rows[0].id]
@@ -113,7 +69,6 @@ async function persistErrorLog(input: ErrorLogInput): Promise<void> {
     return;
   }
 
-  // YENİ SATIR
   await pool.query(
     `INSERT INTO error_log
        (severity, source, business_id, user_id, message, stack, context, fingerprint)
@@ -131,16 +86,17 @@ async function persistErrorLog(input: ErrorLogInput): Promise<void> {
   );
 }
 
-/**
- * Süper admin için hata listesi (filtreli).
- */
+// ===================================================================
+// LİSTELEME / DETAY / GÜNCELLEME / İSTATİSTİK
+// ===================================================================
+
 export type ListErrorsFilter = {
   severity?: ErrorSeverity[];
   source?: ErrorLogSource[];
   status?: Array<'new' | 'investigating' | 'resolved' | 'ignored'>;
   business_id?: string;
-  search?: string;        // message içinde arama
-  since?: string;          // ISO date — bu tarihten sonrası
+  search?: string;
+  since?: string;
   limit?: number;
   offset?: number;
 };
@@ -151,6 +107,8 @@ export type ErrorLogRow = {
   source: ErrorLogSource;
   business_id: string | null;
   user_id: string | null;
+  business_name: string | null;
+  user_email: string | null;
   message: string;
   stack: string | null;
   context: Record<string, unknown> | null;
@@ -164,6 +122,21 @@ export type ErrorLogRow = {
   resolution_note: string | null;
 };
 
+const SELECT_COLUMNS = `
+  el.id, el.severity, el.source, el.business_id, el.user_id,
+  b.name AS business_name,
+  u.email AS user_email,
+  el.message, el.stack, el.context,
+  el.fingerprint, el.occurrence_count, el.status,
+  el.first_seen_at, el.last_seen_at, el.resolved_at, el.resolved_by, el.resolution_note
+`;
+
+const FROM_WITH_JOINS = `
+  FROM error_log el
+  LEFT JOIN businesses b ON b.id = el.business_id
+  LEFT JOIN users u ON u.id = el.user_id
+`;
+
 export async function listErrors(filter: ListErrorsFilter): Promise<{
   rows: ErrorLogRow[];
   total: number;
@@ -173,44 +146,42 @@ export async function listErrors(filter: ListErrorsFilter): Promise<{
 
   if (filter.severity && filter.severity.length > 0) {
     params.push(filter.severity);
-    where.push(`severity = ANY($${params.length}::text[])`);
+    where.push(`el.severity = ANY($${params.length}::text[])`);
   }
 
   if (filter.source && filter.source.length > 0) {
     params.push(filter.source);
-    where.push(`source = ANY($${params.length}::text[])`);
+    where.push(`el.source = ANY($${params.length}::text[])`);
   }
 
   if (filter.status && filter.status.length > 0) {
     params.push(filter.status);
-    where.push(`status = ANY($${params.length}::text[])`);
+    where.push(`el.status = ANY($${params.length}::text[])`);
   }
 
   if (filter.business_id) {
     params.push(filter.business_id);
-    where.push(`business_id = $${params.length}`);
+    where.push(`el.business_id = $${params.length}`);
   }
 
   if (filter.search && filter.search.trim().length > 0) {
     params.push(`%${filter.search.trim()}%`);
-    where.push(`message ILIKE $${params.length}`);
+    where.push(`el.message ILIKE $${params.length}`);
   }
 
   if (filter.since) {
     params.push(filter.since);
-    where.push(`last_seen_at >= $${params.length}`);
+    where.push(`el.last_seen_at >= $${params.length}`);
   }
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
-  // Toplam sayı
   const countResult = await pool.query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM error_log ${whereClause}`,
+    `SELECT COUNT(*)::text AS count FROM error_log el ${whereClause}`,
     params
   );
   const total = parseInt(countResult.rows[0]?.count ?? '0', 10);
 
-  // Liste
   const limit = Math.min(filter.limit ?? 50, 200);
   const offset = filter.offset ?? 0;
 
@@ -220,20 +191,17 @@ export async function listErrors(filter: ListErrorsFilter): Promise<{
   const offsetIdx = params.length;
 
   const listResult = await pool.query<ErrorLogRow>(
-    `SELECT
-       id, severity, source, business_id, user_id, message, stack, context,
-       fingerprint, occurrence_count, status,
-       first_seen_at, last_seen_at, resolved_at, resolved_by, resolution_note
-     FROM error_log
+    `SELECT ${SELECT_COLUMNS}
+     ${FROM_WITH_JOINS}
      ${whereClause}
      ORDER BY
-       CASE severity
+       CASE el.severity
          WHEN 'CRITICAL' THEN 1
          WHEN 'HIGH' THEN 2
          WHEN 'MEDIUM' THEN 3
          WHEN 'LOW' THEN 4
        END,
-       last_seen_at DESC
+       el.last_seen_at DESC
      LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
     params
   );
@@ -243,12 +211,9 @@ export async function listErrors(filter: ListErrorsFilter): Promise<{
 
 export async function getErrorById(id: string): Promise<ErrorLogRow | null> {
   const result = await pool.query<ErrorLogRow>(
-    `SELECT
-       id, severity, source, business_id, user_id, message, stack, context,
-       fingerprint, occurrence_count, status,
-       first_seen_at, last_seen_at, resolved_at, resolved_by, resolution_note
-     FROM error_log
-     WHERE id = $1`,
+    `SELECT ${SELECT_COLUMNS}
+     ${FROM_WITH_JOINS}
+     WHERE el.id = $1`,
     [id]
   );
   return result.rowCount === 1 ? result.rows[0] : null;
@@ -273,9 +238,6 @@ export async function updateErrorStatus(
   return (result.rowCount ?? 0) === 1;
 }
 
-/**
- * Dashboard widget için özet istatistik.
- */
 export async function getErrorStats(): Promise<{
   critical_active: number;
   high_active: number;

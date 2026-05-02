@@ -337,10 +337,11 @@ export function ErrorLogPage() {
         {/* DESKTOP — TABLO */}
         <div className="hidden lg:block bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
           <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-            style={{ gridTemplateColumns: '90px 90px 3fr 80px 110px 130px', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>
+            style={{ gridTemplateColumns: '90px 90px 2.5fr 1.2fr 70px 100px 110px', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>
             <div>Öncelik</div>
             <div>Kaynak</div>
             <div>Mesaj</div>
+            <div>İşletme / Kullanıcı</div>
             <div className="text-center">Tekrar</div>
             <div>Durum</div>
             <div>Son Görülme</div>
@@ -364,7 +365,7 @@ export function ErrorLogPage() {
           {rows.map(row => (
             <button key={row.id} onClick={() => openDetail(row)}
               className="w-full text-left grid items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50"
-              style={{ gridTemplateColumns: '90px 90px 3fr 80px 110px 130px', borderBottom: '1px solid #F1F5F9', cursor: 'pointer' }}>
+              style={{ gridTemplateColumns: '90px 90px 2.5fr 1.2fr 70px 100px 110px', borderBottom: '1px solid #F1F5F9', cursor: 'pointer' }}>
               <div>
                 <span className="px-2 py-1 rounded-md text-xs font-bold"
                   style={{ background: SEVERITY_COLOR[row.severity].bg, color: SEVERITY_COLOR[row.severity].fg }}>
@@ -374,6 +375,20 @@ export function ErrorLogPage() {
               <div className="text-xs" style={{ color: '#64748B' }}>{SOURCE_LABEL[row.source]}</div>
               <div className="truncate" style={{ color: '#0F172A' }} title={row.message}>
                 {row.message}
+              </div>
+              <div className="min-w-0">
+                {row.business_name ? (
+                  <div className="text-xs font-semibold truncate" style={{ color: '#0F172A' }} title={row.business_name}>
+                    🏢 {row.business_name}
+                  </div>
+                ) : (
+                  <div className="text-xs" style={{ color: '#94A3B8' }}>—</div>
+                )}
+                {row.user_email && (
+                  <div className="text-xs truncate" style={{ color: '#64748B' }} title={row.user_email}>
+                    {row.user_email}
+                  </div>
+                )}
               </div>
               <div className="text-center">
                 {row.occurrence_count > 1 ? (
@@ -435,10 +450,16 @@ export function ErrorLogPage() {
               <div className="text-sm font-medium mb-2" style={{ color: '#0F172A' }}>
                 {row.message.length > 120 ? row.message.slice(0, 120) + '...' : row.message}
               </div>
-              <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+              {row.business_name && (
+                <div className="text-xs font-semibold mb-1" style={{ color: '#0D9488' }}>
+                  🏢 {row.business_name}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: '#64748B' }}>
                 <span>{SOURCE_LABEL[row.source]}</span>
                 <span>•</span>
                 <span>{timeAgo(row.last_seen_at)}</span>
+                {row.user_email && (<><span>•</span><span className="truncate">{row.user_email}</span></>)}
               </div>
             </button>
           ))}
@@ -511,9 +532,24 @@ export function ErrorLogPage() {
                   <div className="font-semibold uppercase tracking-wider mb-1" style={{ color: '#64748B' }}>Son Görülme</div>
                   <div className="font-semibold" style={{ color: '#0F172A' }}>{formatDateTime(detailRow.last_seen_at)}</div>
                 </div>
-                {detailRow.business_id && (
+                {detailRow.business_name && (
+                  <div className="rounded-xl p-3 col-span-2" style={{ background: '#F0FDFA', border: '1px solid #99F6E4' }}>
+                    <div className="font-semibold uppercase tracking-wider mb-1" style={{ color: '#0D9488' }}>🏢 İşletme</div>
+                    <div className="font-bold text-sm" style={{ color: '#0F172A' }}>{detailRow.business_name}</div>
+                    {detailRow.business_id && (
+                      <div className="font-mono text-xs mt-1" style={{ color: '#94A3B8', wordBreak: 'break-all' }}>{detailRow.business_id}</div>
+                    )}
+                  </div>
+                )}
+                {detailRow.user_email && (
                   <div className="rounded-xl p-3 col-span-2" style={{ background: '#F8FAFC' }}>
-                    <div className="font-semibold uppercase tracking-wider mb-1" style={{ color: '#64748B' }}>İşletme ID</div>
+                    <div className="font-semibold uppercase tracking-wider mb-1" style={{ color: '#64748B' }}>Kullanıcı</div>
+                    <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>{detailRow.user_email}</div>
+                  </div>
+                )}
+                {!detailRow.business_name && detailRow.business_id && (
+                  <div className="rounded-xl p-3 col-span-2" style={{ background: '#F8FAFC' }}>
+                    <div className="font-semibold uppercase tracking-wider mb-1" style={{ color: '#64748B' }}>İşletme ID (silinmiş?)</div>
                     <div className="font-mono text-xs" style={{ color: '#0F172A', wordBreak: 'break-all' }}>{detailRow.business_id}</div>
                   </div>
                 )}
