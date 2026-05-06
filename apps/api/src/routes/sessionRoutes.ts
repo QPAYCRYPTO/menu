@@ -99,7 +99,7 @@ sessionRoutes.post('/:id/close', async (req, res) => {
     // Session'ı kilitle ve kontrol et
     const sessionResult = await client.query(
       `SELECT * FROM table_sessions 
-       WHERE id = $1 AND business_id = $2 AND status = 'open'
+       WHERE id = $1 AND business_id = $2 AND status IN ('open', 'merged')
        FOR UPDATE`,
       [id, businessId]
     );
