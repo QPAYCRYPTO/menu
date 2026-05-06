@@ -20,6 +20,8 @@ import { ownerRoutes } from './routes/ownerRoutes.js';
 import { waiterAdminRoutes } from './routes/waiterAdminRoutes.js';
 import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
 import { errorLogIngestRoutes, superAdminErrorRoutes } from './routes/errorLogRoutes.js';
+import { adminTableOperationsRoutes, waiterTableOperationsRoutes } from './routes/tableOperationsRoutes.js';
+import { paymentRoutes } from './routes/paymentRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -56,6 +58,8 @@ export function createApp() {
   app.use('/api/admin/tables', tableRoutes);
   app.use('/api/admin/orders', orderRoutes);
   app.use('/api/admin/sessions', sessionRoutes);
+  app.use('/api/admin/table-operations', adminTableOperationsRoutes);
+  app.use('/api/admin/payment', paymentRoutes);
   app.use('/api/admin/waiters', waiterAdminRoutes);
 
   // SONRA: Genel admin route'u (catch-all)
@@ -67,6 +71,7 @@ export function createApp() {
   app.use('/api/public', publicRoutes);
   app.use('/api/public', customerOrderRoutes);
   app.use('/api/public/waiter', waiterPublicRoutes); 
+  app.use('/api/public/waiter/table-operations', waiterTableOperationsRoutes);
 
   // Frontend hata logu kabul endpoint'i (rate-limited, public)
   app.use('/api/error-log', errorLogIngestRoutes);

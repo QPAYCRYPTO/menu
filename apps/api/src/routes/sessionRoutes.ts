@@ -29,6 +29,8 @@ sessionRoutes.get('/', async (req, res) => {
       s.opened_at,
       s.cached_total_int,
       s.status,
+      s.merge_group_id,
+      s.merged_into_session_id,
       t.name AS table_name,
       COUNT(o.id) FILTER (WHERE o.type = 'order' AND o.status != 'cancelled') AS order_count,
       COUNT(o.id) FILTER (WHERE o.type = 'order' AND o.status = 'delivered') AS delivered_count,
