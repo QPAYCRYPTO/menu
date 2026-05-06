@@ -38,7 +38,7 @@ sessionRoutes.get('/', async (req, res) => {
     FROM table_sessions s
     INNER JOIN tables t ON t.id = s.table_id
     LEFT JOIN orders o ON o.session_id = s.id
-    WHERE s.business_id = $1 AND s.status = 'open'
+    WHERE s.business_id = $1 AND s.status IN ('open', 'merged')
     GROUP BY s.id, t.name
     ORDER BY s.opened_at DESC
   `, [businessId]);

@@ -34,6 +34,7 @@ export type WaiterTable = {
   active_calls: number;
   order_count: number;
   has_active_session: boolean;
+  merge_group_id: string | null;
 };
 
 export type WaiterOrderItem = {

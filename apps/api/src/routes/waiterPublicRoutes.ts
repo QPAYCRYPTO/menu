@@ -180,6 +180,7 @@ waiterPublicRoutes.get('/tables', requireWaiterAuth, async (req, res) => {
     SELECT
       t.id, t.name, t.sort_order, t.is_active,
       s.id AS session_id, s.opened_at, s.cached_total_int,
+      s.merge_group_id,
       (SELECT COUNT(*) FROM orders o
        WHERE o.table_id = t.id AND o.type = 'call' AND o.status = 'pending'
       ) AS active_calls,

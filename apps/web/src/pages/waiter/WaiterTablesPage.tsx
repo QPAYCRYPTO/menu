@@ -1,17 +1,14 @@
 // apps/web/src/pages/waiter/WaiterTablesPage.tsx
-// CHANGELOG v3:
-// - Masa taşıma modal (can_transfer_table yetkisi varsa)
-// - Masa birleştirme modal (can_merge_tables yetkisi varsa)
-// - Her iki işlem waiterTableOperationsApi ile yapılır
+// CHANGELOG v4:
+// - Birleşik masalar mavi MergeGroupCard olarak gösterilir
+// - merge_group_id olan masalar normal listeden çıkar, grup kartına girer
+// - Taşı/Birleştir yetki kontrolü korundu
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { WaiterTable, listTables } from '../../api/waiterPublicApi';
-import {
-  waiterMoveSession,
-  waiterMergeSessions,
-} from '../../api/tableOperationsApi';
+import { waiterMoveSession, waiterMergeSessions } from '../../api/tableOperationsApi';
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
 
@@ -53,7 +50,6 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
   const [targetTableId, setTargetTableId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Boş masalar — kendisi hariç
   const emptyTables = allTables.filter(t => !t.has_active_session && t.id !== table.id);
 
   async function handleMove() {
@@ -72,8 +68,7 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: 'rgba(15,23,42,0.7)' }}
-      onClick={onClose}>
+      style={{ background: 'rgba(15,23,42,0.7)' }} onClick={onClose}>
       <div className="w-full bg-white rounded-t-3xl p-6 max-w-lg"
         onClick={e => e.stopPropagation()}>
         <h3 className="font-bold text-base mb-1" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
@@ -84,9 +79,9 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
         </p>
 
         {emptyTables.length === 0 ? (
-          <div className="text-center py-6 rounded-xl mb-4" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          <div className="text-center py-6 rounded-xl mb-4"
+            style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
             <p className="text-sm font-semibold" style={{ color: '#DC2626' }}>Boş masa yok</p>
-            <p className="text-xs mt-1" style={{ color: '#64748B' }}>Tüm masalar dolu.</p>
           </div>
         ) : (
           <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
@@ -112,10 +107,9 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
             className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: '#F1F5F9', color: '#64748B' }}>
-            İptal
-          </button>
-          <button onClick={handleMove} disabled={loading || !targetTableId || emptyTables.length === 0}
+            style={{ background: '#F1F5F9', color: '#64748B' }}>İptal</button>
+          <button onClick={handleMove}
+            disabled={loading || !targetTableId || emptyTables.length === 0}
             className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
             style={{ background: loading || !targetTableId ? '#94A3B8' : '#0D9488' }}>
             {loading ? 'Taşınıyor...' : 'Taşı'}
@@ -141,7 +135,7 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
   const [targetSessionId, setTargetSessionId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Dolu masalar — kendisi hariç
+  // Dolu masalar — kendisi hariç (session_id olanlar)
   const occupiedTables = allTables.filter(t => t.has_active_session && t.id !== table.id);
 
   async function handleMerge() {
@@ -160,8 +154,7 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: 'rgba(15,23,42,0.7)' }}
-      onClick={onClose}>
+      style={{ background: 'rgba(15,23,42,0.7)' }} onClick={onClose}>
       <div className="w-full bg-white rounded-t-3xl p-6 max-w-lg"
         onClick={e => e.stopPropagation()}>
         <h3 className="font-bold text-base mb-1" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
@@ -169,11 +162,11 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
         </h3>
         <p className="text-xs mb-4" style={{ color: '#64748B' }}>
           <strong>{table.name}</strong> masasını başka bir masayla birleştir.
-          Kaynak kapanır, hedefte toplanır.
         </p>
 
         {occupiedTables.length === 0 ? (
-          <div className="text-center py-6 rounded-xl mb-4" style={{ background: '#FEF3C7', border: '1px solid #FDE68A' }}>
+          <div className="text-center py-6 rounded-xl mb-4"
+            style={{ background: '#FEF3C7', border: '1px solid #FDE68A' }}>
             <p className="text-sm font-semibold" style={{ color: '#92400E' }}>Birleştirilecek masa yok</p>
             <p className="text-xs mt-1" style={{ color: '#64748B' }}>Başka açık masa bulunmuyor.</p>
           </div>
@@ -204,21 +197,239 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
         )}
 
         <div className="p-3 rounded-xl mb-4 text-xs" style={{ background: '#FEF3C7', color: '#92400E' }}>
-          ⚠️ <strong>{table.name}</strong> kapanır, tüm siparişleri seçilen masaya taşınır.
+          ⚠️ <strong>{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.
         </div>
 
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
             className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: '#F1F5F9', color: '#64748B' }}>
-            İptal
-          </button>
-          <button onClick={handleMerge} disabled={loading || !targetSessionId || occupiedTables.length === 0}
+            style={{ background: '#F1F5F9', color: '#64748B' }}>İptal</button>
+          <button onClick={handleMerge}
+            disabled={loading || !targetSessionId || occupiedTables.length === 0}
             className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
             style={{ background: loading || !targetSessionId ? '#94A3B8' : '#F59E0B' }}>
             {loading ? 'Birleştiriliyor...' : 'Birleştir'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── BİRLEŞİK MASA GRUP KARTI ────────────────────────────────────────────────
+function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
+  tables: WaiterTable[];
+  canTransfer: boolean;
+  canMerge: boolean;
+  onMove: (t: WaiterTable) => void;
+  onMerge: (t: WaiterTable) => void;
+}) {
+  const totalInt = tables.reduce((sum, t) => sum + t.total_int, 0);
+  const orderCount = tables.reduce((sum, t) => sum + t.order_count, 0);
+
+  return (
+    <div style={{
+      background: '#EFF6FF',
+      border: '2px solid #3B82F6',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '8px 14px',
+        background: '#1D4ED8',
+        color: 'white',
+        fontWeight: 700,
+        fontSize: 11,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+      }}>
+        🔵 BİRLEŞİK MASA GRUBU
+      </div>
+
+      <div style={{ padding: 16 }}>
+        {/* Masa isimleri */}
+        {tables.map(t => (
+          <div key={t.id} style={{
+            fontSize: 20, fontWeight: 700, color: '#1D4ED8',
+            fontFamily: 'Georgia, serif', lineHeight: 1.3
+          }}>
+            {t.name}
+          </div>
+        ))}
+
+        <div style={{ height: 1, background: '#BFDBFE', margin: '10px 0' }} />
+
+        {/* Adisyon */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '6px 10px', background: 'white', borderRadius: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Toplam Adisyon</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: '#1D4ED8' }}>
+            {formatPrice(totalInt)}
+          </span>
+        </div>
+
+        <div style={{ padding: '5px 8px', background: 'white', borderRadius: 8,
+          textAlign: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
+            Toplam Sipariş
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{orderCount}</div>
+        </div>
+
+        {/* Her masaya git linkleri */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {tables.map(t => (
+            <Link key={t.id} to={`/garson/masa/${t.id}`}
+              style={{
+                textDecoration: 'none', padding: '8px 10px',
+                background: '#DBEAFE', borderRadius: 8,
+                fontSize: 12, fontWeight: 600, color: '#1D4ED8', textAlign: 'center',
+                display: 'block'
+              }}>
+              📋 {t.name} — Adisyon Aç
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Operasyon butonları */}
+      {(canTransfer || canMerge) && tables[0] && (
+        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #BFDBFE', display: 'flex', gap: 6 }}>
+          {canTransfer && (
+            <button onClick={() => onMove(tables[0])}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+              🔄 Taşı
+            </button>
+          )}
+          {canMerge && (
+            <button onClick={() => onMerge(tables[0])}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: '#FFFBEB', color: '#B45309' }}>
+              🔗 Ekle
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── NORMAL MASA KARTI ────────────────────────────────────────────────────────
+function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
+  table: WaiterTable;
+  canTransfer: boolean;
+  canMerge: boolean;
+  onMove: () => void;
+  onMerge: () => void;
+}) {
+  const isOccupied = table.has_active_session;
+  const hasCall = table.active_calls > 0;
+  const duration = isOccupied && table.opened_at ? useDuration(table.opened_at) : null;
+
+  const colors = hasCall
+    ? { bg: '#FEE2E2', border: '#DC2626', accent: '#DC2626' }
+    : isOccupied
+    ? { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626' }
+    : { bg: '#F0FDF4', border: '#A7F3D0', accent: '#059669' };
+
+  return (
+    <div style={{
+      background: colors.bg,
+      border: `2px solid ${colors.border}`,
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'relative'
+    }}>
+      {hasCall && (
+        <div style={{
+          position: 'absolute', top: -8, right: -8,
+          width: 28, height: 28, borderRadius: '50%',
+          background: '#DC2626', color: 'white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, zIndex: 1
+        }}>🔔</div>
+      )}
+
+      <div style={{
+        padding: '8px 14px', background: colors.accent, color: 'white',
+        fontWeight: 700, fontSize: 11, textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+      }}>
+        <span>{hasCall ? '🔔 ÇAĞRI' : isOccupied ? '● Dolu' : '○ Boş'}</span>
+        {isOccupied && duration && (
+          <span style={{ fontFamily: 'monospace' }}>⏱ {duration}</span>
+        )}
+      </div>
+
+      <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none', flex: 1 }}>
+        <div style={{ padding: 16 }}>
+          <h3 style={{ fontWeight: 700, fontSize: 20, color: '#0F172A',
+            fontFamily: 'Georgia, serif', lineHeight: 1.1, marginBottom: 12 }}>
+            {table.name}
+          </h3>
+
+          {isOccupied && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', padding: '6px 10px', background: 'white', borderRadius: 8 }}>
+                <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Adisyon</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: colors.accent }}>
+                  {formatPrice(table.total_int)}
+                </span>
+              </div>
+              <div style={{ padding: '5px 8px', background: 'white', borderRadius: 8, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Sipariş
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{table.order_count}</div>
+              </div>
+            </div>
+          )}
+
+          {!isOccupied && (
+            <div style={{ padding: '14px 8px', textAlign: 'center',
+              background: 'white', borderRadius: 10, border: '1px dashed #A7F3D0' }}>
+              <div style={{ fontSize: 11, color: '#065F46', fontWeight: 600 }}>Müşteri bekleniyor</div>
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* Operasyon butonları */}
+      {isOccupied && (canTransfer || canMerge) && (
+        <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 6 }}>
+          {canTransfer && (
+            <button onClick={e => { e.preventDefault(); onMove(); }}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: '#EFF6FF', color: '#1D4ED8' }}>
+              🔄 Taşı
+            </button>
+          )}
+          {canMerge && (
+            <button onClick={e => { e.preventDefault(); onMerge(); }}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold"
+              style={{ background: '#FFFBEB', color: '#B45309' }}>
+              🔗 Birleştir
+            </button>
+          )}
+        </div>
+      )}
+
+      <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.04)',
+        background: 'rgba(255,255,255,0.5)' }}>
+        <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none' }}>
+          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700,
+            color: isOccupied ? '#0F172A' : '#059669' }}>
+            {isOccupied ? '📋 Adisyonu Aç' : '➕ Sipariş Al'}
+          </div>
+        </Link>
       </div>
     </div>
   );
@@ -230,8 +441,6 @@ export function WaiterTablesPage() {
   const [tables, setTables] = useState<WaiterTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
-
-  // Modal state
   const [moveTarget, setMoveTarget] = useState<WaiterTable | null>(null);
   const [mergeTarget, setMergeTarget] = useState<WaiterTable | null>(null);
 
@@ -271,16 +480,30 @@ export function WaiterTablesPage() {
   const canTransfer = waiter.permissions.can_transfer_table;
   const canMerge = waiter.permissions.can_merge_tables;
 
-  const sortedTables = [...tables].sort((a, b) => {
-    if (a.active_calls > 0 && b.active_calls === 0) return -1;
-    if (a.active_calls === 0 && b.active_calls > 0) return 1;
-    if (a.has_active_session && !b.has_active_session) return -1;
-    if (!a.has_active_session && b.has_active_session) return 1;
-    return a.sort_order - b.sort_order;
+  // Birleşik masa gruplarını hesapla
+  const mergeGroupMap = new Map<string, WaiterTable[]>();
+  tables.forEach(t => {
+    if (t.merge_group_id) {
+      const group = mergeGroupMap.get(t.merge_group_id) ?? [];
+      group.push(t);
+      mergeGroupMap.set(t.merge_group_id, group);
+    }
   });
 
-  const busyCount = tables.filter(t => t.has_active_session).length;
+  // Normal masalar (birleşik olmayanlar) — sıralı
+  const normalTables = [...tables]
+    .filter(t => !t.merge_group_id)
+    .sort((a, b) => {
+      if (a.active_calls > 0 && b.active_calls === 0) return -1;
+      if (a.active_calls === 0 && b.active_calls > 0) return 1;
+      if (a.has_active_session && !b.has_active_session) return -1;
+      if (!a.has_active_session && b.has_active_session) return 1;
+      return a.sort_order - b.sort_order;
+    });
+
+  const busyCount = tables.filter(t => t.has_active_session && !t.merge_group_id).length;
   const emptyCount = tables.filter(t => !t.has_active_session).length;
+  const mergedCount = mergeGroupMap.size;
   const totalOpen = tables.reduce((sum, t) => sum + (t.total_int || 0), 0);
 
   return (
@@ -297,19 +520,6 @@ export function WaiterTablesPage() {
         </div>
       )}
 
-      {waiter.permissions.can_use_break && (
-        <div className="mb-4 bg-white rounded-2xl p-3" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="flex gap-2">
-            <button className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white opacity-60 cursor-not-allowed"
-              style={{ background: '#16A34A' }} disabled>▶️ İşe Giriş</button>
-            <button className="flex-1 py-2.5 rounded-xl text-xs font-semibold opacity-60 cursor-not-allowed"
-              style={{ background: '#FEF3C7', color: '#92400E' }} disabled>☕ Mola</button>
-            <button className="flex-1 py-2.5 rounded-xl text-xs font-semibold opacity-60 cursor-not-allowed"
-              style={{ background: '#FEF2F2', color: '#DC2626' }} disabled>⏹️ Çıkış</button>
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold text-lg" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
           🍽️ Masalar
@@ -321,6 +531,7 @@ export function WaiterTablesPage() {
         </button>
       </div>
 
+      {/* İstatistikler */}
       {tables.length > 0 && (
         <div className="flex gap-2 mb-4 flex-wrap">
           <div className="px-3 py-1.5 rounded-xl" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
@@ -329,11 +540,14 @@ export function WaiterTablesPage() {
           <div className="px-3 py-1.5 rounded-xl" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
             <span className="text-xs font-semibold" style={{ color: '#991B1B' }}>🔴 Dolu: {busyCount}</span>
           </div>
-          {busyCount > 0 && (
+          {mergedCount > 0 && (
+            <div className="px-3 py-1.5 rounded-xl" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+              <span className="text-xs font-semibold" style={{ color: '#1D4ED8' }}>🔵 Birleşik: {mergedCount} grup</span>
+            </div>
+          )}
+          {totalOpen > 0 && (
             <div className="px-3 py-1.5 rounded-xl" style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-              <span className="text-xs font-semibold" style={{ color: '#0C4A6E' }}>
-                💰 Açık: {formatPrice(totalOpen)}
-              </span>
+              <span className="text-xs font-semibold" style={{ color: '#0C4A6E' }}>💰 {formatPrice(totalOpen)}</span>
             </div>
           )}
         </div>
@@ -356,7 +570,20 @@ export function WaiterTablesPage() {
 
       {tables.length > 0 && (
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-          {sortedTables.map(table => (
+          {/* Birleşik masa grupları — tek kart */}
+          {[...mergeGroupMap.entries()].map(([groupId, groupTables]) => (
+            <MergeGroupCard
+              key={groupId}
+              tables={groupTables}
+              canTransfer={canTransfer}
+              canMerge={canMerge}
+              onMove={(t) => setMoveTarget(t)}
+              onMerge={(t) => setMergeTarget(t)}
+            />
+          ))}
+
+          {/* Normal masalar */}
+          {normalTables.map(table => (
             <WaiterTableCard
               key={table.id}
               table={table}
@@ -394,127 +621,6 @@ export function WaiterTablesPage() {
           onError={msg => showToast(msg, 'error')}
         />
       )}
-    </div>
-  );
-}
-
-// ─── MASA KARTI ───────────────────────────────────────────────────────────────
-function WaiterTableCard({
-  table,
-  canTransfer,
-  canMerge,
-  onMove,
-  onMerge
-}: {
-  table: WaiterTable;
-  canTransfer: boolean;
-  canMerge: boolean;
-  onMove: () => void;
-  onMerge: () => void;
-}) {
-  const isOccupied = table.has_active_session;
-  const hasCall = table.active_calls > 0;
-  const duration = isOccupied && table.opened_at ? useDuration(table.opened_at) : null;
-
-  const colors = hasCall
-    ? { bg: '#FEE2E2', border: '#DC2626', accent: '#DC2626' }
-    : isOccupied
-    ? { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626' }
-    : { bg: '#F0FDF4', border: '#A7F3D0', accent: '#059669' };
-
-  return (
-    <div style={{
-      background: colors.bg,
-      border: `2px solid ${colors.border}`,
-      borderRadius: 16,
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative'
-    }}>
-      {hasCall && (
-        <div style={{
-          position: 'absolute', top: -8, right: -8,
-          width: 28, height: 28, borderRadius: '50%',
-          background: '#DC2626', color: 'white',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, zIndex: 1
-        }}>🔔</div>
-      )}
-
-      <div style={{
-        padding: '8px 14px',
-        background: colors.accent, color: 'white',
-        fontWeight: 700, fontSize: 11, textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-      }}>
-        <span>{hasCall ? '🔔 ÇAĞRI' : isOccupied ? '● Dolu' : '○ Boş'}</span>
-        {isOccupied && duration && (
-          <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>⏱ {duration}</span>
-        )}
-      </div>
-
-      {/* Ana içerik — tıklanınca masa detayına git */}
-      <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none', flex: 1 }}>
-        <div style={{ padding: 16 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 20, color: '#0F172A', fontFamily: 'Georgia, serif', lineHeight: 1.1, marginBottom: 12 }}>
-            {table.name}
-          </h3>
-
-          {isOccupied && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'white', borderRadius: 8 }}>
-                <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Adisyon</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: colors.accent }}>{formatPrice(table.total_int)}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <div style={{ flex: 1, padding: '5px 8px', background: 'white', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>Sipariş</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{table.order_count}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!isOccupied && (
-            <div style={{ padding: '14px 8px', textAlign: 'center', background: 'white', borderRadius: 10, border: '1px dashed #A7F3D0' }}>
-              <div style={{ fontSize: 11, color: '#065F46', fontWeight: 600 }}>Müşteri bekleniyor</div>
-            </div>
-          )}
-        </div>
-      </Link>
-
-      {/* Operasyon butonları — sadece dolu masada ve yetki varsa */}
-      {isOccupied && (canTransfer || canMerge) && (
-        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 6 }}>
-          {canTransfer && (
-            <button
-              onClick={e => { e.preventDefault(); onMove(); }}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: '#EFF6FF', color: '#1D4ED8' }}>
-              🔄 Taşı
-            </button>
-          )}
-          {canMerge && (
-            <button
-              onClick={e => { e.preventDefault(); onMerge(); }}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: '#FFFBEB', color: '#B45309' }}>
-              🔗 Birleştir
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Alt kısım — sipariş al veya adisyon */}
-      <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.04)', background: 'rgba(255,255,255,0.5)' }}>
-        <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none' }}>
-          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: isOccupied ? '#0F172A' : '#059669' }}>
-            {isOccupied ? '📋 Adisyonu Aç' : '➕ Sipariş Al'}
-          </div>
-        </Link>
-      </div>
     </div>
   );
 }
