@@ -499,7 +499,13 @@ export function TablesPage() {
   const tablesWithSession = tables.map(t => {
     const session = sessions.find(s => s.table_id === t.id);
     const isMerged = session?.merge_group_id != null;
-    return { ...t, session, isMerged, mergeGroupId: session?.merge_group_id ?? null };
+
+    // Birleşik masada ödeme target session üzerinden alınır
+    const paymentSessionInfo = isMerged && session?.merged_into_session_id
+      ? sessions.find(s => s.id === session.merged_into_session_id) ?? session
+      : session;
+
+    return { ...t, session, isMerged, mergeGroupId: session?.merge_group_id ?? null, paymentSessionInfo };
   });
 
   // Merge group'larını renk/sıra için indexle
@@ -576,7 +582,10 @@ export function TablesPage() {
             onDelete={() => askDeleteTable(table)}
             onOpenDetail={() => table.session && openDetail(table.session.id)}
             onCloseSession={() => table.session && tryCloseSession(table.session.id, table.name)}
-            onOpenPayment={() => table.session && setPaymentSession({ sessionId: table.session.id, tableName: table.name })}
+            onOpenPayment={() => table.paymentSessionInfo && setPaymentSession({ 
+              sessionId: table.paymentSessionInfo.id, 
+              tableName: table.paymentSessionInfo.table_name 
+            })}
           />
         ))}
 
