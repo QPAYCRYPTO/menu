@@ -40,15 +40,27 @@ export async function getOrCreateOpenSession(
   const db = client ?? pool;
 
   // 1. Önce var olan open session'ı kontrol et
+  // YENİ — 'merged' de arıyor, merged ise target'ı döndürüyor:
   const existingResult = await db.query(
     `SELECT * FROM table_sessions 
-     WHERE business_id = $1 AND table_id = $2 AND status = 'open'
-     LIMIT 1`,
+    WHERE business_id = $1 AND table_id = $2 AND status IN ('open', 'merged')
+    LIMIT 1`,
     [businessId, tableId]
   );
 
   if (existingResult.rowCount === 1) {
-    return existingResult.rows[0] as TableSession;
+    const session = existingResult.rows[0] as TableSession;
+    // Birleştirilmiş masa ise target session'ı getir
+    if (session.status === 'merged' && session.merged_into_session_id) {
+      const targetResult = await db.query(
+        `SELECT * FROM table_sessions WHERE id = $1`,
+        [session.merged_into_session_id]
+      );
+      if (targetResult.rowCount === 1) {
+        return targetResult.rows[0] as TableSession;
+      }
+    }
+    return session;
   }
 
   // 2. Yoksa yeni oluştur — race condition'a karşı dayanıklı INSERT
