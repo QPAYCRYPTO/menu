@@ -11,11 +11,13 @@ export type TableSession = {
   table_id: string;
   opened_at: string;
   closed_at: string | null;
-  status: 'open' | 'closed';
+  status: 'open' | 'closed' | 'merged';
   cached_total_int: number;
   closed_by: string | null;
   auto_closed: boolean;
   note: string | null;
+  merge_group_id: string | null;
+  merged_into_session_id: string | null;
   updated_at: string;
 };
 

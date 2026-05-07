@@ -150,9 +150,16 @@ publicRoutes.post('/order/:slug', async (req, res) => {
     await client.query('BEGIN');
 
     let sessionId: string | null = null;
+    // YENİ — merged session çözümleme eklendi:
     if (parsed.data.type === 'order') {
       const session = await getOrCreateOpenSession(businessId, table.id, client);
-      sessionId = session.id;
+      
+      // Eğer bu masa birleştirilmişse, siparişi target session'a yaz
+      if (session.status === 'merged' && session.merged_into_session_id) {
+        sessionId = session.merged_into_session_id;
+      } else {
+        sessionId = session.id;
+      }
     }
 
     const orderResult = await client.query(
