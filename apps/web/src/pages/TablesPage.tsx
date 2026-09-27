@@ -613,6 +613,27 @@ export function TablesPage() {
     }
   }
 
+  // Kapat: masa artık buradan doğrudan kapatılmaz (sessions/:id/close çağrılmaz).
+  // Bekleyen sipariş varsa seçenek modalı (yeni müşteri / iptal et ve ödemeye geç),
+  // yoksa ödeme ekranı açılır; ödenmemiş ürün kontrolü ve kapatma orada yapılır.
+  async function startCloseFlow(sessionId: string, tableName: string) {
+    try {
+      const detail = await apiRequest<SessionDetail>(`/admin/sessions/${sessionId}`, { token: accessToken });
+      const pendingCount = detail.orders.filter(o =>
+        o.type === 'order' && ['pending', 'preparing', 'ready'].includes(o.status)
+      ).length;
+      if (pendingCount > 0) {
+        setCloseModal({ sessionId, tableName, pendingCount });
+        return;
+      }
+      setDetailOpen(null);
+      setDetailData(null);
+      setPaymentSession({ sessionId, tableName });
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Masa bilgisi alınamadı.', 'error');
+    }
+  }
+
   // Bekleyen siparişleri tek tek iptal et (customer_left), masayı KAPATMA → ödeme ekranını aç.
   // Kapatma ödeme ekranından yapılır (ödenmemiş ürün kontrolü + açık sipariş karar paneli orada).
   async function cancelPendingAndOpenPayment(sessionId: string, tableName: string) {
@@ -757,7 +778,7 @@ export function TablesPage() {
             onToggleActive={() => toggleActive(table)}
             onDelete={() => askDeleteTable(table)}
             onOpenDetail={() => table.paymentSessionInfo && openDetail(table.paymentSessionInfo.id)}
-            onCloseSession={() => table.session && tryCloseSession(table.session.id, table.name)}
+            onCloseSession={() => table.session && startCloseFlow(table.session.id, table.name)}
             onOpenPayment={() => table.paymentSessionInfo && setPaymentSession({ 
               sessionId: table.paymentSessionInfo.id, 
               tableName: table.paymentSessionInfo.table_name 
@@ -843,7 +864,7 @@ export function TablesPage() {
                   💳 Ödeme Al
                 </button>
                 <button
-                  onClick={() => tryCloseSession(detailOpen!, detailData?.table?.name ?? 'Masa')}
+                  onClick={() => startCloseFlow(detailOpen!, detailData?.table?.name ?? 'Masa')}
                   style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
                   🔒 Masayı Kapat
                 </button>
