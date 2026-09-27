@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
+import { publishOrder } from '../db/redisPubSub.js';
 import {
   getSessionBillDetails,
   payItems,
@@ -84,7 +85,11 @@ paymentRoutes.post('/pay-items', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const closeTableSchema = z.object({
   session_id: z.string().uuid(),
-  force_close: z.boolean().default(false)
+  force_close: z.boolean().default(false),
+  open_order_decisions: z.array(z.object({
+    order_id: z.string().uuid(),
+    decision: z.enum(['customer_left', 'no_payment'])
+  })).max(200).default([])
 });
 
 paymentRoutes.post('/close-table', async (req, res) => {
@@ -100,8 +105,35 @@ paymentRoutes.post('/close-table', async (req, res) => {
     businessId,
     sessionId: parsed.data.session_id,
     closedBy: userId,
-    forceClose: parsed.data.force_close
+    forceClose: parsed.data.force_close,
+    openOrderDecisions: parsed.data.open_order_decisions
   });
+
+  // Ödenmemiş açık sipariş var ve her biri için karar gönderilmedi → 409, kapanmaz
+  if (result.open_orders_requiring_decision.length > 0) {
+    res.status(409).json({
+      message: 'Ödenmemiş açık siparişler var. Her biri için "İptal Et" veya "Zayi Say" seçin.',
+      code: 'OPEN_ORDERS_REQUIRE_DECISION',
+      unpaid_items_count: result.unpaid_items_count,
+      open_orders: result.open_orders_requiring_decision
+    });
+    return;
+  }
+
+  // İptal/zayi edilen siparişler mutfak ekranından düşsün
+  for (const order of result.cancelled_orders) {
+    try {
+      await publishOrder(businessId, {
+        type: 'order_cancelled',
+        order_id: order.order_id,
+        table_name: order.table_name,
+        order_type: 'order',
+        reason: order.reason
+      });
+    } catch {
+      // yut
+    }
+  }
 
   // Ödenmemiş item var ve force_close=false → 409 döner, kapanmaz
   if (result.closed_session_ids.length === 0 && !parsed.data.force_close) {

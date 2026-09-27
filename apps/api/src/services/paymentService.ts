@@ -250,17 +250,38 @@ export async function payItems(params: {
 // Ödenmemiş item varsa → 409 + kaç tane kaldığını döner.
 // Birleşik masalar varsa (merge_group_id) hepsini kapatır.
 // ----------------------------------------------------------------------------
+export type OpenOrderDecision = 'customer_left' | 'no_payment';
+
+// Ödenmemiş ürünü olan, henüz teslim edilmemiş sipariş (kapatmadan önce karar ister)
+export type OpenOrderRequiringDecision = {
+  order_id: string;
+  table_name: string;
+  status: string;
+  created_at: string;
+  unpaid_total_int: number;
+  items: { product_name: string; quantity: number; is_paid: boolean }[];
+};
+
+const OPEN_ORDER_CANCEL_REASONS: Record<OpenOrderDecision, string> = {
+  customer_left: 'customer_left: Masa kapatılırken iptal edildi',
+  no_payment: 'no_payment: Masa kapatılırken zayi sayıldı',
+};
+
 export async function closeTableAfterPayment(params: {
   businessId: string;
   sessionId: string;
   closedBy: string;
   forceClose?: boolean; // true ise ödenmemiş item'lar olsa bile kapatır
+  // forceClose'da ödenmemiş açık (pending/preparing/ready) siparişlerin her biri için karar zorunlu
+  openOrderDecisions?: { order_id: string; decision: OpenOrderDecision }[];
 }): Promise<{
   closed_session_ids: string[];
   unpaid_items_count: number;
   forced: boolean;
+  open_orders_requiring_decision: OpenOrderRequiringDecision[];
+  cancelled_orders: { order_id: string; table_name: string; reason: string }[];
 }> {
-  const { businessId, sessionId, closedBy, forceClose = false } = params;
+  const { businessId, sessionId, closedBy, forceClose = false, openOrderDecisions = [] } = params;
   const client = await pool.connect();
 
   try {
@@ -300,7 +321,72 @@ export async function closeTableAfterPayment(params: {
         closed_session_ids: [],
         unpaid_items_count: unpaidCount,
         forced: false,
+        open_orders_requiring_decision: [],
+        cancelled_orders: [],
       };
+    }
+
+    // Ödenmemiş ürünü olan açık siparişler: kapalı masada mutfakta takılı kalmasınlar.
+    // Her biri için "İptal Et" (customer_left) veya "Zayi Say" (no_payment) kararı zorunlu.
+    // Önce kilitle (mutfak bu arada durum değiştiremesin), sonra detayı çek.
+    await client.query(
+      `SELECT id FROM orders
+       WHERE session_id = $1 AND business_id = $2
+         AND type = 'order' AND status IN ('pending', 'preparing', 'ready')
+       FOR UPDATE`,
+      [sessionId, businessId]
+    );
+
+    const openOrdersResult = await client.query(
+      `SELECT
+         o.id AS order_id, o.table_name, o.status, o.created_at,
+         COALESCE(SUM(oi.price_int * oi.quantity) FILTER (WHERE oi.is_paid = FALSE), 0)::int AS unpaid_total_int,
+         COALESCE(
+           json_agg(
+             json_build_object('product_name', oi.product_name, 'quantity', oi.quantity, 'is_paid', oi.is_paid)
+             ORDER BY oi.created_at
+           ) FILTER (WHERE oi.id IS NOT NULL),
+           '[]'
+         ) AS items
+       FROM orders o
+       LEFT JOIN order_items oi ON oi.order_id = o.id
+       WHERE o.session_id = $1 AND o.business_id = $2
+         AND o.type = 'order' AND o.status IN ('pending', 'preparing', 'ready')
+       GROUP BY o.id
+       HAVING BOOL_OR(oi.is_paid = FALSE) OR COUNT(oi.id) = 0
+       ORDER BY o.created_at ASC`,
+      [sessionId, businessId]
+    );
+    const openOrders: OpenOrderRequiringDecision[] = openOrdersResult.rows;
+
+    const decisionByOrder = new Map(openOrderDecisions.map(d => [d.order_id, d.decision]));
+    if (openOrders.some(o => !decisionByOrder.has(o.order_id))) {
+      // Karar eksik → hiçbir şey değişmez, liste admin'e döner
+      await client.query('ROLLBACK');
+      return {
+        closed_session_ids: [],
+        unpaid_items_count: unpaidCount,
+        forced: false,
+        open_orders_requiring_decision: openOrders,
+        cancelled_orders: [],
+      };
+    }
+
+    // Kararları uygula (teslim edilmemiş siparişler → cached_total_int'e hiç eklenmemişti, düşülecek bir şey yok)
+    const cancelledOrders: { order_id: string; table_name: string; reason: string }[] = [];
+    for (const order of openOrders) {
+      const reason = OPEN_ORDER_CANCEL_REASONS[decisionByOrder.get(order.order_id)!];
+      await client.query(
+        `UPDATE orders
+         SET status = 'cancelled',
+             cancelled_at = NOW(),
+             cancelled_by = $1,
+             cancel_reason = $2,
+             updated_at = NOW()
+         WHERE id = $3 AND business_id = $4`,
+        [closedBy, reason, order.order_id, businessId]
+      );
+      cancelledOrders.push({ order_id: order.order_id, table_name: order.table_name, reason });
     }
 
     // Kapatılacak session ID listesi
@@ -368,6 +454,8 @@ export async function closeTableAfterPayment(params: {
       closed_session_ids: sessionIdsToClose,
       unpaid_items_count: unpaidCount,
       forced: forceClose,
+      open_orders_requiring_decision: [],
+      cancelled_orders: cancelledOrders,
     };
   } catch (err) {
     await client.query('ROLLBACK');

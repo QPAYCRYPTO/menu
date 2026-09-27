@@ -37,10 +37,23 @@ export type PayItemsResult = {
   fully_paid_order_ids: string[];
 };
 
+export type OpenOrderDecision = 'customer_left' | 'no_payment';
+
+export type OpenOrderRequiringDecision = {
+  order_id: string;
+  table_name: string;
+  status: string;
+  created_at: string;
+  unpaid_total_int: number;
+  items: { product_name: string; quantity: number; is_paid: boolean }[];
+};
+
 export type CloseTableResult = {
   closed_session_ids: string[];
   unpaid_items_count: number;
   forced: boolean;
+  // Doluysa masa kapanmadı: her sipariş için karar gerekiyor
+  open_orders?: OpenOrderRequiringDecision[];
 };
 
 export type NewOrdersResult = {
@@ -95,20 +108,22 @@ export async function payItems(
 export async function closeTable(
   token: string,
   sessionId: string,
-  forceClose = false
+  forceClose = false,
+  openOrderDecisions: { order_id: string; decision: OpenOrderDecision }[] = []
 ): Promise<CloseTableResult> {
   const res = await fetch(`${API_BASE_URL}/admin/payment/close-table`, {
     method: 'POST',
     headers: headers(token),
-    body: JSON.stringify({ session_id: sessionId, force_close: forceClose })
+    body: JSON.stringify({ session_id: sessionId, force_close: forceClose, open_order_decisions: openOrderDecisions })
   });
-  // 409 = ödenmemiş item var — bu beklenen bir durum, hata fırlatma
+  // 409 = ödenmemiş item var veya açık siparişler için karar gerekiyor — beklenen durum, hata fırlatma
   if (res.status === 409) {
     const data = await res.json();
     return {
       closed_session_ids: [],
       unpaid_items_count: data.unpaid_items_count ?? 0,
-      forced: false
+      forced: false,
+      open_orders: data.code === 'OPEN_ORDERS_REQUIRE_DECISION' ? data.open_orders : undefined
     };
   }
   return handleResponse<CloseTableResult>(res);

@@ -16,6 +16,8 @@ import {
   closeTable,
   type BillItem,
   type BillSummary,
+  type OpenOrderDecision,
+  type OpenOrderRequiringDecision,
   type PaymentMethod,
 } from '../api/paymentApi';
 import { adminMergeSessions, adminMoveSession } from '../api/tableOperationsApi';
@@ -94,6 +96,9 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paying, setPaying] = useState(false);
   const [closing, setClosing] = useState(false);
+  // Doluysa masa kapanmadı: ödenmemiş açık siparişler için karar paneli gösterilir
+  const [openOrders, setOpenOrders] = useState<OpenOrderRequiringDecision[] | null>(null);
+  const [decisions, setDecisions] = useState<Record<string, OpenOrderDecision>>({});
   const paymentStartAt = useRef(new Date().toISOString());
 
   useEffect(() => {
@@ -146,7 +151,16 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
   async function handleCloseTable(force = false) {
     setClosing(true);
     try {
-      const result = await closeTable(token, sessionId, force);
+      const decisionList = Object.entries(decisions).map(([order_id, decision]) => ({ order_id, decision }));
+      const result = await closeTable(token, sessionId, force, force ? decisionList : []);
+      if (result.open_orders && result.open_orders.length > 0) {
+        // Kararı eksik açık sipariş var → masa kapanmadı, panel açılır (liste değiştiyse güncellenir)
+        const ids = new Set(result.open_orders.map(o => o.order_id));
+        if (openOrders) onToast('Açık sipariş listesi değişti. Seçimleri kontrol edin.', 'error');
+        setOpenOrders(result.open_orders);
+        setDecisions(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))));
+        return;
+      }
       if (result.closed_session_ids.length === 0 && !force) {
         // Ödenmemiş item var
         const proceed = window.confirm(
@@ -203,6 +217,15 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
             <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
               style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
           </div>
+        ) : bill && openOrders ? (
+          <OpenOrdersDecisionPanel
+            orders={openOrders}
+            decisions={decisions}
+            closing={closing}
+            onDecide={(orderId, decision) => setDecisions(prev => ({ ...prev, [orderId]: decision }))}
+            onCancel={() => { setOpenOrders(null); setDecisions({}); }}
+            onConfirm={() => handleCloseTable(true)}
+          />
         ) : bill ? (
           <>
             {/* Ödeme Yöntemi */}
@@ -344,6 +367,109 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
         ) : null}
       </div>
     </div>
+  );
+}
+
+// ─── AÇIK SİPARİŞ KARAR PANELİ ───────────────────────────────────────────────
+// Ödenmemiş ürünü olan, teslim edilmemiş her sipariş için "İptal Et" veya "Zayi Say"
+// seçilmeden masa kapatılamaz (backend de aynı kuralı zorunlu tutar).
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  pending: 'Bekliyor',
+  preparing: 'Hazırlanıyor',
+  ready: 'Hazır',
+};
+
+const DECISION_OPTIONS: { value: OpenOrderDecision; label: string; hint: string; color: string; bg: string }[] = [
+  { value: 'customer_left', label: '✖ İptal Et', hint: 'Müşteri kalktı', color: '#B45309', bg: '#FFFBEB' },
+  { value: 'no_payment', label: '⚠ Zayi Say', hint: 'Hazırlandı, ödenmedi', color: '#DC2626', bg: '#FEF2F2' },
+];
+
+function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCancel, onConfirm }: {
+  orders: OpenOrderRequiringDecision[];
+  decisions: Record<string, OpenOrderDecision>;
+  closing: boolean;
+  onDecide: (orderId: string, decision: OpenOrderDecision) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const decidedCount = orders.filter(o => decisions[o.order_id]).length;
+  const allDecided = decidedCount === orders.length;
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto px-5 pt-4">
+        <div className="mb-3 px-3 py-2 rounded-xl text-xs font-semibold"
+          style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
+          Masa kapatılmadan önce ödenmemiş açık siparişler için karar verin. Karar verilmeden masa kapatılamaz.
+        </div>
+
+        <div className="space-y-3 mb-4">
+          {orders.map(order => {
+            const selected = decisions[order.order_id];
+            const hasPaidItems = order.items.some(i => i.is_paid);
+            return (
+              <div key={order.order_id} className="p-3 rounded-xl"
+                style={{ background: '#F8FAFC', border: `1.5px solid ${selected ? '#0D9488' : '#E2E8F0'}` }}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold" style={{ color: '#0F172A' }}>
+                    {order.table_name} · {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: '#DC2626' }}>
+                    {formatPrice(order.unpaid_total_int)}
+                  </span>
+                </div>
+                <div className="text-xs mb-2" style={{ color: '#64748B' }}>
+                  {order.items.map((i, idx) => (
+                    <span key={idx} style={i.is_paid ? { textDecoration: 'line-through' } : undefined}>
+                      {idx > 0 ? ', ' : ''}{i.quantity}x {i.product_name}
+                    </span>
+                  ))}
+                </div>
+                {hasPaidItems && (
+                  <div className="text-xs mb-2" style={{ color: '#92400E' }}>
+                    Bu siparişte ödenmiş ürün de var; sipariş bütün olarak iptal edilir.
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  {DECISION_OPTIONS.map(opt => (
+                    <button key={opt.value}
+                      onClick={() => onDecide(order.order_id, opt.value)}
+                      className="flex-1 py-2 rounded-xl text-xs font-semibold"
+                      style={{
+                        background: selected === opt.value ? opt.color : opt.bg,
+                        color: selected === opt.value ? 'white' : opt.color,
+                        border: `1.5px solid ${opt.color}`
+                      }}>
+                      {opt.label}
+                      <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{opt.hint}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: '1px solid #E2E8F0' }}>
+        <div className="text-xs mb-2 text-center" style={{ color: '#64748B' }}>
+          {decidedCount}/{orders.length} sipariş için karar verildi
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} disabled={closing}
+            className="px-4 py-3 rounded-xl text-sm font-semibold"
+            style={{ background: '#F1F5F9', color: '#64748B' }}>
+            Vazgeç
+          </button>
+          <button onClick={onConfirm}
+            disabled={closing || !allDecided}
+            className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
+            style={{ background: closing || !allDecided ? '#94A3B8' : '#DC2626' }}>
+            {closing ? '...' : '🔒 Kararları Uygula ve Masayı Kapat'}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
