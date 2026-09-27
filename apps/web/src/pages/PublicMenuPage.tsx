@@ -171,7 +171,7 @@ export function PublicMenuPage() {
     if (!tableId || cart.length === 0) return;
     setOrderLoading(true);
     try {
-      await fetch(`${API_BASE_URL}/public/order/${slug}`, {
+      const res = await fetch(`${API_BASE_URL}/public/order/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -186,6 +186,11 @@ export function PublicMenuPage() {
           }))
         })
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Sipariş gönderilemedi. Tekrar deneyin.');
+        return;
+      }
       setOrderSent(true);
       setCart([]);
       setCartOpen(false);

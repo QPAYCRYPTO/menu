@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth } from '../middleware/auth.js';
-import { subscriber, ORDER_CHANNEL, publishOrder } from '../db/redisPubSub.js';
+import { subscriber, ORDER_CHANNEL, publishOrder, subscribeChannel, unsubscribeChannel } from '../db/redisPubSub.js';
 import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
 
 const updateOrderSchema = z.object({
@@ -55,7 +55,7 @@ orderRoutes.get('/stream', (req, res) => {
   res.flushHeaders();
   res.write(`: connected at ${Date.now()}\n\n`);
 
-  subscriber.subscribe(channel, (err) => {
+  subscribeChannel(channel, (err) => {
     if (err) {
       res.end();
       return;
@@ -76,6 +76,7 @@ orderRoutes.get('/stream', (req, res) => {
 
   req.on('close', () => {
     subscriber.off('message', messageHandler);
+    unsubscribeChannel(channel);
     clearInterval(ping);
   });
 });

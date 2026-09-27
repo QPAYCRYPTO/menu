@@ -433,7 +433,7 @@ waiterPublicRoutes.post('/calls/:call_id/take', requireWaiterAuth, async (req, r
 // ─────────────────────────────────────────────────────────────
 
 waiterPublicRoutes.get('/stream', requireWaiterAuth, async (req, res) => {
-  const { subscriber, ORDER_CHANNEL } = await import('../db/redisPubSub.js');
+  const { subscriber, ORDER_CHANNEL, subscribeChannel, unsubscribeChannel } = await import('../db/redisPubSub.js');
   const businessId = req.waiter!.business_id;
   const channel = `${ORDER_CHANNEL}:${businessId}`;
 
@@ -452,7 +452,7 @@ waiterPublicRoutes.get('/stream', requireWaiterAuth, async (req, res) => {
   res.flushHeaders();
   res.write(`: connected at ${Date.now()}\n\n`);
 
-  subscriber.subscribe(channel, (err) => {
+  subscribeChannel(channel, (err) => {
     if (err) {
       res.end();
       return;
@@ -473,6 +473,7 @@ waiterPublicRoutes.get('/stream', requireWaiterAuth, async (req, res) => {
 
   req.on('close', () => {
     subscriber.off('message', messageHandler);
+    unsubscribeChannel(channel);
     clearInterval(ping);
   });
 });

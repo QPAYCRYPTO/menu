@@ -8,7 +8,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
-import { publicMenuRateLimit } from '../middleware/rateLimit.js';
+import { publicCallRateLimit, publicMenuRateLimit, publicOrderRateLimit } from '../middleware/rateLimit.js';
 import { getPublicMenuBySlug } from '../services/menuService.js';
 import { pool } from '../db/postgres.js';
 import { publishOrder } from '../db/redisPubSub.js';
@@ -26,9 +26,9 @@ const createPublicOrderSchema = z.object({
   customer_token: z.string().min(10).max(100).optional(),
   items: z.array(z.object({
     product_id: z.string().uuid(),
-    quantity: z.number().int().min(1),
+    quantity: z.number().int().min(1).max(99),
     note: z.string().max(300).optional()
-  })).optional()
+  })).max(20).optional()
 });
 
 // Çağrı türleri
@@ -97,7 +97,7 @@ publicRoutes.get('/qr/:slug', (req, res) => {
 });
 
 // Müşteri sipariş oluşturur
-publicRoutes.post('/order/:slug', async (req, res) => {
+publicRoutes.post('/order/:slug', publicOrderRateLimit, async (req, res) => {
   const slugParsed = slugParamsSchema.safeParse(req.params);
   if (!slugParsed.success) {
     throw new AppError('Geçersiz slug.', 400, APP_ERROR_CODES.BAD_REQUEST);
@@ -233,7 +233,7 @@ publicRoutes.post('/order/:slug', async (req, res) => {
 // GARSON ÇAĞIR — call_type ile + LOGLAMA
 // ─────────────────────────────────────────────────────────────
 
-publicRoutes.post('/call/:slug', async (req, res) => {
+publicRoutes.post('/call/:slug', publicCallRateLimit, async (req, res) => {
   const slugParsed = slugParamsSchema.safeParse(req.params);
   if (!slugParsed.success) {
     throw new AppError('Geçersiz slug.', 400, APP_ERROR_CODES.BAD_REQUEST);

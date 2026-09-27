@@ -7,6 +7,7 @@ type SlidingWindowOptions = {
   maxRequests: number;
   windowMs: number;
   includeEmail?: boolean;
+  includeTableId?: boolean;
 };
 
 function createSlidingWindowRateLimiter(options: SlidingWindowOptions) {
@@ -15,7 +16,10 @@ function createSlidingWindowRateLimiter(options: SlidingWindowOptions) {
     const email = options.includeEmail ? String(req.body?.email ?? '').toLowerCase() : '';
     const now = Date.now();
     const minScore = now - options.windowMs;
-    const key = `${options.keyPrefix}:${ip}:${email}`;
+    const tableId = options.includeTableId ? String(req.body?.table_id ?? '').slice(0, 64) : '';
+    const key = options.includeTableId
+      ? `${options.keyPrefix}:${ip}:${tableId}`
+      : `${options.keyPrefix}:${ip}:${email}`;
 
     await redis.zremrangebyscore(key, 0, minScore);
     await redis.zadd(key, now, `${now}-${Math.random().toString(36).slice(2)}`);
@@ -49,4 +53,19 @@ export const publicMenuRateLimit = createSlidingWindowRateLimiter({
   keyPrefix: 'rl:public:menu',
   maxRequests: 60,
   windowMs: 60_000
+});
+
+// Aynı restoranda müşteriler aynı IP'yi (Wi-Fi/NAT) paylaşabilir → IP + masa bazlı
+export const publicOrderRateLimit = createSlidingWindowRateLimiter({
+  keyPrefix: 'rl:public:order',
+  maxRequests: 10,
+  windowMs: 60_000,
+  includeTableId: true
+});
+
+export const publicCallRateLimit = createSlidingWindowRateLimiter({
+  keyPrefix: 'rl:public:call',
+  maxRequests: 10,
+  windowMs: 60_000,
+  includeTableId: true
 });
