@@ -45,6 +45,7 @@ type SessionDetail = {
   table: { id: string; name: string } | null;
   orders: Array<{
     id: string; status: string; note: string | null; created_at: string;
+    type: string;
     customer_token: string | null;
     items: Array<{ id: string; product_name: string; quantity: number; price_int: number }>;
   }>;
@@ -612,6 +613,42 @@ export function TablesPage() {
     }
   }
 
+  // Bekleyen siparişleri tek tek iptal et (customer_left), masayı KAPATMA → ödeme ekranını aç.
+  // Kapatma ödeme ekranından yapılır (ödenmemiş ürün kontrolü + açık sipariş karar paneli orada).
+  async function cancelPendingAndOpenPayment(sessionId: string, tableName: string) {
+    try {
+      const detail = await apiRequest<SessionDetail>(`/admin/sessions/${sessionId}`, { token: accessToken });
+      const pendingOrders = detail.orders.filter(o =>
+        o.type === 'order' && ['pending', 'preparing', 'ready'].includes(o.status)
+      );
+      await Promise.all(pendingOrders.map(o =>
+        apiRequest(`/admin/orders/${o.id}/cancel`, {
+          method: 'POST',
+          token: accessToken,
+          body: { reason_code: 'customer_left' }
+        })
+      ));
+      setCloseModal(null);
+      setDetailOpen(null);
+      setDetailData(null);
+      await loadSessions();
+      setPaymentSession({ sessionId, tableName });
+      showToast(`${pendingOrders.length} bekleyen sipariş iptal edildi. Ödemeyi alıp masayı kapatın.`, 'success');
+    } catch (e) {
+      await loadSessions();
+      showToast(e instanceof Error ? e.message : 'Bekleyen siparişler iptal edilemedi.', 'error');
+    }
+  }
+
+  // Birleşik kaynak masadan hedef masanın kartına kaydır ve kısa süre vurgula
+  function goToTableCard(tableId: string) {
+    const el = document.getElementById(`table-card-${tableId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.boxShadow = '0 0 0 4px #3B82F6';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1600);
+  }
+
   // Birleşik masa gruplarını hesapla
   const mergeGroups = new Map<string, string[]>(); // group_id → table_id[]
   sessions.forEach(s => {
@@ -636,7 +673,13 @@ export function TablesPage() {
       paymentSessionInfo = sessions.find(s => s.id === targetId) ?? paymentSessionInfo;
     }
 
-    return { ...t, session, isMerged, mergeGroupId: session?.merge_group_id ?? null, paymentSessionInfo };
+    // Kaynak (merged) masa: siparişleri hedef masada → kartta hedefe yönlendirme gösterilir
+    const mergedInto = session?.status === 'merged' && paymentSessionInfo?.status === 'open'
+      && paymentSessionInfo.id !== session.id
+      ? { tableId: paymentSessionInfo.table_id, tableName: paymentSessionInfo.table_name }
+      : null;
+
+    return { ...t, session, isMerged, mergeGroupId: session?.merge_group_id ?? null, paymentSessionInfo, mergedInto };
   });
 
   // Merge group'larını renk/sıra için indexle
@@ -703,6 +746,8 @@ export function TablesPage() {
             session={table.session}
             isMerged={table.isMerged}
             mergeGroupId={table.mergeGroupId}
+            mergedInto={table.mergedInto}
+            onGoToTable={goToTableCard}
             editing={editingId === table.id}
             editingName={editingName}
             onStartEdit={() => { setEditingId(table.id); setEditingName(table.name); }}
@@ -826,9 +871,9 @@ export function TablesPage() {
                 style={{ padding: 12, borderRadius: 10, border: '1.5px solid #0D9488', background: 'white', color: '#0D9488', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
                 🔄 Yeni müşteriye ait — yeni masa aç
               </button>
-              <button onClick={() => tryCloseSession(closeModal.sessionId, closeModal.tableName, 'cancel_pending')}
+              <button onClick={() => cancelPendingAndOpenPayment(closeModal.sessionId, closeModal.tableName)}
                 style={{ padding: 12, borderRadius: 10, border: '1.5px solid #DC2626', background: 'white', color: '#DC2626', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                ❌ Bekleyenleri iptal et ve kapat
+                ❌ Bekleyenleri İptal Et ve Ödemeye Geç
               </button>
               <button onClick={() => setCloseModal(null)}
                 style={{ padding: 12, borderRadius: 10, border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
@@ -860,6 +905,8 @@ type TableCardProps = {
   session: SessionInfo | undefined;
   isMerged: boolean;
   mergeGroupId: string | null;
+  mergedInto: { tableId: string; tableName: string } | null;
+  onGoToTable: (tableId: string) => void;
   editing: boolean;
   editingName: string;
   onStartEdit: () => void;
@@ -874,7 +921,7 @@ type TableCardProps = {
 };
 
 function TableCard({
-  table, session, isMerged, mergeGroupId,
+  table, session, isMerged, mergeGroupId, mergedInto, onGoToTable,
   editing, editingName,
   onStartEdit, onChangeEditName, onSaveEdit, onCancelEdit,
   onToggleActive, onDelete, onOpenDetail, onCloseSession, onOpenPayment
@@ -898,7 +945,7 @@ function TableCard({
     : '○ Boş';
 
   return (
-    <div style={{
+    <div id={`table-card-${table.id}`} style={{
       background: colors.bg,
       border: `2px solid ${colors.border}`,
       borderRadius: 16,
@@ -944,7 +991,14 @@ function TableCard({
           </div>
         )}
 
-        {isOccupied && session && (
+        {/* Kaynak masa: siparişler hedef masada, burada adisyon/detay yok */}
+        {mergedInto && (
+          <div style={{ marginBottom: 12, padding: '10px', background: 'white', borderRadius: 8, fontSize: 12, color: '#1D4ED8', fontWeight: 600, textAlign: 'center' }}>
+            Bu masa birleştirildi → <strong>{mergedInto.tableName}</strong>
+          </div>
+        )}
+
+        {isOccupied && session && !mergedInto && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'white', borderRadius: 8 }}>
               <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Adisyon</span>
@@ -974,7 +1028,14 @@ function TableCard({
 
       {/* Butonlar */}
       <div style={{ padding: '10px 14px 14px', borderTop: '1px solid rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {isOccupied && !editing && (
+        {mergedInto && !editing && (
+          <button onClick={() => onGoToTable(mergedInto.tableId)}
+            style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none', background: '#1D4ED8', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+            → {mergedInto.tableName} masasına git
+          </button>
+        )}
+
+        {isOccupied && !editing && !mergedInto && (
           <>
             {/* Ödeme Al butonu */}
             <button onClick={onOpenPayment}
