@@ -500,10 +500,15 @@ export function TablesPage() {
     const session = sessions.find(s => s.table_id === t.id);
     const isMerged = session?.merge_group_id != null;
 
-    // Birleşik masada ödeme target session üzerinden alınır
-    const paymentSessionInfo = isMerged && session?.merged_into_session_id
-      ? sessions.find(s => s.id === session.merged_into_session_id) ?? session
-      : session;
+    // Birleşik masada ödeme ve detay, zincirin sonundaki açık (target) session üzerinden
+    let paymentSessionInfo = session;
+    const seen = new Set<string>();
+    while (paymentSessionInfo?.status === 'merged' && paymentSessionInfo.merged_into_session_id
+      && !seen.has(paymentSessionInfo.id)) {
+      seen.add(paymentSessionInfo.id);
+      const targetId: string = paymentSessionInfo.merged_into_session_id;
+      paymentSessionInfo = sessions.find(s => s.id === targetId) ?? paymentSessionInfo;
+    }
 
     return { ...t, session, isMerged, mergeGroupId: session?.merge_group_id ?? null, paymentSessionInfo };
   });
@@ -556,7 +561,7 @@ export function TablesPage() {
           {sessions.length > 0 && (
             <div className="px-4 py-2 rounded-xl" style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}>
               <span className="text-xs font-semibold" style={{ color: '#0C4A6E' }}>
-                💰 Toplam: {formatPrice(sessions.reduce((sum, s) => sum + s.cached_total_int, 0))}
+                💰 Toplam: {formatPrice(sessions.filter(s => s.status === 'open').reduce((sum, s) => sum + s.cached_total_int, 0))}
               </span>
             </div>
           )}
@@ -580,7 +585,7 @@ export function TablesPage() {
             onCancelEdit={() => { setEditingId(null); setEditingName(''); }}
             onToggleActive={() => toggleActive(table)}
             onDelete={() => askDeleteTable(table)}
-            onOpenDetail={() => table.session && openDetail(table.session.id)}
+            onOpenDetail={() => table.paymentSessionInfo && openDetail(table.paymentSessionInfo.id)}
             onCloseSession={() => table.session && tryCloseSession(table.session.id, table.name)}
             onOpenPayment={() => table.paymentSessionInfo && setPaymentSession({ 
               sessionId: table.paymentSessionInfo.id, 

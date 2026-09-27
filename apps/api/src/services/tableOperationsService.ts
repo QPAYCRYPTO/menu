@@ -244,9 +244,11 @@ export async function mergeSessions(params: {
     );
 
     // 6. Source session'ı 'merged' olarak kapat
+    //    Tutarı target'a eklendi → source'ta sıfırlanır (çift sayılmasın)
     await client.query(
       `UPDATE table_sessions
        SET status = 'merged',
+           cached_total_int = 0,
            closed_at = NOW(),
            merged_into_session_id = $1,
            merge_group_id = $2,

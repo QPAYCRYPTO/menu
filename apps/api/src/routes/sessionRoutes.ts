@@ -27,7 +27,8 @@ sessionRoutes.get('/', async (req, res) => {
       s.id,
       s.table_id,
       s.opened_at,
-      s.cached_total_int,
+      -- merged session'ın siparişleri ve tutarı hedef session'da; eski kayıtlar için de 0 göster
+      CASE WHEN s.status = 'merged' THEN 0 ELSE s.cached_total_int END AS cached_total_int,
       s.status,
       s.merge_group_id,
       s.merged_into_session_id,
