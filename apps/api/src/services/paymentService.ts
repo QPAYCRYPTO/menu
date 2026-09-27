@@ -10,6 +10,7 @@
 
 import { pool } from '../db/postgres.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
+import { findActiveSessionById } from './sessionService.js';
 
 // ----------------------------------------------------------------------------
 // TİPLER
@@ -47,14 +48,20 @@ export async function getSessionBillDetails(
   businessId: string,
   sessionId: string
 ): Promise<BillSummary> {
+  // Merged session verildiyse zincirin sonundaki açık session'ın adisyonu gösterilir
+  const active = await findActiveSessionById(businessId, sessionId);
+  if (!active) {
+    throw new AppError('Oturum bulunamadı.', 404, APP_ERROR_CODES.NOT_FOUND);
+  }
+
   // Session kontrol
   const sessionResult = await pool.query(
     `SELECT s.*, t.name AS table_name
      FROM table_sessions s
      INNER JOIN tables t ON t.id = s.table_id
      WHERE s.id = $1 AND s.business_id = $2
-       AND s.status IN ('open', 'merged')`,
-    [sessionId, businessId]
+       AND s.status = 'open'`,
+    [active.id, businessId]
   );
 
   if (sessionResult.rowCount !== 1) {
@@ -62,6 +69,7 @@ export async function getSessionBillDetails(
   }
 
   const session = sessionResult.rows[0];
+  sessionId = session.id;
 
   // Tüm item'ları getir (cancelled order'lar hariç)
   const itemsResult = await pool.query(
@@ -327,6 +335,32 @@ export async function closeTableAfterPayment(params: {
          AND business_id = $3`,
       [closedBy, sessionIdsToClose, businessId]
     );
+
+    // Bu session'lara birleştirilmiş (merged) kaynak masaları da kapat.
+    // Zincir (A → B → C) recursive izlenir; merge_group_id zincirde farklı olabildiği için
+    // grup yerine merged_into_session_id kullanılır. closed_at birleştirme anı olarak korunur.
+    const mergedClosed = await client.query(
+      `WITH RECURSIVE feeders AS (
+         SELECT id FROM table_sessions
+         WHERE business_id = $1 AND status = 'merged'
+           AND merged_into_session_id = ANY($2::uuid[])
+         UNION
+         SELECT s.id FROM table_sessions s
+         INNER JOIN feeders f ON s.merged_into_session_id = f.id
+         WHERE s.business_id = $1 AND s.status = 'merged'
+       )
+       UPDATE table_sessions
+       SET status = 'closed',
+           closed_by = $3,
+           updated_at = NOW()
+       WHERE id IN (SELECT id FROM feeders)
+       RETURNING id`,
+      [businessId, sessionIdsToClose, closedBy]
+    );
+    sessionIdsToClose = [
+      ...sessionIdsToClose,
+      ...mergedClosed.rows.map((r: any) => r.id),
+    ];
 
     await client.query('COMMIT');
 

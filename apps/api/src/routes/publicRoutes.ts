@@ -12,7 +12,7 @@ import { publicCallRateLimit, publicMenuRateLimit, publicOrderRateLimit } from '
 import { getPublicMenuBySlug } from '../services/menuService.js';
 import { pool } from '../db/postgres.js';
 import { publishOrder } from '../db/redisPubSub.js';
-import { getOrCreateOpenSession } from '../services/sessionService.js';
+import { resolveActiveSession } from '../services/sessionService.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
 
 const slugParamsSchema = z.object({
@@ -150,16 +150,10 @@ publicRoutes.post('/order/:slug', publicOrderRateLimit, async (req, res) => {
     await client.query('BEGIN');
 
     let sessionId: string | null = null;
-    // YENİ — merged session çözümleme eklendi:
+    // Birleşik masa zinciri resolveActiveSession içinde çözülür, dönen session her zaman open
     if (parsed.data.type === 'order') {
-      const session = await getOrCreateOpenSession(businessId, table.id, client);
-      
-      // Eğer bu masa birleştirilmişse, siparişi target session'a yaz
-      if (session.status === 'merged' && session.merged_into_session_id) {
-        sessionId = session.merged_into_session_id;
-      } else {
-        sessionId = session.id;
-      }
+      const session = await resolveActiveSession(businessId, table.id, client);
+      sessionId = session.id;
     }
 
     const orderResult = await client.query(

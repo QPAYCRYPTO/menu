@@ -5,6 +5,7 @@
 
 import { pool } from '../db/postgres.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
+import { findActiveSession } from './sessionService.js';
 
 // ----------------------------------------------------------------------------
 // YARDIMCI: waiter_activity_log'a kayıt yaz
@@ -90,7 +91,13 @@ export async function moveSession(params: {
 
     const targetTable = targetTableResult.rows[0];
 
-    if (targetTable.open_session_id) {
+    // Kendi open session'ı olmasa da, açık bir masaya birleştirilmiş (merged) masa da doludur.
+    // Kalıntı merged kayıt (zinciri kapalı session'da biten) masayı dolu yapmaz.
+    const targetActive = targetTable.open_session_id
+      ? null
+      : await findActiveSession(businessId, targetTableId, client);
+
+    if (targetTable.open_session_id || targetActive) {
       throw new AppError(
         'Hedef masa dolu. Önce o masayı boşaltın veya birleştirme yapın.',
         409,

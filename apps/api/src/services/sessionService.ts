@@ -2,8 +2,10 @@
 // Masa oturumu (table_sessions) iş mantığı
 // Bu dosya yeni oluşturuldu, mevcut kodlar etkilenmez
 
-import { PoolClient } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { pool } from '../db/postgres.js';
+
+type Db = Pool | PoolClient;
 
 export type TableSession = {
   id: string;
@@ -21,73 +23,146 @@ export type TableSession = {
   updated_at: string;
 };
 
+// ----------------------------------------------------------------------------
+// AKTİF SESSION ÇÖZÜMLEME — "Bu masanın aktif adisyonu hangisi?" sorusunun
+// TEK cevabı. Birleştirme zinciri (A → B → C) sonuna kadar takip edilir,
+// sadece status='open' olan session aktif sayılır.
+// ----------------------------------------------------------------------------
+
+const MAX_MERGE_CHAIN_DEPTH = 20;
+
 /**
- * Masada açık bir session var mı kontrol eder.
- * Varsa getirir, yoksa yeni oluşturur.
- * 
- * Race condition korumalı: Unique partial index sayesinde
- * aynı anda iki paralel istek gelse bile sadece biri session oluşturur.
- * 
- * Transaction içinde çağrılabilir (client parametresi ile).
- * 
- * @returns Session kaydı
+ * Bir session'dan başlayıp merged_into_session_id zincirini izler.
+ * Zincirin sonundaki 'open' session'ı döner; zincir kapalı bir session'da
+ * bitiyorsa (veya kopuksa / döngü varsa) null döner.
+ * loadById: session'ı DB'den veya önceden yüklenmiş bir map'ten getirir.
+ */
+export async function followMergeChain<T extends Pick<TableSession, 'id' | 'status' | 'merged_into_session_id'>>(
+  start: T | null,
+  loadById: (id: string) => Promise<T | null> | T | null
+): Promise<T | null> {
+  const seen = new Set<string>();
+  let current = start;
+
+  while (current) {
+    if (current.status === 'open') return current;
+    if (current.status !== 'merged' || !current.merged_into_session_id) return null;
+    if (seen.has(current.id) || seen.size >= MAX_MERGE_CHAIN_DEPTH) return null;
+    seen.add(current.id);
+    current = await loadById(current.merged_into_session_id);
+  }
+
+  return null;
+}
+
+/**
+ * Session id'den aktif (open) session'ı bulur. Session merged ise zinciri izler.
+ * Kilitlemez, oluşturmaz.
+ */
+export async function findActiveSessionById(
+  businessId: string,
+  sessionId: string,
+  db: Db = pool
+): Promise<TableSession | null> {
+  const loadById = async (id: string) => {
+    const r = await db.query(
+      `SELECT * FROM table_sessions WHERE id = $1 AND business_id = $2`,
+      [id, businessId]
+    );
+    return r.rowCount === 1 ? (r.rows[0] as TableSession) : null;
+  };
+  return followMergeChain(await loadById(sessionId), loadById);
+}
+
+/**
+ * Masanın aktif (open) session'ını bulur. Kilitlemez, oluşturmaz.
+ * Okuma ekranları (garson masa detayı vb.) ve "masa dolu mu?" kontrolü için.
+ */
+export async function findActiveSession(
+  businessId: string,
+  tableId: string,
+  db: Db = pool
+): Promise<TableSession | null> {
+  // Masanın kendi open session'ı önce gelir, sonra en son birleştirilen merged kayıt
+  const rows = await db.query(
+    `SELECT * FROM table_sessions
+     WHERE business_id = $1 AND table_id = $2 AND status IN ('open', 'merged')
+     ORDER BY (status = 'open') DESC, closed_at DESC NULLS LAST`,
+    [businessId, tableId]
+  );
+
+  for (const row of rows.rows as TableSession[]) {
+    if (row.status === 'open') return row;
+    if (!row.merged_into_session_id) continue;
+    const active = await findActiveSessionById(businessId, row.merged_into_session_id, db);
+    if (active) return active;
+  }
+
+  return null;
+}
+
+/**
+ * Sipariş yazmak için masanın aktif session'ını çözer:
+ * - Birleştirme zincirini sonuna kadar izler
+ * - Sadece open session kabul eder ve FOR UPDATE ile kilitler
+ * - Açık session yoksa yeni açar
+ * - Hiçbir açık session'a çıkmayan (kalıntı) merged kayıtları kapatır
+ *
+ * Transaction içinde (BEGIN sonrası client ile) çağrılmalıdır.
+ */
+export async function resolveActiveSession(
+  businessId: string,
+  tableId: string,
+  client: PoolClient
+): Promise<TableSession> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const active = await findActiveSession(businessId, tableId, client);
+
+    if (active) {
+      // Kilit alırken status tekrar kontrol edilir: bu arada kapatıldı/birleştirildiyse baştan çöz
+      const locked = await client.query(
+        `SELECT * FROM table_sessions
+         WHERE id = $1 AND business_id = $2 AND status = 'open'
+         FOR UPDATE`,
+        [active.id, businessId]
+      );
+      if (locked.rowCount === 1) return locked.rows[0] as TableSession;
+      continue;
+    }
+
+    // Aktif session yok → bu masadaki merged kayıtlar kalıntı, kapat
+    await client.query(
+      `UPDATE table_sessions
+       SET status = 'closed', updated_at = NOW()
+       WHERE business_id = $1 AND table_id = $2 AND status = 'merged'`,
+      [businessId, tableId]
+    );
+
+    // Yeni session aç. Paralel istek aynı anda açtıysa unique index çakışır →
+    // DO NOTHING (transaction bozulmaz), döngü tekrar okuyup onu kilitler.
+    const inserted = await client.query(
+      `INSERT INTO table_sessions (business_id, table_id, status, opened_at, updated_at)
+       VALUES ($1, $2, 'open', NOW(), NOW())
+       ON CONFLICT (table_id) WHERE status = 'open' DO NOTHING
+       RETURNING *`,
+      [businessId, tableId]
+    );
+    if (inserted.rowCount === 1) return inserted.rows[0] as TableSession;
+  }
+
+  throw new Error('Masa için aktif oturum çözümlenemedi.');
+}
+
+/**
+ * Geriye uyumluluk: eski isim. Artık resolveActiveSession'a yönlendirir.
+ * Transaction içinde (client ile) çağrılmalıdır.
  */
 export async function getOrCreateOpenSession(
   businessId: string,
   tableId: string,
-  client?: PoolClient
+  client: PoolClient
 ): Promise<TableSession> {
-  const db = client ?? pool;
-
-  // 1. Önce var olan open session'ı kontrol et
-  // YENİ — 'merged' de arıyor, merged ise target'ı döndürüyor:
-  const existingResult = await db.query(
-    `SELECT * FROM table_sessions 
-    WHERE business_id = $1 AND table_id = $2 AND status IN ('open', 'merged')
-    LIMIT 1`,
-    [businessId, tableId]
-  );
-
-  if (existingResult.rowCount === 1) {
-    const session = existingResult.rows[0] as TableSession;
-    // Birleştirilmiş masa ise target session'ı getir
-    if (session.status === 'merged' && session.merged_into_session_id) {
-      const targetResult = await db.query(
-        `SELECT * FROM table_sessions WHERE id = $1`,
-        [session.merged_into_session_id]
-      );
-      if (targetResult.rowCount === 1) {
-        return targetResult.rows[0] as TableSession;
-      }
-    }
-    return session;
-  }
-
-  // 2. Yoksa yeni oluştur — race condition'a karşı dayanıklı INSERT
-  try {
-    const insertResult = await db.query(
-      `INSERT INTO table_sessions (business_id, table_id, status, opened_at, updated_at)
-       VALUES ($1, $2, 'open', NOW(), NOW())
-       RETURNING *`,
-      [businessId, tableId]
-    );
-    return insertResult.rows[0] as TableSession;
-  } catch (err: any) {
-    // 3. Unique violation (23505) — aynı anda başka istek session açmış
-    // Tekrar oku ve dön
-    if (err?.code === '23505') {
-      const retryResult = await db.query(
-        `SELECT * FROM table_sessions 
-         WHERE business_id = $1 AND table_id = $2 AND status = 'open'
-         LIMIT 1`,
-        [businessId, tableId]
-      );
-      if (retryResult.rowCount === 1) {
-        return retryResult.rows[0] as TableSession;
-      }
-    }
-    throw err;
-  }
+  return resolveActiveSession(businessId, tableId, client);
 }
 
 /**

@@ -20,7 +20,12 @@ import {
   registerSessionTab,
   revokeSessionTab
 } from '../services/waiterService.js';
-import { getOrCreateOpenSession, decrementSessionTotal } from '../services/sessionService.js';
+import {
+  resolveActiveSession,
+  decrementSessionTotal,
+  findActiveSession,
+  followMergeChain
+} from '../services/sessionService.js';
 import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
 
@@ -195,7 +200,39 @@ waiterPublicRoutes.get('/tables', requireWaiterAuth, async (req, res) => {
     ORDER BY t.sort_order ASC, t.name ASC
   `, [businessId]);
 
-  res.status(200).json(result.rows.map(row => ({
+  // Kendi open session'ı olmayan masalar birleştirilmiş olabilir → zinciri izle.
+  // Tüm open/merged session'lar tek sorguda alınır, zincir bellekte çözülür (N+1 yok).
+  const sessionsResult = await pool.query(
+    `SELECT id, table_id, status, merged_into_session_id, merge_group_id, opened_at, closed_at
+     FROM table_sessions
+     WHERE business_id = $1 AND status IN ('open', 'merged')
+     ORDER BY closed_at DESC NULLS LAST`,
+    [businessId]
+  );
+  const sessionsById = new Map<string, any>(sessionsResult.rows.map((s: any) => [s.id, s]));
+
+  const rows = await Promise.all(result.rows.map(async row => {
+    if (row.session_id) {
+      return row;
+    }
+    for (const merged of sessionsResult.rows.filter((s: any) => s.table_id === row.id && s.status === 'merged')) {
+      const active = await followMergeChain(merged, (id) => sessionsById.get(id) ?? null);
+      if (active) {
+        // Siparişler hedef session'da; toplam/sayı hedef masada gösterilir (grup kartında çift sayılmasın)
+        return {
+          ...row,
+          session_id: active.id,
+          opened_at: active.opened_at,
+          merge_group_id: active.merge_group_id,
+          cached_total_int: 0,
+          order_count: 0
+        };
+      }
+    }
+    return row;
+  }));
+
+  res.status(200).json(rows.map(row => ({
     id: row.id,
     name: row.name,
     sort_order: row.sort_order,
@@ -204,7 +241,8 @@ waiterPublicRoutes.get('/tables', requireWaiterAuth, async (req, res) => {
     total_int: row.cached_total_int ?? 0,
     active_calls: Number(row.active_calls) || 0,
     order_count: Number(row.order_count) || 0,
-    has_active_session: !!row.session_id
+    has_active_session: !!row.session_id,
+    merge_group_id: row.merge_group_id ?? null
   })));
 });
 
@@ -232,14 +270,8 @@ waiterPublicRoutes.get('/tables/:table_id', requireWaiterAuth, async (req, res) 
 
   const table = tableResult.rows[0];
 
-  const sessionResult = await pool.query(
-    `SELECT id, opened_at, cached_total_int FROM table_sessions
-     WHERE table_id = $1 AND business_id = $2 AND status = 'open'
-     LIMIT 1`,
-    [tableId, businessId]
-  );
-
-  const session = sessionResult.rowCount === 1 ? sessionResult.rows[0] : null;
+  // Birleşik masa ise zincirin sonundaki açık session (hedef masanın adisyonu)
+  const session = await findActiveSession(businessId, tableId);
 
   let orders: any[] = [];
   if (session) {
@@ -559,7 +591,7 @@ waiterPublicRoutes.post('/tables/:table_id/orders', requireWaiterAuth, async (re
   try {
     await client.query('BEGIN');
 
-    const session = await getOrCreateOpenSession(businessId, table.id, client);
+    const session = await resolveActiveSession(businessId, table.id, client);
 
     const orderResult = await client.query(
       `INSERT INTO orders
