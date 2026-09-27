@@ -22,72 +22,59 @@ export function HomePage() {
   }, [location]);
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
+    <div className="text-white" style={{ minHeight: '100vh' }}>
       <PublicHeader />
 
       {/* ═══════ HERO ═══════ */}
-      <section
-        className="relative overflow-hidden px-4 md:px-6 py-16 md:py-24"
-        style={{ background: 'linear-gradient(135deg, #0F172A 0%, #134E4A 50%, #0F172A 100%)' }}
-      >
-        {/* Grid texture overlay */}
+      <section className="relative overflow-hidden px-4 md:px-6 py-16 md:py-24">
+        {/* Warm glow overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
-            backgroundSize: '50px 50px',
-          }}
+          style={{ background: 'radial-gradient(circle at 50% 30%, rgba(255, 122, 41, 0.18), transparent 60%)' }}
         />
 
-        <div className="max-w-5xl mx-auto relative z-10">
+        <div className="max-w-5xl mx-auto relative z-10 fade-enter">
           <h1
-            className="text-center text-white font-bold mb-5"
+            className="font-serif text-center text-white font-bold mb-5"
             style={{
-              fontFamily: 'Georgia, serif',
               fontSize: 'clamp(36px, 5.5vw, 58px)',
               lineHeight: 1.1,
-              letterSpacing: '-1.5px',
+              letterSpacing: '-1px',
+              textShadow: '0 4px 24px rgba(0,0,0,0.35)',
             }}
           >
-            Restoranın için <em style={{ color: '#0D9488', fontStyle: 'italic' }}>tek panel,</em>
+            Restoranın için <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>tek panel,</em>
             <br />
             tüm operasyon.
           </h1>
           <p
             className="text-center mx-auto mb-10"
-            style={{ color: 'rgba(255,255,255,0.7)', fontSize: 18, maxWidth: 640 }}
+            style={{ color: 'var(--text-muted)', fontSize: 18, maxWidth: 640 }}
           >
             QR menü, adisyon takibi, sipariş yönetimi, anlık raporlar — bir günde kurulum, ömür boyu kullanım.
           </p>
 
           {/* Search box */}
           <form
-            className="max-w-2xl mx-auto flex items-center gap-3 p-2 pl-6"
-            style={{ background: 'white', borderRadius: 999, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            className="glass-panel max-w-2xl mx-auto flex items-center gap-3 p-2 pl-6"
+            style={{ borderRadius: 999 }}
             onSubmit={e => {
               e.preventDefault();
               const input = (e.currentTarget.elements.namedItem('q') as HTMLInputElement)?.value;
               window.location.href = WA_LINK(input || 'AtlasQR hakkında bilgi almak istiyorum');
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" className="shrink-0">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
+            <i className="fa-solid fa-magnifying-glass shrink-0" style={{ color: 'var(--text-muted)', fontSize: 18 }} />
             <input
               type="text"
               name="q"
               placeholder="Ne arıyorsun? (örn: QR menü, adisyon)"
-              className="flex-1 outline-none text-sm md:text-base py-3"
-              style={{ color: '#0F172A', background: 'transparent', border: 'none' }}
+              className="flex-1 min-w-0 outline-none text-sm md:text-base py-3 placeholder:text-white/60"
+              style={{ color: '#fff', background: 'transparent', border: 'none' }}
             />
             <button
               type="submit"
-              className="px-5 md:px-7 py-3 rounded-full text-sm font-semibold text-white whitespace-nowrap"
-              style={{ background: '#0D9488' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#0F766E')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#0D9488')}
+              className="btn-accent spring-btn px-5 md:px-7 py-3 rounded-full text-sm font-bold whitespace-nowrap"
             >
               Bilgi Al
             </button>
@@ -96,35 +83,32 @@ export function HomePage() {
       </section>
 
       {/* ═══════ SERVICE CARDS ═══════ */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 -mt-12 md:-mt-16 relative z-20">
+      <section className="max-w-7xl mx-auto px-4 md:px-6 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
           {/* Promo card */}
-          <div
-            className="rounded-2xl p-8 text-white relative overflow-hidden"
-            style={{ background: '#0F172A' }}
-          >
+          <div className="glass-dark rounded-3xl p-8 text-white relative overflow-hidden">
             <div
               className="absolute pointer-events-none"
               style={{
                 bottom: -40,
                 right: -40,
-                width: 200,
-                height: 200,
-                background: 'radial-gradient(circle, #0D9488 0%, transparent 70%)',
-                opacity: 0.3,
+                width: 220,
+                height: 220,
+                background: 'radial-gradient(circle, #FF7A29 0%, transparent 70%)',
+                opacity: 0.35,
               }}
             />
             <div className="relative z-10">
-              <h2 className="font-bold mb-4" style={{ fontFamily: 'Georgia, serif', fontSize: 32, letterSpacing: '-1px' }}>
+              <h2 className="font-serif font-bold mb-4" style={{ fontSize: 32, letterSpacing: '-0.5px' }}>
                 Hızlı Başla
               </h2>
-              <p className="mb-6" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.7 }}>
+              <p className="mb-6" style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.7 }}>
                 Bir günde kurulum, sıfır teknik bilgi. Menünü WhatsApp'tan gönder, biz sisteme aktarıp QR kodlarını sana yollarız.
               </p>
               <a
                 href={WA_LINK('Merhaba, AtlasQR kurulumu için bilgi almak istiyorum')}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold"
-                style={{ background: '#0D9488', color: 'white', textDecoration: 'none' }}
+                className="btn-accent spring-btn inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold"
+                style={{ textDecoration: 'none' }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.1 4.9 4.3 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.4c1.4.8 3.1 1.2 4.8 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
@@ -146,32 +130,32 @@ export function HomePage() {
               <a
                 key={i}
                 href="#ozellikler"
-                className="bg-white rounded-2xl p-5 flex items-center gap-4 transition-all"
-                style={{ border: '1px solid #E2E8F0', textDecoration: 'none', color: '#0F172A' }}
+                className="glass-card rounded-3xl p-5 flex items-center gap-4"
+                style={{ textDecoration: 'none', color: '#fff' }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#0D9488';
+                  e.currentTarget.style.borderColor = 'rgba(255, 122, 41, 0.8)';
                   e.currentTarget.style.transform = 'translateX(4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(13, 148, 136, 0.08)';
+                  e.currentTarget.style.background = 'var(--glass-bg-hover)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '#E2E8F0';
+                  e.currentTarget.style.borderColor = '';
                   e.currentTarget.style.transform = 'translateX(0)';
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.background = '';
                 }}
               >
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: '#CCFBF1' }}
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
                 >
                   <ServiceIcon name={s.icon} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-base">{s.title}</div>
-                  <div className="text-sm" style={{ color: '#64748B' }}>
+                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
                     {s.desc}
                   </div>
                 </div>
-                <span style={{ color: '#94A3B8', fontSize: 20 }}>→</span>
+                <i className="fa-solid fa-arrow-right" style={{ color: 'var(--text-faint)', fontSize: 16 }} />
               </a>
             ))}
           </div>
@@ -181,8 +165,7 @@ export function HomePage() {
       {/* ═══════ STATS ═══════ */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 mt-20">
         <div
-          className="rounded-2xl p-6 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-6 bg-white"
-          style={{ border: '1px solid #E2E8F0' }}
+          className="glass-panel rounded-3xl p-6 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-6"
         >
           {[
             { num: '1 gün', label: 'Kurulum Süresi' },
@@ -194,17 +177,17 @@ export function HomePage() {
               key={i}
               className="text-center"
               style={{
-                borderRight: i < 3 ? '1px solid #E2E8F0' : 'none',
+                borderRight: i < 3 ? '1px solid var(--glass-border-soft)' : 'none',
                 paddingRight: 16,
               }}
             >
               <div
-                className="font-bold mb-2"
-                style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4vw, 44px)', color: '#0D9488', letterSpacing: '-1px', lineHeight: 1 }}
+                className="font-serif font-bold mb-2"
+                style={{ fontSize: 'clamp(28px, 4vw, 44px)', color: 'var(--accent)', letterSpacing: '-0.5px', lineHeight: 1 }}
               >
                 {s.num}
               </div>
-              <div className="text-xs uppercase" style={{ color: '#64748B', letterSpacing: '0.5px' }}>
+              <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
                 {s.label}
               </div>
             </div>
@@ -217,14 +200,14 @@ export function HomePage() {
         <div className="text-center max-w-2xl mx-auto mb-14">
           <span
             className="block text-xs font-semibold mb-3 uppercase"
-            style={{ letterSpacing: '2.5px', color: '#0D9488' }}
+            style={{ letterSpacing: '2.5px', color: 'var(--accent)' }}
           >
             Neden AtlasQR
           </span>
-          <h2 className="font-bold mb-4" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4vw, 44px)', letterSpacing: '-1px', lineHeight: 1.15 }}>
+          <h2 className="font-serif font-bold mb-4" style={{ fontSize: 'clamp(28px, 4vw, 44px)', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
             Restoranın için her şey, tek panelde.
           </h2>
-          <p style={{ color: '#64748B', fontSize: 17 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 17 }}>
             Garson defteri, manuel kasa, kağıt menü — hepsi tarihe karışıyor.
           </p>
         </div>
@@ -240,29 +223,28 @@ export function HomePage() {
           ].map((f, i) => (
             <div
               key={i}
-              className="rounded-2xl p-8 bg-white transition-all"
-              style={{ border: '1px solid #E2E8F0' }}
+              className="glass-card rounded-3xl p-8"
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#0D9488';
+                e.currentTarget.style.borderColor = 'rgba(255, 122, 41, 0.8)';
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 16px 32px rgba(15, 23, 42, 0.06)';
+                e.currentTarget.style.background = 'var(--glass-bg-hover)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.borderColor = '';
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.background = '';
               }}
             >
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-                style={{ background: '#CCFBF1' }}
+                style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
               >
                 <FeatureIcon name={f.icon} />
               </div>
-              <h3 className="font-semibold mb-2" style={{ fontFamily: 'Georgia, serif', fontSize: 24, letterSpacing: '-0.3px' }}>
+              <h3 className="font-serif font-semibold mb-2" style={{ fontSize: 24, letterSpacing: '-0.3px' }}>
                 {f.title}
               </h3>
-              <p style={{ color: '#64748B', fontSize: 15, lineHeight: 1.7 }}>{f.desc}</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.7 }}>{f.desc}</p>
             </div>
           ))}
         </div>
@@ -273,18 +255,18 @@ export function HomePage() {
         <div className="text-center mb-12">
           <span
             className="block text-xs font-semibold mb-3 uppercase"
-            style={{ letterSpacing: '2.5px', color: '#0D9488' }}
+            style={{ letterSpacing: '2.5px', color: 'var(--accent)' }}
           >
             Destek &amp; Sıkça Sorulanlar
           </span>
-          <h2 className="font-bold mb-3" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-1px' }}>
+          <h2 className="font-serif font-bold mb-3" style={{ fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-0.5px' }}>
             Aklındaki sorulara cevaplar.
           </h2>
-          <p style={{ color: '#64748B', fontSize: 16 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 16 }}>
             Bulamadığını bulamadıysan,{' '}
             <a
               href={WA_LINK('Merhaba, AtlasQR hakkında bir sorum var')}
-              style={{ color: '#0D9488', fontWeight: 600, textDecoration: 'none' }}
+              style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}
             >
               WhatsApp'tan yaz
             </a>
@@ -323,27 +305,24 @@ export function HomePage() {
       {/* ═══════ CTA BAND ═══════ */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 mt-24 mb-20">
         <div
-          className="rounded-3xl p-10 md:p-16 text-white text-center relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' }}
+          className="glass-panel rounded-3xl p-10 md:p-16 text-white text-center relative overflow-hidden"
         >
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(circle at 30% 50%, rgba(13, 148, 136, 0.2), transparent 50%)' }}
+            style={{ background: 'radial-gradient(circle at 30% 50%, rgba(255, 122, 41, 0.25), transparent 55%)' }}
           />
           <div className="relative z-10">
-            <h2 className="font-bold mb-4" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-1px', lineHeight: 1.15 }}>
-              Bugün başla, yarın <em style={{ color: '#0D9488', fontStyle: 'italic' }}>fark</em> et.
+            <h2 className="font-serif font-bold mb-4" style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
+              Bugün başla, yarın <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>fark</em> et.
             </h2>
-            <p className="mb-8 mx-auto" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 17, maxWidth: 560 }}>
+            <p className="mb-8 mx-auto" style={{ color: 'var(--text-muted)', fontSize: 17, maxWidth: 560 }}>
               Demo görmek, fiyat sormak veya sadece sohbet etmek için yaz. WhatsApp'tan dakikalar içinde dönüş yaparız.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
                 href={WA_LINK('Merhaba, AtlasQR hakkında bilgi almak istiyorum')}
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white"
-                style={{ background: '#0D9488', textDecoration: 'none', fontSize: 16 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#0F766E')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#0D9488')}
+                className="btn-accent spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
+                style={{ textDecoration: 'none', fontSize: 16 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.1 4.9 4.3 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.4c1.4.8 3.1 1.2 4.8 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
@@ -352,8 +331,8 @@ export function HomePage() {
               </a>
               <Link
                 to="/fiyat"
-                className="inline-flex items-center px-8 py-4 rounded-xl font-semibold text-white"
-                style={{ background: 'transparent', border: '2px solid rgba(255,255,255,0.2)', textDecoration: 'none', fontSize: 16 }}
+                className="glass-pill spring-btn inline-flex items-center px-8 py-4 rounded-full font-semibold"
+                style={{ textDecoration: 'none', fontSize: 16 }}
               >
                 Fiyatlandırmayı Gör
               </Link>
@@ -371,7 +350,7 @@ export function HomePage() {
 // ═══════ Helper Components ═══════
 
 function ServiceIcon({ name }: { name: string }) {
-  const props = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: '#0D9488', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const props = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: '#FF8C38', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
     case 'qr':
       return (
@@ -412,7 +391,7 @@ function ServiceIcon({ name }: { name: string }) {
 }
 
 function FeatureIcon({ name }: { name: string }) {
-  const props = { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', stroke: '#0D9488', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const props = { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', stroke: '#FF8C38', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   switch (name) {
     case 'check':
       return (
@@ -465,24 +444,24 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden bg-white transition-all"
-      style={{ border: '1px solid #E2E8F0' }}
+      className="glass-card rounded-2xl overflow-hidden"
+      style={open ? { borderColor: 'rgba(255, 122, 41, 0.7)' } : undefined}
     >
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-6 py-5 flex items-center justify-between font-semibold text-left"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#0F172A', fontSize: 16 }}
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 16 }}
       >
         <span className="flex-1 pr-4">{question}</span>
         <span
           className="text-2xl shrink-0 transition-transform"
-          style={{ color: '#0D9488', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
+          style={{ color: 'var(--accent)', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
         >
           +
         </span>
       </button>
       {open && (
-        <div className="px-6 pb-5" style={{ color: '#64748B', fontSize: 15, lineHeight: 1.7 }}>
+        <div className="px-6 pb-5 fade-enter" style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.7 }}>
           {answer}
         </div>
       )}
@@ -492,24 +471,25 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
 export function Footer() {
   return (
-    <footer style={{ background: '#0F172A', color: 'rgba(255,255,255,0.6)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+    <footer
+      className="glass-dark"
+      style={{ color: 'var(--text-muted)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', boxShadow: 'none' }}
+    >
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-8">
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#0D9488' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                  <rect x="3" y="3" width="5" height="5" />
-                  <rect x="16" y="3" width="5" height="5" />
-                  <rect x="3" y="16" width="5" height="5" />
-                  <path d="M21 16h-6v5M16 11h5M11 3v5M11 11h5v5" />
-                </svg>
+              <div
+                className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-lg"
+                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)', border: '1px solid rgba(255,255,255,0.6)' }}
+              >
+                <i className="fa-solid fa-wheat-awn" />
               </div>
               <div>
-                <div className="font-bold text-white text-lg" style={{ fontFamily: 'Georgia, serif' }}>
-                  Atlas<span style={{ color: '#0D9488' }}>QR</span>
+                <div className="font-serif font-bold text-white text-lg">
+                  Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
                 </div>
-                <div className="text-xs" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>
+                <div className="text-xs" style={{ color: 'var(--text-faint)', letterSpacing: '0.1em' }}>
                   RESTORAN YÖNETİM SİSTEMİ
                 </div>
               </div>

@@ -90,55 +90,59 @@ export function SettingsPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }}></div>
+      <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin"></div>
     </div>
   );
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl text-white">
       <Toast state={toast} />
 
       <div className="grid gap-6">
 
-        {/* Canlı Önizleme */}
-        <div className="rounded-2xl p-6 shadow-sm" style={{ background: form.bg_color, border: `2px solid ${form.theme_color}20` }}>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: form.theme_color }}>Canlı Önizleme</p>
-          <div className="flex items-center gap-4">
-            {form.logo_url ? (
-              <img src={form.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover" style={{ border: `2px solid ${form.theme_color}` }} />
-            ) : (
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center font-bold text-xl text-white" style={{ background: form.theme_color }}>
-                {form.name?.charAt(0) || 'A'}
-              </div>
-            )}
-            <div>
-              <div className="font-bold text-lg" style={{ color: form.dark_mode ? '#F8FAFC' : '#0F172A', fontFamily: 'Georgia, serif' }}>{form.name || 'İşletme Adı'}</div>
-              {form.description && <div className="text-sm mt-0.5" style={{ color: form.dark_mode ? '#94A3B8' : '#64748B' }}>{form.description}</div>}
-              <div className="flex gap-2 mt-2">
-                <div className="w-4 h-4 rounded-full" style={{ background: form.theme_color }}></div>
-                <div className="w-4 h-4 rounded-full" style={{ background: form.bg_color, border: '1px solid #E2E8F0' }}></div>
-                <div className="w-4 h-4 rounded-full" style={{ background: form.dark_mode ? '#0F172A' : '#F1F5F9' }}></div>
+        {/* Canlı Önizleme — işletmenin kendi menü renkleri (bg_color / theme_color / dark_mode) ile */}
+        <div className="glass-panel rounded-3xl p-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider mb-3 px-3 pt-2 text-white/70 flex items-center gap-2">
+            <i className="fa-solid fa-eye text-amber-300" /> Canlı Önizleme
+          </p>
+          <div className="rounded-2xl p-5" style={{ background: form.bg_color, border: `2px solid ${form.theme_color}40` }}>
+            <div className="flex items-center gap-4">
+              {form.logo_url ? (
+                <img src={form.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover" style={{ border: `2px solid ${form.theme_color}` }} />
+              ) : (
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center font-bold text-xl text-white" style={{ background: form.theme_color }}>
+                  {form.name?.charAt(0) || 'A'}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="font-serif font-bold text-lg" style={{ color: form.dark_mode ? '#F8FAFC' : '#0F172A' }}>{form.name || 'İşletme Adı'}</div>
+                {form.description && <div className="text-sm mt-0.5" style={{ color: form.dark_mode ? '#94A3B8' : '#64748B' }}>{form.description}</div>}
+                <div className="flex gap-2 mt-2">
+                  <div className="w-4 h-4 rounded-full" style={{ background: form.theme_color }}></div>
+                  <div className="w-4 h-4 rounded-full" style={{ background: form.bg_color, border: '1px solid #E2E8F0' }}></div>
+                  <div className="w-4 h-4 rounded-full" style={{ background: form.dark_mode ? '#0F172A' : '#F1F5F9' }}></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Temel Bilgiler */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border: '1px solid #E2E8F0' }}>
-          <h3 className="font-bold mb-4" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>Temel Bilgiler</h3>
+        <div className="glass-dark rounded-3xl p-6">
+          <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
+            <i className="fa-solid fa-store text-amber-300 text-base" /> Temel Bilgiler
+          </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>İşletme Adı</label>
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">İşletme Adı</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} maxLength={120}
-                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A' }}
+                className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                 placeholder="İşletme adınız..." />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Açıklama</label>
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Açıklama</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none"
-                style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A' }}
+                className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none"
                 rows={2} placeholder="Kısa açıklama..." />
             </div>
 
@@ -156,21 +160,23 @@ export function SettingsPage() {
         </div>
 
         {/* Tema */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border: '1px solid #E2E8F0' }}>
-          <h3 className="font-bold mb-4" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>Tema & Görünüm</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="glass-dark rounded-3xl p-6">
+          <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
+            <i className="fa-solid fa-palette text-amber-300 text-base" /> Tema & Görünüm
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Tema Rengi</label>
-              <div className="flex items-center gap-3 px-4 py-2 rounded-xl" style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }}>
-                <input type="color" value={form.theme_color} onChange={e => setForm(p => ({ ...p, theme_color: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-0" />
-                <span className="text-sm font-mono" style={{ color: '#0F172A' }}>{form.theme_color}</span>
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Tema Rengi</label>
+              <div className="glass-input flex items-center gap-3 px-4 py-2 rounded-2xl">
+                <input type="color" value={form.theme_color} onChange={e => setForm(p => ({ ...p, theme_color: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent" />
+                <span className="text-sm font-mono text-white">{form.theme_color}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Arkaplan Rengi</label>
-              <div className="flex items-center gap-3 px-4 py-2 rounded-xl" style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }}>
-                <input type="color" value={form.bg_color} onChange={e => setForm(p => ({ ...p, bg_color: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-0" />
-                <span className="text-sm font-mono" style={{ color: '#0F172A' }}>{form.bg_color}</span>
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Arkaplan Rengi</label>
+              <div className="glass-input flex items-center gap-3 px-4 py-2 rounded-2xl">
+                <input type="color" value={form.bg_color} onChange={e => setForm(p => ({ ...p, bg_color: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent" />
+                <span className="text-sm font-mono text-white">{form.bg_color}</span>
               </div>
             </div>
           </div>
@@ -178,18 +184,23 @@ export function SettingsPage() {
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="relative">
                 <input type="checkbox" checked={form.dark_mode} onChange={e => setForm(p => ({ ...p, dark_mode: e.target.checked }))} className="sr-only" />
-                <div className="w-10 h-6 rounded-full transition-all" style={{ background: form.dark_mode ? '#0D9488' : '#E2E8F0' }}>
-                  <div className="w-5 h-5 bg-white rounded-full shadow transition-all mt-0.5" style={{ marginLeft: form.dark_mode ? '18px' : '2px' }}></div>
+                <div className="w-10 h-6 rounded-full transition-all border border-white/30"
+                  style={{ background: form.dark_mode ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
+                  <div className="w-5 h-5 bg-white rounded-full shadow transition-all" style={{ marginTop: 1, marginLeft: form.dark_mode ? '17px' : '1px' }}></div>
                 </div>
               </div>
-              <span className="text-sm font-medium" style={{ color: '#0F172A' }}>Koyu Mod</span>
+              <span className="text-sm font-medium text-white flex items-center gap-2">
+                <i className="fa-solid fa-moon text-white/70 text-xs" /> Koyu Mod
+              </span>
             </label>
           </div>
         </div>
 
         {/* İletişim */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border: '1px solid #E2E8F0' }}>
-          <h3 className="font-bold mb-4" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>İletişim Bilgileri</h3>
+        <div className="glass-dark rounded-3xl p-6">
+          <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
+            <i className="fa-solid fa-address-book text-amber-300 text-base" /> İletişim Bilgileri
+          </h3>
           <div className="space-y-4">
             {[
               { key: 'contact_phone', label: 'Telefon', placeholder: '+90 555 000 00 00', icon: '📞' },
@@ -197,12 +208,11 @@ export function SettingsPage() {
               { key: 'contact_instagram', label: 'Instagram', placeholder: '@kullanici_adi', icon: '📸' },
             ].map(field => (
               <div key={field.key}>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>{field.icon} {field.label}</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">{field.icon} {field.label}</label>
                 <input
                   value={(form as any)[field.key]}
                   onChange={e => setForm(p => ({ ...p, [field.key]: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A' }}
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   placeholder={field.placeholder}
                 />
               </div>
@@ -212,9 +222,8 @@ export function SettingsPage() {
 
         {/* Kaydet */}
         <button onClick={saveSettings}
-          className="w-full py-3.5 rounded-xl text-sm font-bold text-white tracking-wide"
-          style={{ background: '#0F172A' }}>
-          Kaydet
+          className="btn-accent w-full py-3.5 rounded-full text-sm font-bold tracking-wide flex items-center justify-center gap-2 spring-btn">
+          <i className="fa-solid fa-floppy-disk" /> Kaydet
         </button>
       </div>
     </div>

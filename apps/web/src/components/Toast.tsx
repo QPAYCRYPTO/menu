@@ -20,9 +20,9 @@ export type ToastType = 'success' | 'error' | 'info';
 export type ToastState = { message: string; type: ToastType } | null;
 
 const STYLES: Record<ToastType, { bg: string; color: string; border: string; icon: string }> = {
-  success: { bg: '#F0FDF4', color: '#16A34A', border: '#BBF7D0', icon: '✓' },
-  error:   { bg: '#FEF2F2', color: '#DC2626', border: '#FECACA', icon: '✕' },
-  info:    { bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE', icon: 'ℹ' }
+  success: { bg: 'var(--success-bg)', color: 'var(--success)', border: 'rgba(52,211,153,0.45)', icon: '✓' },
+  error:   { bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'rgba(251,113,133,0.45)', icon: '✕' },
+  info:    { bg: 'var(--info-bg)', color: 'var(--info)', border: 'rgba(125,211,252,0.45)', icon: 'ℹ' }
 };
 
 /**
@@ -48,6 +48,7 @@ export function Toast({ state }: { state: ToastState }) {
 
   return (
     <div
+      className="glass-dark"
       style={{
         position: 'fixed',
         top: 24,
@@ -57,14 +58,13 @@ export function Toast({ state }: { state: ToastState }) {
         alignItems: 'center',
         gap: 10,
         padding: '12px 16px',
-        background: style.bg,
-        color: style.color,
+        backgroundImage: `linear-gradient(${style.bg}, ${style.bg})`,
+        color: 'var(--text)',
         border: `1px solid ${style.border}`,
-        borderRadius: 12,
+        borderRadius: 16,
         fontSize: 14,
-        fontWeight: 500,
-        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05)',
-        maxWidth: 380,
+        fontWeight: 600,
+        maxWidth: 'min(380px, calc(100vw - 48px))',
         transform: visible ? 'translateX(0)' : 'translateX(120%)',
         opacity: visible ? 1 : 0,
         transition: 'transform 0.25s ease-out, opacity 0.25s ease-out',
@@ -77,7 +77,7 @@ export function Toast({ state }: { state: ToastState }) {
         height: 22,
         borderRadius: '50%',
         background: style.color,
-        color: 'white',
+        color: '#14110F',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

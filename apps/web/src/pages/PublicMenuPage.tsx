@@ -1,5 +1,7 @@
 // apps/web/src/pages/PublicMenuPage.tsx
 // CHANGELOG:
+// - Warm glassmorphism tasarım (cam kartlar, turuncu vurgu, alttan açılan sheet'ler)
+// - Menüde arama (tüm kategorilerde), ürün kartında hızlı "+" ile sepete ekleme
 // - "Garson Çağır" butonu artık modal açıyor (12 çağrı türü)
 // - "Diğer" seçilirse serbest text alanı çıkıyor (zorunlu min 3 karakter)
 // - Çağrı gönderildikten sonra modal kapanır, toast gösterir
@@ -81,6 +83,7 @@ export function PublicMenuPage() {
   const [orderLoading, setOrderLoading] = useState(false);
 
   const [openNoteFor, setOpenNoteFor] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Çağrı modal state
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -119,18 +122,31 @@ export function PublicMenuPage() {
     return () => { mounted = false; };
   }, [slug, tableId]);
 
+  // İşletmenin tema rengi → vurgu rengi (--accent). Diğer tonlar index.css'te bundan türetilir.
+  // Sadece geçerli hex kabul edilir; sayfadan çıkınca varsayılan (turuncu) geri gelir.
+  const accentColor = menu?.business.theme_color?.trim();
+  useEffect(() => {
+    if (!accentColor || !/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(accentColor)) return;
+    const root = document.documentElement;
+    root.style.setProperty('--accent', accentColor);
+    return () => { root.style.removeProperty('--accent'); };
+  }, [accentColor]);
+
   const activeCategory = useMemo<PublicMenuCategory | null>(() => {
     if (!menu) return null;
     return menu.categories.find(c => c.id === activeCategoryId) ?? menu.categories[0] ?? null;
   }, [menu, activeCategoryId]);
 
-  const themeColor = menu?.business.theme_color ?? '#0D9488';
-  const bgColor = menu?.business.bg_color ?? '#F8FAFC';
-  const darkMode = menu?.business.dark_mode ?? false;
-  const textColor = darkMode ? '#F8FAFC' : '#0F172A';
-  const textMuted = darkMode ? '#94A3B8' : '#64748B';
-  const cardBg = darkMode ? '#1E293B' : '#FFFFFF';
-  const cardBorder = darkMode ? 'rgba(255,255,255,0.08)' : '#E2E8F0';
+  // Arama doluysa tüm kategorilerde ara, değilse aktif kategori
+  const visibleProducts = useMemo(() => {
+    if (!menu) return [];
+    const q = searchQuery.trim().toLocaleLowerCase('tr');
+    if (!q) return activeCategory?.products ?? [];
+    return menu.categories.flatMap(c => c.products ?? []).filter(p =>
+      p.name.toLocaleLowerCase('tr').includes(q) || (p.description ?? '').toLocaleLowerCase('tr').includes(q)
+    );
+  }, [menu, activeCategory, searchQuery]);
+
   const contactLink = buildContactLink(menu);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price_int * item.quantity, 0);
@@ -253,20 +269,20 @@ export function PublicMenuPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{background: bgColor}}>
-      <div className="text-center">
-        <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4" style={{borderColor: themeColor, borderTopColor: 'transparent'}}></div>
-        <p className="text-sm" style={{color: textMuted}}>Menü yükleniyor...</p>
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="glass-panel rounded-3xl px-8 py-7 text-center fade-enter">
+        <div className="w-12 h-12 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-4" />
+        <p className="text-sm font-semibold text-white/80">Menü yükleniyor...</p>
       </div>
     </div>
   );
 
   if (!menu) return (
-    <div className="min-h-screen flex items-center justify-center" style={{background: bgColor}}>
-      <div className="text-center p-8">
-        <div className="text-6xl mb-4">🍽️</div>
-        <h1 className="font-bold text-xl mb-2" style={{color: textColor}}>Menü Bulunamadı</h1>
-        <p className="text-sm" style={{color: textMuted}}>Bu menü mevcut değil veya kaldırılmış olabilir.</p>
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="glass-panel rounded-3xl p-8 text-center max-w-sm fade-enter">
+        <div className="text-5xl mb-4">🍽️</div>
+        <h1 className="font-serif font-bold text-xl mb-2 text-white">Menü Bulunamadı</h1>
+        <p className="text-sm text-white/70">Bu menü mevcut değil veya kaldırılmış olabilir.</p>
       </div>
     </div>
   );
@@ -275,215 +291,245 @@ export function PublicMenuPage() {
   const canSendCall = selectedCallType !== null &&
     (selectedCallType !== 'other' || callNote.trim().length >= 3);
 
+  const description = (menu.business as any).description as string | undefined;
+
   return (
-    <div className="min-h-screen" style={{background: bgColor, color: textColor}}>
+    <div className="min-h-screen text-white">
+      <div className="mx-auto w-full max-w-[480px] px-3.5 pt-3" style={{ paddingBottom: tableId ? 104 : 24 }}>
 
-      {orderSent && (
-        <div style={{position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#0D9488', color: 'white', padding: '12px 24px', borderRadius: 12, fontWeight: 600, fontSize: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.2)'}}>
-          ✅ Siparişiniz alındı!
-        </div>
-      )}
+        {/* Bildirimler */}
+        {orderSent && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter"
+            style={{ background: 'var(--accent-gradient)' }}>
+            ✅ Siparişiniz alındı!
+          </div>
+        )}
+        {callSent && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter"
+            style={{ background: 'rgba(217,119,6,0.85)' }}>
+            🔔 Çağrı gönderildi! Garson en kısa sürede gelecek.
+          </div>
+        )}
 
-      {callSent && (
-        <div style={{position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#F59E0B', color: 'white', padding: '12px 24px', borderRadius: 12, fontWeight: 600, fontSize: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.2)'}}>
-          🔔 Çağrı gönderildi! Garson en kısa sürede gelecek.
-        </div>
-      )}
-
-      {/* Header */}
-      <div style={{background: '#0F172A', position: 'sticky', top: 0, zIndex: 10}}>
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center gap-3 mb-4">
+        {/* Başlık kartı */}
+        <div className="glass-panel rounded-3xl p-3.5 flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
             {menu.business.logo_url ? (
               <img src={menu.business.logo_url} alt={menu.business.name}
-                className="flex-shrink-0 rounded-xl object-cover"
-                style={{width: 48, height: 48, border: `2px solid ${themeColor}`}} />
+                className="w-12 h-12 rounded-2xl object-cover flex-shrink-0 border border-white/40" />
             ) : (
-              <div className="flex-shrink-0 rounded-xl flex items-center justify-center font-bold text-lg text-white"
-                style={{width: 48, height: 48, background: themeColor}}>
-                {menu.business.name?.charAt(0)}
+              <div className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-xl text-white border border-white/30 bg-white/10">
+                <i className="fa-solid fa-wheat-awn" />
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-base leading-tight text-white" style={{fontFamily: 'Georgia, serif'}}>
-                {menu.business.name}
-              </h1>
-              {tableId && tableName && (
-                <div style={{
-                  marginTop: 4,
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: themeColor,
-                  letterSpacing: '0.02em',
-                  fontFamily: 'Georgia, serif'
-                }}>
-                  📍 {tableName}
-                </div>
+            <div className="min-w-0">
+              <h1 className="font-serif font-bold text-lg leading-tight tracking-wide truncate">{menu.business.name}</h1>
+              {description && (
+                <p className="text-[11px] text-white/80 font-medium truncate">{description}</p>
               )}
             </div>
-
-            {tableId && mainTab === 'menu' && (
-              <button onClick={() => setCartOpen(true)}
-                style={{position: 'relative', width: 40, height: 40, borderRadius: 10, background: themeColor, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                  <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                </svg>
-                {cartCount > 0 && (
-                  <span style={{position: 'absolute', top: -6, right: -6, background: '#DC2626', color: 'white', width: 18, height: 18, borderRadius: '50%', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-            )}
           </div>
 
-          {tableId && (
-            <div style={{display: 'flex', gap: 4, marginBottom: 12, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 10}}>
-              <button onClick={() => setMainTab('menu')}
-                style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  cursor: 'pointer', border: 'none',
-                  background: mainTab === 'menu' ? themeColor : 'transparent',
-                  color: mainTab === 'menu' ? 'white' : 'rgba(255,255,255,0.6)'
-                }}>
-                🍽️ Menü
-              </button>
-              <button onClick={() => setMainTab('orders')}
-                style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  cursor: 'pointer', border: 'none',
-                  background: mainTab === 'orders' ? themeColor : 'transparent',
-                  color: mainTab === 'orders' ? 'white' : 'rgba(255,255,255,0.6)'
-                }}>
-                📋 Siparişlerim
-              </button>
+          {tableId && tableName && (
+            <div className="glass-pill rounded-2xl px-3 py-1.5 flex flex-col items-center justify-center text-center min-w-[72px] flex-shrink-0">
+              <div className="flex items-center gap-1 text-[10px] text-white/70 font-medium">
+                <i className="fa-solid fa-chair text-[9px]" />
+                <span>Masa</span>
+              </div>
+              <span className="font-extrabold text-sm leading-tight truncate max-w-[90px]">{tableName}</span>
             </div>
           )}
+        </div>
 
-          {mainTab === 'menu' && (
-            <div style={{display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4}}>
-              {menu.categories.map(cat => (
-                <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
-                  style={{flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: activeCategory?.id === cat.id ? themeColor : 'rgba(255,255,255,0.1)', color: activeCategory?.id === cat.id ? 'white' : 'rgba(255,255,255,0.6)', border: `1px solid ${activeCategory?.id === cat.id ? themeColor : 'rgba(255,255,255,0.15)'}`}}>
-                  {cat.name}
+        {/* Menü / Siparişlerim */}
+        {tableId && (
+          <div className="flex gap-1 p-1 mb-3 rounded-2xl bg-black/35 border border-white/20 backdrop-blur-xl">
+            {([['menu', 'fa-utensils', 'Menü'], ['orders', 'fa-receipt', 'Siparişlerim']] as const).map(([tab, icon, label]) => (
+              <button key={tab} onClick={() => setMainTab(tab)}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 spring-btn ${mainTab === tab ? 'btn-accent' : 'text-white/70'}`}>
+                <i className={`fa-solid ${icon}`} /> {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mainTab === 'orders' && tableId ? (
+          <MyOrdersTab
+            slug={slug}
+            tableId={tableId}
+            token={customerToken}
+            themeColor="var(--accent)"
+            textColor="#FFFFFF"
+            textMuted="rgba(255,255,255,0.72)"
+            cardBg="rgba(255,255,255,0.18)"
+            cardBorder="rgba(255,255,255,0.35)"
+            darkMode={true}
+          />
+        ) : (
+          <>
+            {/* Arama */}
+            <div className="relative mb-3">
+              <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 text-xs" />
+              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Menüde ara..."
+                className="glass-input w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm font-medium" />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 text-xs" aria-label="Aramayı temizle">
+                  <i className="fa-solid fa-xmark" />
                 </button>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-      </div>
 
-      {mainTab === 'orders' && tableId ? (
-        <MyOrdersTab
-          slug={slug}
-          tableId={tableId}
-          token={customerToken}
-          themeColor={themeColor}
-          textColor={textColor}
-          textMuted={textMuted}
-          cardBg={cardBg}
-          cardBorder={cardBorder}
-          darkMode={darkMode}
-        />
-      ) : (
-        <div className="px-4 py-6" style={{paddingBottom: tableId ? 100 : 24}}>
-          {activeCategory && (
-            <>
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="font-bold text-base" style={{color: textColor, fontFamily: 'Georgia, serif'}}>{activeCategory.name}</h2>
-                <div className="flex-1 h-px" style={{background: cardBorder}}></div>
-                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{background: `${themeColor}20`, color: themeColor}}>
-                  {activeCategory.products?.length ?? 0} ürün
-                </span>
-              </div>
-
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12}}>
-                {(activeCategory.products ?? []).map(product => (
-                  <div key={product.id} onClick={() => setSelectedProduct(product)}
-                    style={{background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 16, overflow: 'hidden', cursor: 'pointer'}}>
-                    <div style={{width: '100%', paddingTop: '100%', position: 'relative', background: darkMode ? '#334155' : '#F1F5F9'}}>
-                      {product.image_url ? (
-                        <img src={product.image_url} alt={product.name}
-                          style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} />
-                      ) : (
-                        <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32}}>🍽️</div>
-                      )}
-                      {cart.find(i => i.product_id === product.id) && (
-                        <div style={{position: 'absolute', top: 8, right: 8, background: themeColor, color: 'white', width: 24, height: 24, borderRadius: '50%', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                          {cart.find(i => i.product_id === product.id)?.quantity}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{padding: '10px 12px'}}>
-                      <div style={{fontWeight: 600, fontSize: 13, color: textColor, marginBottom: 2, lineHeight: 1.3}}>{product.name}</div>
-                      {product.description && (
-                        <div style={{fontSize: 11, color: textMuted, marginBottom: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical'}}>{product.description}</div>
-                      )}
-                      <div style={{fontWeight: 700, fontSize: 14, color: themeColor}}>{formatPrice(product.price_int)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {tableId && mainTab === 'menu' && (
-        <div style={{position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 20, padding: '12px 16px', background: cardBg, borderTop: `1px solid ${cardBorder}`, display: 'flex', gap: 10}}>
-          <button onClick={openCallModal}
-            style={{flex: 1, padding: '12px', borderRadius: 12, border: `1.5px solid ${themeColor}`, background: 'transparent', color: themeColor, fontWeight: 700, fontSize: 14, cursor: 'pointer'}}>
-            🔔 Garson Çağır
-          </button>
-          <button onClick={() => setCartOpen(true)}
-            style={{flex: 2, padding: '12px', borderRadius: 12, border: 'none', background: themeColor, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8}}>
-            🛒 Sepet {cartCount > 0 && `(${cartCount})`} {cartTotal > 0 && `— ${formatPrice(cartTotal)}`}
-          </button>
-        </div>
-      )}
-
-      {!tableId && (
-        <div className="text-center px-4 py-6" style={{borderTop: `1px solid ${cardBorder}`}}>
-          <a href={contactLink} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold mb-4" style={{background: themeColor, color: 'white'}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-            </svg>
-            İletişim
-          </a>
-          <p className="text-xs" style={{color: textMuted}}>
-            Powered by <span style={{fontWeight: 600, color: themeColor}}>{BRAND_NAME}</span>
-          </p>
-        </div>
-      )}
-
-      {/* Ürün detay modal */}
-      {selectedProduct && (
-        <div style={{position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.7)'}}
-          onClick={() => setSelectedProduct(null)}>
-          <div style={{width: '100%', maxWidth: 480, background: cardBg, borderRadius: '24px 24px 0 0', overflow: 'hidden'}}
-            onClick={e => e.stopPropagation()}>
-            {selectedProduct.image_url && (
-              <div style={{width: '100%', paddingTop: '56.25%', position: 'relative', background: darkMode ? '#334155' : '#F1F5F9'}}>
-                <img src={selectedProduct.image_url} alt={selectedProduct.name}
-                  style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} />
+            {/* Kategoriler */}
+            {!searchQuery && (
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 mb-3">
+                {menu.categories.map(cat => {
+                  const active = activeCategory?.id === cat.id;
+                  return (
+                    <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
+                      className={`flex-shrink-0 px-4 py-2 rounded-2xl text-xs font-semibold spring-btn ${active ? 'btn-accent' : 'glass-pill'}`}>
+                      {cat.name}
+                    </button>
+                  );
+                })}
               </div>
             )}
-            <div style={{padding: 24}}>
-              <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8}}>
-                <h3 style={{fontWeight: 700, fontSize: 20, color: textColor, fontFamily: 'Georgia, serif', flex: 1}}>{selectedProduct.name}</h3>
-                <button onClick={() => setSelectedProduct(null)}
-                  style={{width: 32, height: 32, borderRadius: '50%', border: 'none', background: darkMode ? '#334155' : '#F1F5F9', color: textMuted, cursor: 'pointer', marginLeft: 12, flexShrink: 0, fontSize: 14}}>✕</button>
+
+            {/* Bölüm başlığı */}
+            <div className="flex items-center gap-3 mb-3 px-1">
+              <h2 className="font-serif font-bold text-base">
+                {searchQuery ? 'Arama Sonuçları' : activeCategory?.name}
+              </h2>
+              <div className="flex-1 h-px bg-white/20" />
+              <span className="glass-pill text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                {visibleProducts.length} ürün
+              </span>
+            </div>
+
+            {/* Ürünler */}
+            <div className="space-y-3">
+              {visibleProducts.length === 0 && (
+                <div className="glass-card rounded-3xl py-8 text-center text-white/70">
+                  <i className="fa-solid fa-utensils text-2xl mb-2 text-amber-300" />
+                  <p className="text-xs">{searchQuery ? 'Aramanıza uygun ürün bulunamadı.' : 'Bu kategoride henüz ürün yok.'}</p>
+                </div>
+              )}
+
+              {visibleProducts.map(product => {
+                const inCart = cart.find(i => i.product_id === product.id);
+                return (
+                  <div key={product.id} onClick={() => setSelectedProduct(product)}
+                    className="glass-card glass-card-hover rounded-3xl p-3 flex items-center gap-3 cursor-pointer">
+                    <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white/10 shadow-md">
+                      {product.image_url ? (
+                        <img src={product.thumb_url ?? product.image_url} alt={product.name} loading="lazy"
+                          className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
+                      )}
+                      {inCart && (
+                        <span className="absolute top-1.5 right-1.5 btn-accent w-6 h-6 rounded-full text-[11px] font-extrabold flex items-center justify-center">
+                          {inCart.quantity}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-serif font-bold text-sm leading-snug">{product.name}</h4>
+                      {product.description && (
+                        <p className="text-[11px] text-white/75 leading-tight mt-1 font-medium line-clamp-2">{product.description}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-sm font-extrabold tracking-tight">{formatPrice(product.price_int)}</span>
+                        {tableId && (
+                          <button onClick={e => { e.stopPropagation(); addToCart(product); }}
+                            aria-label={`${product.name} sepete ekle`}
+                            className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn">
+                            <i className="fa-solid fa-plus" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {!tableId && (
+          <div className="text-center px-4 pt-8 pb-2">
+            <a href={contactLink} className="btn-accent inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold mb-4 spring-btn">
+              <i className="fa-solid fa-phone" /> İletişim
+            </a>
+            <p className="text-xs text-white/60">
+              Powered by <span className="font-bold text-amber-300">{BRAND_NAME}</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Alt yüzen bar: Garson Çağır + Sepetim */}
+      {tableId && mainTab === 'menu' && (
+        <div className="fixed bottom-3 left-0 right-0 z-30 px-3.5">
+          <div className="mx-auto max-w-[480px] flex items-center gap-2">
+            <button onClick={openCallModal}
+              className="glass-panel rounded-full px-4 py-3 text-xs font-extrabold flex items-center gap-2 spring-btn">
+              <i className="fa-regular fa-bell text-sm" />
+              <span className="whitespace-nowrap">Garson Çağır</span>
+            </button>
+            <button onClick={() => setCartOpen(true)}
+              className="btn-accent flex-1 rounded-full px-4 py-3 text-xs font-extrabold flex items-center justify-between spring-btn">
+              <span className="flex items-center gap-2">
+                <span className="relative">
+                  <i className="fa-solid fa-cart-shopping text-sm" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2.5 bg-white text-[var(--accent-deep)] font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </span>
+                <span className="ml-1">Sepetim</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                {cartCount > 0 && <span>{cartCount} ürün • {formatPrice(cartTotal)}</span>}
+                <i className="fa-solid fa-chevron-right text-[10px] text-white/80" />
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ürün detay sheet */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+          onClick={() => setSelectedProduct(null)}>
+          <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] overflow-hidden border-t border-white/60"
+            onClick={e => e.stopPropagation()}>
+            {selectedProduct.image_url && (
+              <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+                <img src={selectedProduct.image_url} alt={selectedProduct.name}
+                  className="absolute inset-0 w-full h-full object-cover" />
+              </div>
+            )}
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h3 className="font-serif font-bold text-xl flex-1">{selectedProduct.name}</h3>
+                <button onClick={() => setSelectedProduct(null)} aria-label="Kapat"
+                  className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                  <i className="fa-solid fa-xmark" />
+                </button>
               </div>
               {selectedProduct.description && (
-                <p style={{fontSize: 14, color: textMuted, marginBottom: 16, lineHeight: 1.6}}>{selectedProduct.description}</p>
+                <p className="text-sm text-white/75 mb-4 leading-relaxed">{selectedProduct.description}</p>
               )}
-              <div style={{borderTop: `1px solid ${cardBorder}`, paddingTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontWeight: 700, fontSize: 24, color: themeColor}}>{formatPrice(selectedProduct.price_int)}</span>
+              <div className="pt-4 border-t border-white/20 flex items-center justify-between">
+                <span className="font-extrabold text-2xl text-amber-300">{formatPrice(selectedProduct.price_int)}</span>
                 {tableId && (
                   <button onClick={() => addToCart(selectedProduct)}
-                    style={{padding: '10px 20px', borderRadius: 10, border: 'none', background: themeColor, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer'}}>
-                    + Sepete Ekle
+                    className="btn-accent px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 spring-btn">
+                    <i className="fa-solid fa-plus" /> Sepete Ekle
                   </button>
                 )}
               </div>
@@ -492,81 +538,76 @@ export function PublicMenuPage() {
         </div>
       )}
 
-      {/* Sepet Modal */}
+      {/* Sepet sheet */}
       {cartOpen && (
-        <div style={{position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.7)'}}
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
           onClick={() => setCartOpen(false)}>
-          <div style={{width: '100%', maxWidth: 480, background: cardBg, borderRadius: '24px 24px 0 0', overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column'}}
+          <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] flex flex-col border-t border-white/60"
+            style={{ maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
 
-            <div style={{padding: '20px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${cardBorder}`}}>
-              <h3 style={{fontWeight: 700, fontSize: 18, color: textColor, fontFamily: 'Georgia, serif'}}>Siparişim</h3>
-              <button onClick={() => setCartOpen(false)}
-                style={{width: 32, height: 32, borderRadius: '50%', border: 'none', background: darkMode ? '#334155' : '#F1F5F9', color: textMuted, cursor: 'pointer', fontSize: 14}}>✕</button>
+            <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-white/20">
+              <div>
+                <h3 className="font-serif font-bold text-lg leading-tight">Sipariş Sepetiniz</h3>
+                {tableName && <p className="text-[11px] text-white/65">{tableName} • Anında mutfak iletimi</p>}
+              </div>
+              <button onClick={() => setCartOpen(false)} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
 
-            <div style={{flex: 1, overflowY: 'auto', padding: '12px 20px'}}>
+            <div className="flex-1 overflow-y-auto px-5 py-3">
               {cart.length === 0 ? (
-                <div style={{textAlign: 'center', padding: '40px 0'}}>
-                  <div style={{fontSize: 40, marginBottom: 12}}>🛒</div>
-                  <p style={{color: textMuted, fontSize: 14}}>Sepetiniz boş</p>
+                <div className="text-center py-10 text-white/65">
+                  <i className="fa-solid fa-basket-shopping text-3xl mb-2 text-amber-300" />
+                  <p className="text-sm">Sepetiniz şu anda boş.</p>
                 </div>
               ) : (
-                <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
+                <div className="space-y-2.5">
                   {cart.map(item => {
                     const isNoteOpen = openNoteFor === item.product_id;
                     const hasNote = item.note && item.note.trim().length > 0;
 
                     return (
                       <div key={item.product_id}
-                        style={{
-                          background: darkMode ? '#0F172A' : '#FAFAFA',
-                          borderRadius: 12,
-                          border: `1px solid ${hasNote ? '#F59E0B' : cardBorder}`,
-                          overflow: 'hidden'
-                        }}>
-                        <div style={{padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12}}>
-                          <div style={{flex: 1, minWidth: 0}}>
-                            <div style={{fontWeight: 600, fontSize: 14, color: textColor}}>{item.name}</div>
-                            <div style={{fontSize: 12, color: themeColor, fontWeight: 700}}>{formatPrice(item.price_int * item.quantity)}</div>
+                        className={`glass-card rounded-2xl overflow-hidden ${hasNote ? 'border-amber-300/70' : ''}`}>
+                        <div className="p-3 flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm truncate">{item.name}</div>
+                            <div className="text-xs font-extrabold text-amber-300">{formatPrice(item.price_int * item.quantity)}</div>
                           </div>
-                          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-                            <button onClick={() => removeFromCart(item.product_id)}
-                              style={{width: 28, height: 28, borderRadius: '50%', border: `1.5px solid ${cardBorder}`, background: 'transparent', color: textColor, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>−</button>
-                            <span style={{fontWeight: 700, fontSize: 15, color: textColor, minWidth: 20, textAlign: 'center'}}>{item.quantity}</span>
-                            <button onClick={() => addToCart({id: item.product_id, name: item.name, price_int: item.price_int})}
-                              style={{width: 28, height: 28, borderRadius: '50%', border: 'none', background: themeColor, color: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>+</button>
+                          <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
+                            <button onClick={() => removeFromCart(item.product_id)} aria-label="Azalt"
+                              className="w-7 h-7 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn">−</button>
+                            <span className="font-extrabold text-sm w-5 text-center">{item.quantity}</span>
+                            <button onClick={() => addToCart({ id: item.product_id, name: item.name, price_int: item.price_int })} aria-label="Artır"
+                              className="w-7 h-7 rounded-lg btn-accent font-bold text-sm flex items-center justify-center spring-btn">+</button>
                           </div>
                         </div>
 
                         {hasNote && !isNoteOpen && (
-                          <div style={{
-                            padding: '8px 12px',
-                            background: '#FFFBEB',
-                            borderTop: '1px solid #FDE68A',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8
-                          }}>
-                            <div style={{fontSize: 12, color: '#92400E', flex: 1, minWidth: 0}}>
-                              📝 <strong>{item.note}</strong>
-                            </div>
+                          <div className="px-3 py-2 bg-amber-500/20 border-t border-amber-300/30 flex items-center justify-between gap-2">
+                            <div className="text-xs text-amber-100 flex-1 min-w-0">📝 <strong>{item.note}</strong></div>
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              style={{fontSize: 12, fontWeight: 600, color: '#B45309', background: 'transparent', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap'}}>
+                              className="text-xs font-bold text-amber-300 whitespace-nowrap">
                               Düzenle
                             </button>
                           </div>
                         )}
 
                         {!hasNote && !isNoteOpen && (
-                          <div style={{padding: '0 12px 10px'}}>
+                          <div className="px-3 pb-2.5">
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              style={{fontSize: 12, fontWeight: 600, color: themeColor, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0}}>
+                              className="text-xs font-semibold text-amber-300">
                               📝 + Bu ürüne özel not ekle
                             </button>
                           </div>
                         )}
 
                         {isNoteOpen && (
-                          <div style={{padding: '10px 12px 12px', background: darkMode ? '#1E293B' : '#F8FAFC', borderTop: `1px solid ${cardBorder}`}}>
+                          <div className="px-3 pt-2.5 pb-3 bg-black/25 border-t border-white/20">
                             <OrderNoteTemplates
                               value={item.note ?? ''}
                               onChange={(newNote) => updateItemNote(item.product_id, newNote)}
@@ -575,12 +616,7 @@ export function PublicMenuPage() {
                               rows={2}
                             />
                             <button onClick={() => setOpenNoteFor(null)}
-                              style={{
-                                marginTop: 8, width: '100%', padding: '8px',
-                                borderRadius: 8, border: 'none',
-                                background: '#0F172A', color: 'white',
-                                fontWeight: 600, fontSize: 13, cursor: 'pointer'
-                              }}>
+                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn">
                               ✓ Tamam
                             </button>
                           </div>
@@ -592,30 +628,30 @@ export function PublicMenuPage() {
               )}
 
               {cart.length > 0 && (
-                <div style={{marginTop: 16, paddingTop: 16, borderTop: `1px dashed ${cardBorder}`}}>
-                  <label style={{fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
+                <div className="mt-4 pt-4 border-t border-dashed border-white/25">
+                  <label className="text-[11px] font-bold text-white/70 block mb-1 uppercase tracking-wider">
                     📋 Sipariş Geneli Not (opsiyonel)
                   </label>
-                  <p style={{fontSize: 11, color: textMuted, marginBottom: 8}}>
+                  <p className="text-[11px] text-white/55 mb-2">
                     Tüm sipariş için geçerli notlar (örn: "kapı kenarında oturuyoruz")
                   </p>
                   <textarea value={orderNote} onChange={e => setOrderNote(e.target.value)}
-                    placeholder="Genel not..."
+                    placeholder="Mutfak için özel not ekleyin..."
                     rows={2}
-                    style={{width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${cardBorder}`, background: darkMode ? '#334155' : '#F8FAFC', color: textColor, fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box'}} />
+                    className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
                 </div>
               )}
             </div>
 
             {cart.length > 0 && (
-              <div style={{padding: '12px 20px 24px', borderTop: `1px solid ${cardBorder}`}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 12}}>
-                  <span style={{fontWeight: 600, color: textMuted}}>Toplam</span>
-                  <span style={{fontWeight: 700, fontSize: 18, color: themeColor}}>{formatPrice(cartTotal)}</span>
+              <div className="px-5 pt-3 pb-6 border-t border-white/20">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold text-white/75 text-sm">Toplam Tutar</span>
+                  <span className="font-extrabold text-xl text-amber-300">{formatPrice(cartTotal)}</span>
                 </div>
                 <button onClick={sendOrder} disabled={orderLoading}
-                  style={{width: '100%', padding: '14px', borderRadius: 12, border: 'none', background: orderLoading ? '#94A3B8' : themeColor, color: 'white', fontWeight: 700, fontSize: 16, cursor: orderLoading ? 'not-allowed' : 'pointer'}}>
-                  {orderLoading ? 'Gönderiliyor...' : '✅ Sipariş Ver'}
+                  className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
+                  {orderLoading ? 'Gönderiliyor...' : (<><i className="fa-solid fa-paper-plane" /> Siparişi Gönder</>)}
                 </button>
               </div>
             )}
@@ -623,77 +659,41 @@ export function PublicMenuPage() {
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ÇAĞRI MODAL — bottom sheet, 12 tür grid */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* Garson çağır sheet — 12 tür grid */}
       {callModalOpen && (
-        <div style={{position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(15,23,42,0.7)'}}
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
           onClick={() => !callLoading && setCallModalOpen(false)}>
-          <div style={{
-            width: '100%', maxWidth: 480, background: cardBg,
-            borderRadius: '24px 24px 0 0', overflow: 'hidden',
-            maxHeight: '90vh', display: 'flex', flexDirection: 'column'
-          }}
+          <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] flex flex-col border-t border-white/60"
+            style={{ maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
 
-            {/* Header */}
-            <div style={{
-              padding: '20px 20px 12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              borderBottom: `1px solid ${cardBorder}`
-            }}>
+            <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-white/20">
               <div>
-                <h3 style={{fontWeight: 700, fontSize: 18, color: textColor, fontFamily: 'Georgia, serif'}}>
-                  🔔 Garson Çağır
+                <h3 className="font-serif font-bold text-lg flex items-center gap-2">
+                  <i className="fa-regular fa-bell text-amber-300" /> Garson Çağır
                 </h3>
-                <p style={{fontSize: 12, color: textMuted, marginTop: 2}}>
-                  Ne istediğinizi seçin
-                </p>
+                <p className="text-xs text-white/65 mt-0.5">Ne istediğinizi seçin</p>
               </div>
               <button onClick={() => !callLoading && setCallModalOpen(false)}
-                disabled={callLoading}
-                style={{width: 32, height: 32, borderRadius: '50%', border: 'none',
-                  background: darkMode ? '#334155' : '#F1F5F9', color: textMuted,
-                  cursor: callLoading ? 'not-allowed' : 'pointer', fontSize: 14,
-                  opacity: callLoading ? 0.5 : 1}}>
-                ✕
+                disabled={callLoading} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn disabled:opacity-50">
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
 
-            {/* Çağrı türleri grid */}
-            <div style={{flex: 1, overflowY: 'auto', padding: 16}}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 10
-              }}>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="grid grid-cols-3 gap-2.5">
                 {CALL_TYPES.map(ct => {
                   const isSelected = selectedCallType === ct.code;
                   return (
                     <button key={ct.code}
                       onClick={() => setSelectedCallType(ct.code)}
-                      style={{
-                        padding: '16px 8px',
-                        borderRadius: 14,
-                        border: `2px solid ${isSelected ? themeColor : cardBorder}`,
-                        background: isSelected ? `${themeColor}15` : (darkMode ? '#0F172A' : '#FAFAFA'),
-                        color: textColor,
-                        cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', gap: 6,
-                        transition: 'all 0.15s',
-                        minHeight: 90
-                      }}>
-                      <div style={{fontSize: 28, lineHeight: 1}}>{ct.emoji}</div>
-                      <div style={{
-                        fontSize: 11,
-                        fontWeight: isSelected ? 700 : 600,
-                        color: isSelected ? themeColor : textColor,
-                        textAlign: 'center',
-                        lineHeight: 1.2
-                      }}>
+                      className={`rounded-2xl py-4 px-2 flex flex-col items-center gap-1.5 min-h-[90px] spring-btn ${isSelected ? 'btn-accent' : 'glass-card'}`}>
+                      <span className="text-[28px] leading-none">{ct.emoji}</span>
+                      <span className={`text-[11px] text-center leading-tight ${isSelected ? 'font-extrabold' : 'font-semibold'}`}>
                         {ct.label}
-                      </div>
+                      </span>
                     </button>
                   );
                 })}
@@ -701,12 +701,8 @@ export function PublicMenuPage() {
 
               {/* "Diğer" seçilince serbest text */}
               {selectedCallType === 'other' && (
-                <div style={{marginTop: 16}}>
-                  <label style={{
-                    fontSize: 12, fontWeight: 700, color: textMuted,
-                    display: 'block', marginBottom: 6,
-                    textTransform: 'uppercase', letterSpacing: '0.05em'
-                  }}>
+                <div className="mt-4">
+                  <label className="text-[11px] font-bold text-white/70 block mb-1.5 uppercase tracking-wider">
                     Açıklama (zorunlu, en az 3 karakter)
                   </label>
                   <textarea value={callNote}
@@ -714,41 +710,22 @@ export function PublicMenuPage() {
                     placeholder="Ne istediğinizi yazın..."
                     rows={3}
                     autoFocus
-                    style={{
-                      width: '100%', padding: '10px 12px',
-                      borderRadius: 10,
-                      border: `1.5px solid ${callNote.trim().length < 3 ? '#FECACA' : cardBorder}`,
-                      background: darkMode ? '#334155' : '#F8FAFC',
-                      color: textColor, fontSize: 13,
-                      resize: 'none', outline: 'none',
-                      boxSizing: 'border-box'
-                    }} />
+                    className={`glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none ${callNote.trim().length < 3 && callNote.length > 0 ? 'border-rose-300' : ''}`} />
                   {callNote.trim().length < 3 && callNote.length > 0 && (
-                    <div style={{fontSize: 11, color: '#DC2626', marginTop: 4}}>
-                      En az 3 karakter yazın
-                    </div>
+                    <div className="text-[11px] text-rose-300 mt-1">En az 3 karakter yazın</div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Gönder butonu */}
-            <div style={{padding: '12px 20px 24px', borderTop: `1px solid ${cardBorder}`}}>
+            <div className="px-5 pt-3 pb-6 border-t border-white/20">
               <button onClick={sendCall}
                 disabled={!canSendCall || callLoading}
-                style={{
-                  width: '100%', padding: '14px',
-                  borderRadius: 12, border: 'none',
-                  background: (canSendCall && !callLoading) ? themeColor : '#94A3B8',
-                  color: 'white', fontWeight: 700, fontSize: 16,
-                  cursor: (canSendCall && !callLoading) ? 'pointer' : 'not-allowed'
-                }}>
-                {callLoading ? 'Gönderiliyor...' : '🔔 Çağrıyı Gönder'}
+                className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
+                {callLoading ? 'Gönderiliyor...' : (<><i className="fa-regular fa-bell" /> Çağrıyı Gönder</>)}
               </button>
               {!selectedCallType && (
-                <p style={{fontSize: 11, color: textMuted, textAlign: 'center', marginTop: 8}}>
-                  Önce bir seçenek seçin
-                </p>
+                <p className="text-[11px] text-white/55 text-center mt-2">Önce bir seçenek seçin</p>
               )}
             </div>
           </div>

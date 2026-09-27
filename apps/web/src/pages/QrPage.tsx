@@ -101,45 +101,44 @@ export function QrPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl text-white">
       <Toast state={toast} />
 
       {/* Genel Menü QR */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6" style={{border: '1px solid #E2E8F0'}}>
-        <div className="px-6 py-4 border-b" style={{borderColor: '#E2E8F0'}}>
-          <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Genel Menü QR</h2>
-          <p className="text-xs mt-1" style={{color: '#94A3B8'}}>Masa seçimi olmadan direkt menüye yönlendirir</p>
+      <div className="glass-panel rounded-3xl overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-white/20">
+          <h2 className="font-serif font-bold text-lg flex items-center gap-2">
+            <i className="fa-solid fa-qrcode text-amber-300 text-base" /> Genel Menü QR
+          </h2>
+          <p className="text-xs mt-1 text-white/65">Masa seçimi olmadan direkt menüye yönlendirir</p>
         </div>
 
-        <div className="p-6 flex items-center gap-6">
+        <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
           <div className="flex-shrink-0">
             {loading ? (
-              <div className="w-32 h-32 rounded-xl flex items-center justify-center" style={{background: '#E2E8F0'}}>
-                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{borderColor: '#0D9488', borderTopColor: 'transparent'}}></div>
+              <div className="w-32 h-32 rounded-2xl flex items-center justify-center bg-white/15 border border-white/30">
+                <div className="w-6 h-6 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin"></div>
               </div>
             ) : qrSrc ? (
-              <div className="p-3 rounded-xl" style={{background: '#F8FAFC', border: '1px solid #E2E8F0'}}>
+              <div className="p-3 rounded-2xl bg-white shadow-lg" style={{border: '1px solid rgba(255,255,255,0.6)'}}>
                 <img src={qrSrc} alt="QR Kod" className="w-32 h-32 rounded-lg" />
               </div>
             ) : null}
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 w-full min-w-0">
             {publicLink && (
-              <p className="text-xs mb-3 font-mono truncate" style={{color: '#0D9488'}}>{publicLink}</p>
+              <p className="text-xs mb-3 font-mono truncate text-amber-300">{publicLink}</p>
             )}
             <div className="flex flex-col gap-2">
               <button onClick={() => downloadQr(qrBlob, 'atlasqr-menu.png')}
-                className="py-2 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2"
-                style={{background: '#0F172A'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
+                className="btn-accent py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 spring-btn">
+                <i className="fa-solid fa-download" />
                 İndir
               </button>
               <button onClick={() => copyLink(publicLink)}
-                className="py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-                style={{background: '#CCFBF1', color: '#0F766E'}}>
+                className="glass-pill py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn">
+                <i className="fa-regular fa-copy" />
                 Linki Kopyala
               </button>
             </div>
@@ -148,35 +147,34 @@ export function QrPage() {
       </div>
 
       {/* Masa QR'ları */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{border: '1px solid #E2E8F0'}}>
-        <div className="px-6 py-4 border-b" style={{borderColor: '#E2E8F0'}}>
-          <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>Masa QR Kodları</h2>
-          <p className="text-xs mt-1" style={{color: '#94A3B8'}}>Her masaya özel QR — sipariş sistemi için gerekli</p>
+      <div className="glass-dark rounded-3xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/15">
+          <h2 className="font-serif font-bold text-lg flex items-center gap-2">
+            <i className="fa-solid fa-chair text-amber-300 text-base" /> Masa QR Kodları
+          </h2>
+          <p className="text-xs mt-1 text-white/65">Her masaya özel QR — sipariş sistemi için gerekli</p>
         </div>
 
         {tables.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-4xl mb-3">🪑</div>
-            <p className="text-sm mb-2" style={{color: '#94A3B8'}}>Henüz masa tanımlanmamış</p>
-            <p className="text-xs" style={{color: '#CBD5E1'}}>Masa yönetiminden masa ekleyin</p>
+            <p className="text-sm mb-2 text-white/75">Henüz masa tanımlanmamış</p>
+            <p className="text-xs text-white/50">Masa yönetiminden masa ekleyin</p>
           </div>
         ) : (
-          <div className="divide-y" style={{borderColor: '#F1F5F9'}}>
+          <div className="divide-y divide-white/10">
             {tables.map(table => (
               <div key={table.id} className="px-6 py-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background: '#CCFBF1'}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5">
-                    <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
-                    <rect x="3" y="16" width="5" height="5"/><path d="M21 16h-6v5M16 11h5M11 3v5M11 11h5v5"/>
-                  </svg>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
+                  style={{background: 'var(--accent-soft)', border: '1px solid rgba(255,255,255,0.35)'}}>
+                  <i className="fa-solid fa-qrcode" />
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm" style={{color: '#0F172A'}}>{table.name}</div>
-                  <div className="text-xs font-mono truncate" style={{color: '#94A3B8'}}>/m/{slug}?masa={table.id.slice(0, 8)}...</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm">{table.name}</div>
+                  <div className="text-xs font-mono truncate text-white/55">/m/{slug}?masa={table.id.slice(0, 8)}...</div>
                 </div>
                 <button onClick={() => generateTableQr(table)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex-shrink-0"
-                  style={{background: '#0D9488'}}>
+                  className="btn-accent px-4 py-2 rounded-2xl text-xs font-bold flex-shrink-0 spring-btn">
                   QR Oluştur
                 </button>
               </div>
@@ -187,40 +185,40 @@ export function QrPage() {
 
       {/* Masa QR Modal */}
       {selectedTable && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm">
-            <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
-              <h3 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>{selectedTable.name} — QR</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark rounded-3xl overflow-hidden w-full max-w-sm">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h3 className="font-serif font-bold text-lg">{selectedTable.name} — QR</h3>
               <button onClick={() => { setSelectedTable(null); setTableQrSrc(''); }}
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
+                aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
 
             <div className="p-6 flex flex-col items-center">
               {tableQrLoading ? (
-                <div className="w-48 h-48 rounded-xl flex items-center justify-center" style={{background: '#E2E8F0'}}>
-                  <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{borderColor: '#0D9488', borderTopColor: 'transparent'}}></div>
+                <div className="w-48 h-48 rounded-2xl flex items-center justify-center bg-white/15 border border-white/30">
+                  <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin"></div>
                 </div>
               ) : tableQrSrc ? (
-                <div className="p-4 rounded-2xl mb-4" style={{background: '#F8FAFC', border: '1px solid #E2E8F0'}}>
+                <div className="p-4 rounded-2xl mb-4 bg-white shadow-lg">
                   <img src={tableQrSrc} alt={`${selectedTable.name} QR`} className="w-48 h-48 rounded-xl" />
                 </div>
               ) : null}
 
-              <p className="text-xs text-center mb-4 font-mono" style={{color: '#0D9488'}}>
+              <p className="text-xs text-center mb-4 font-mono text-amber-300 break-all">
                 {PUBLIC_BASE_URL}/m/{slug}?masa={selectedTable.id.slice(0, 8)}...
               </p>
 
               <div className="flex gap-3 w-full">
                 <button onClick={() => downloadQr(tableQrBlob, `qr-${selectedTable.name}.png`)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
-                  style={{background: '#0F172A'}}>
-                  İndir
+                  className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 spring-btn">
+                  <i className="fa-solid fa-download" /> İndir
                 </button>
                 <button onClick={() => copyLink(`${PUBLIC_BASE_URL}/m/${slug}?masa=${selectedTable.id}`)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                  style={{background: '#CCFBF1', color: '#0F766E'}}>
-                  Linki Kopyala
+                  className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn">
+                  <i className="fa-regular fa-copy" /> Linki Kopyala
                 </button>
               </div>
             </div>

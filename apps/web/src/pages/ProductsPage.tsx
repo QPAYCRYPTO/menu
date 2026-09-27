@@ -149,55 +149,57 @@ export function ProductsPage() {
   }
 
   return (
-    <div>
+    <div className="text-white">
       <Toast state={toast} />
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
-      <div className="flex items-center gap-3 mb-6">
-        <select
-          value={selectedCategoryId}
-          onChange={e => onCategoryFilterChange(e.target.value)}
-          className="px-4 py-2.5 rounded-xl text-sm outline-none font-medium"
-          style={{border: '1.5px solid #E2E8F0', background: 'white', color: '#0F172A', minWidth: 160}}
-        >
-          <option value="">Tüm Kategoriler</option>
-          {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="relative">
+          <i className="fa-solid fa-layer-group absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 text-xs pointer-events-none" />
+          <select
+            value={selectedCategoryId}
+            onChange={e => onCategoryFilterChange(e.target.value)}
+            className="glass-input pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium"
+            style={{minWidth: 180}}
+          >
+            <option value="">Tüm Kategoriler</option>
+            {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
         <button onClick={openCreateModal}
-          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white ml-auto"
-          style={{background: '#0F172A'}}>
-          + Yeni Ürün
+          className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold ml-auto flex items-center gap-2 spring-btn">
+          <i className="fa-solid fa-plus" /> Yeni Ürün
         </button>
       </div>
 
       <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))'}}>
         {items.map(item => (
-          <div key={item.id} className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{border: '1px solid #E2E8F0'}}>
-            <div className="relative" style={{aspectRatio: '1', background: '#F8FAFC'}}>
+          <div key={item.id} className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col">
+            <div className="relative bg-white/10" style={{aspectRatio: '1'}}>
               {item.image_url ? (
                 <img src={item.thumb_url || item.image_url} alt={item.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>
               )}
               {!item.is_active && (
-                <div className="absolute inset-0 flex items-center justify-center" style={{background: 'rgba(0,0,0,0.4)'}}>
-                  <span className="text-xs font-bold text-white px-2 py-1 rounded-full" style={{background: '#DC2626'}}>Pasif</span>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <span className="text-xs font-bold px-3 py-1 rounded-full"
+                    style={{background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>Pasif</span>
                 </div>
               )}
             </div>
-            <div className="p-3">
-              <div className="font-semibold text-sm mb-1" style={{color: '#0F172A'}}>{item.name}</div>
-              <div className="font-bold text-sm mb-3" style={{color: '#0D9488'}}>{priceIntToTl(item.price_int)} TL</div>
-              <div className="flex gap-2">
+            <div className="p-3 flex-1 flex flex-col">
+              <div className="font-serif font-bold text-sm mb-1 leading-snug">{item.name}</div>
+              <div className="font-extrabold text-sm mb-3 text-amber-300 tracking-tight">{priceIntToTl(item.price_int)} TL</div>
+              <div className="flex gap-2 mt-auto">
                 <button onClick={() => openEditModal(item)}
-                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{background: '#F1F5F9', color: '#0F172A'}}>
-                  Düzenle
+                  className="glass-pill flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 spring-btn">
+                  <i className="fa-solid fa-pen text-[10px]" /> Düzenle
                 </button>
                 <button onClick={() => askDeleteProduct(item)}
-                  className="py-1.5 px-2 rounded-lg text-xs font-semibold"
-                  style={{background: '#FEF2F2', color: '#DC2626'}}>
-                  Sil
+                  className="py-1.5 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn"
+                  style={{background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>
+                  <i className="fa-solid fa-trash-can text-[10px]" /> Sil
                 </button>
               </div>
             </div>
@@ -205,32 +207,34 @@ export function ProductsPage() {
         ))}
 
         {items.length === 0 && (
-          <div className="col-span-full text-center py-16 rounded-2xl" style={{background: 'white', border: '1px dashed #E2E8F0'}}>
+          <div className="glass-card col-span-full text-center py-16 rounded-3xl border-dashed">
             <div className="text-4xl mb-3">🛒</div>
-            <p className="text-sm" style={{color: '#94A3B8'}}>Henüz ürün yok</p>
+            <p className="text-sm text-white/70">Henüz ürün yok</p>
           </div>
         )}
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(15,23,42,0.6)'}}>
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden">
 
-            <div className="px-6 py-4 flex items-center justify-between" style={{borderBottom: '1px solid #E2E8F0'}}>
-              <h2 className="font-bold text-base" style={{color: '#0F172A', fontFamily: 'Georgia, serif'}}>
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg text-white">
                 {editingItem ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
               </h2>
-              <button onClick={closeModal} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: '#F1F5F9', color: '#64748B'}}>✕</button>
+              <button onClick={closeModal} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto" style={{maxHeight: '70vh'}}>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Kategori</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Kategori</label>
                 <select
                   value={form.category_id}
                   onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                 >
                   <option value="">Kategori seçin</option>
                   {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -238,26 +242,23 @@ export function ProductsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Ürün Adı</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Ürün Adı</label>
                 <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   placeholder="Ürün adı..." />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Fiyat (TL)</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Fiyat (TL)</label>
                 <input value={form.priceTl} onChange={e => setForm(p => ({ ...p, priceTl: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   placeholder="Örn: 145,50" />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{color: '#64748B'}}>Açıklama</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Açıklama</label>
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none"
                   rows={2} placeholder="Açıklama..." />
               </div>
 
@@ -267,24 +268,25 @@ export function ProductsPage() {
                 onRemove={handleImageRemove}
                 label="Ürün Fotoğrafı"
                 hint="JPG, PNG, WebP, GIF · max 5MB · kare öneri"
-                themeColor="#A855F7"
+                themeColor="#FF7A29"
                 previewSize={80}
               />
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <div className="relative">
                   <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="sr-only" />
-                  <div className="w-10 h-6 rounded-full transition-all" style={{background: form.is_active ? '#0D9488' : '#E2E8F0'}}>
-                    <div className="w-5 h-5 bg-white rounded-full shadow transition-all mt-0.5" style={{marginLeft: form.is_active ? '18px' : '2px'}}></div>
+                  <div className="w-10 h-6 rounded-full transition-all border border-white/30"
+                    style={{background: form.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)'}}>
+                    <div className="w-5 h-5 bg-white rounded-full shadow transition-all" style={{marginTop: 1, marginLeft: form.is_active ? '17px' : '1px'}}></div>
                   </div>
                 </div>
-                <span className="text-sm font-medium" style={{color: '#0F172A'}}>Aktif ürün</span>
+                <span className="text-sm font-medium text-white">Aktif ürün</span>
               </label>
             </div>
 
-            <div className="px-6 py-4 flex gap-3" style={{borderTop: '1px solid #E2E8F0'}}>
-              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{background: '#F1F5F9', color: '#64748B'}}>İptal</button>
-              <button onClick={saveProduct} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{background: '#0F172A'}}>Kaydet</button>
+            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
+              <button onClick={closeModal} className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">İptal</button>
+              <button onClick={saveProduct} className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">Kaydet</button>
             </div>
           </div>
         </div>

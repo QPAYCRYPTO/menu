@@ -56,8 +56,11 @@ export function WaiterLoginPage() {
   // Context yüklenene kadar bekle
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
-        <div className="text-sm" style={{ color: '#64748B' }}>Yükleniyor...</div>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="glass-panel rounded-3xl px-8 py-7 text-center fade-enter">
+          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+          <div className="text-sm font-semibold text-white/80">Yükleniyor...</div>
+        </div>
       </div>
     );
   }
@@ -88,41 +91,39 @@ export function WaiterLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 text-white">
+      <div className="w-full max-w-md fade-enter">
 
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: '#0D9488' }}>
-              <span className="text-2xl">👨‍🍳</span>
+            <div className="btn-accent w-16 h-16 rounded-3xl flex items-center justify-center">
+              <span className="text-3xl">👨‍🍳</span>
             </div>
           </div>
-          <h1 className="font-bold text-2xl" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+          <h1 className="font-serif font-bold text-3xl tracking-wide">
             Garson Girişi
           </h1>
-          <p className="text-sm mt-1" style={{ color: '#64748B' }}>AtlasQR Garson Paneli</p>
+          <p className="text-sm mt-1 text-white/70 font-medium">AtlasQR Garson Paneli</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6" style={{ border: '1px solid #E2E8F0' }}>
+        <div className="glass-panel rounded-3xl p-6">
 
           {loading && mode === 'auto' && (
             <div className="text-center py-8">
-              <div className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-3"
-                style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
-              <p className="text-sm" style={{ color: '#64748B' }}>Giriş yapılıyor...</p>
+              <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+              <p className="text-sm text-white/75">Giriş yapılıyor...</p>
             </div>
           )}
 
           {!loading && error && mode === 'auto' && (
             <div className="text-center py-4">
               <div className="text-4xl mb-3">⚠️</div>
-              <p className="text-sm font-semibold mb-2" style={{ color: '#DC2626' }}>
+              <p className="text-sm font-bold mb-2" style={{ color: 'var(--danger)' }}>
                 Giriş yapılamadı
               </p>
-              <p className="text-xs mb-4" style={{ color: '#64748B' }}>{error}</p>
+              <p className="text-xs mb-4 text-white/70">{error}</p>
               <button onClick={() => { setMode('email'); setError(null); }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                style={{ background: '#0D9488' }}>
+                className="btn-accent px-5 py-2.5 rounded-full text-sm font-bold spring-btn">
                 Email ile Giriş Yap
               </button>
             </div>
@@ -131,45 +132,42 @@ export function WaiterLoginPage() {
           {mode === 'email' && (
             <>
               {error && (
-                <div className="mb-4 p-3 rounded-xl text-xs"
-                  style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}>
+                <div className="mb-4 p-3 rounded-2xl text-xs font-semibold"
+                  style={{ background: 'var(--danger-bg)', color: '#FECDD3', border: '1px solid rgba(251,113,133,0.45)' }}>
                   ⚠️ {error}
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                     Email
                   </label>
                   <input type="email" value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="ornek@kafe.com"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
+                    className="glass-input w-full px-4 py-3 rounded-2xl text-sm font-medium" />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                     Şifre
                   </label>
                   <input type="password" value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Min 8 karakter"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }}
+                    className="glass-input w-full px-4 py-3 rounded-2xl text-sm font-medium"
                     onKeyDown={(e) => { if (e.key === 'Enter') handleEmailLogin(); }} />
                 </div>
 
                 <button onClick={handleEmailLogin} disabled={loading}
-                  className="w-full py-3 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: loading ? '#475569' : '#0D9488' }}>
+                  className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
                   {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                 </button>
               </div>
 
-              <div className="mt-6 pt-6 text-center" style={{ borderTop: '1px solid #F1F5F9' }}>
-                <p className="text-xs" style={{ color: '#94A3B8' }}>
+              <div className="mt-6 pt-5 text-center border-t border-white/20">
+                <p className="text-xs text-white/60">
                   QR kodunuz varsa yöneticinizden gelen linki kullanın
                 </p>
               </div>
@@ -178,7 +176,7 @@ export function WaiterLoginPage() {
         </div>
 
         <div className="text-center mt-6">
-          <Link to="/" className="text-xs" style={{ color: '#64748B' }}>
+          <Link to="/" className="glass-pill inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold spring-btn">
             ← Ana Sayfa
           </Link>
         </div>

@@ -32,92 +32,72 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'}}>
-      
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden text-white px-4 py-20">
+
       {/* Ana sayfaya dön linki */}
       <Link
         to="/"
-        className="absolute top-6 left-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium z-20"
-        style={{
-          color: 'white',
-          background: 'rgba(255,255,255,0.08)',
-          border: '1px solid rgba(255,255,255,0.15)',
-          textDecoration: 'none',
-          backdropFilter: 'blur(8px)',
-        }}
+        className="glass-pill absolute top-6 left-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold z-20 spring-btn"
+        style={{ textDecoration: 'none' }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
+        <i className="fa-solid fa-arrow-left text-xs" />
         Ana Sayfaya Dön
       </Link>
-      
-      {/* Dekoratif daireler */}
-      <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{background: '#0D9488', transform: 'translate(30%, -30%)'}}></div>
-      <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10" style={{background: '#F59E0B', transform: 'translate(-30%, 30%)'}}></div>
-      <div className="absolute top-1/2 left-0 w-32 h-32 rounded-full opacity-5" style={{background: '#0D9488'}}></div>
 
-      <div className="w-full max-w-sm mx-4 relative z-10">
+      <div className="w-full max-w-sm relative z-10 fade-enter">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{background: '#0D9488'}}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
-              <rect x="3" y="16" width="5" height="5"/><path d="M21 16h-6v5M16 11h5M11 3v5M11 11h5v5"/>
-            </svg>
+        <div className="text-center mb-7">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-2xl text-white border border-white/60"
+            style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
+            <i className="fa-solid fa-wheat-awn" />
           </div>
-          <h1 className="text-3xl font-bold text-white" style={{fontFamily: 'Georgia, serif'}}>
-            Atlas<span style={{color: '#0D9488'}}>QR</span>
+          <h1 className="font-serif text-3xl font-bold text-white tracking-wide">
+            Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
           </h1>
-          <p className="text-xs mt-1 tracking-widest" style={{color: 'rgba(255,255,255,0.4)'}}>YÖNETİCİ PANELİ</p>
+          <p className="text-xs mt-1 tracking-widest text-white/60 font-semibold">YÖNETİCİ PANELİ</p>
         </div>
 
         {/* Kart */}
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-lg font-semibold mb-6" style={{color: '#0F172A'}}>Giriş Yap</h2>
-          
+        <div className="glass-panel rounded-3xl p-7 sm:p-8">
+          <h2 className="font-serif text-xl font-bold mb-6 text-white">Giriş Yap</h2>
+
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase" style={{color: '#64748B'}}>E-posta</label>
+              <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase text-white/75">E-posta</label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                </svg>
+                <i className="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-white/60 pointer-events-none" />
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="admin@kafe.com"
                   required
-                  className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm outline-none transition-all"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  className="glass-input w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase" style={{color: '#64748B'}}>Şifre</label>
+              <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase text-white/75">Şifre</label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
+                <i className="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-white/60 pointer-events-none" />
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-9 pr-10 py-2.5 rounded-lg text-sm outline-none transition-all"
-                  style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+                  className="glass-input w-full pl-9 pr-10 py-2.5 rounded-2xl text-sm font-medium"
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
                   {showPass ? '🙈' : '👁️'}
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="text-sm px-3 py-2 rounded-lg" style={{background: '#FEF2F2', color: '#DC2626'}}>
+              <div className="text-sm px-3 py-2 rounded-xl font-medium"
+                style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' }}>
                 {error}
               </div>
             )}
@@ -125,20 +105,19 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-lg text-sm font-semibold text-white transition-all"
-              style={{background: loading ? '#94A3B8' : '#0F172A'}}
+              className="btn-accent w-full py-3 rounded-2xl text-sm font-bold spring-btn"
             >
               {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
             </button>
           </form>
 
           <div className="text-center mt-4">
-            <Link to="/reset" className="text-xs" style={{color: '#0D9488'}}>Şifremi unuttum</Link>
+            <Link to="/reset" className="text-xs font-semibold text-amber-300 hover:text-amber-200">Şifremi unuttum</Link>
           </div>
         </div>
 
-        <p className="text-center mt-6 text-xs" style={{color: 'rgba(255,255,255,0.3)'}}>
-          Powered by <span style={{color: '#F59E0B'}}>AtlasQR</span>
+        <p className="text-center mt-6 text-xs text-white/60">
+          Powered by <span className="font-bold text-amber-300">AtlasQR</span>
         </p>
       </div>
     </div>

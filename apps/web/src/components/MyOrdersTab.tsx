@@ -35,9 +35,9 @@ type Props = {
 };
 
 const STATUS_META: Record<string, { label: string; icon: string; bg: string; color: string }> = {
-  pending: { label: 'Bekliyor', icon: '⏱', bg: '#FEF3C7', color: '#B45309' },
-  preparing: { label: 'Hazırlanıyor', icon: '👨‍🍳', bg: '#E0F2FE', color: '#0369A1' },
-  ready: { label: 'Hazır', icon: '✨', bg: '#D1FAE5', color: '#065F46' }
+  pending: { label: 'Bekliyor', icon: '⏱', bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  preparing: { label: 'Hazırlanıyor', icon: '👨‍🍳', bg: 'var(--info-bg)', color: 'var(--info)' },
+  ready: { label: 'Hazır', icon: '✨', bg: 'var(--success-bg)', color: 'var(--success)' }
 };
 
 function formatPrice(priceInt: number): string {
@@ -84,18 +84,18 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin mx-auto" 
-          style={{ borderColor: themeColor, borderTopColor: 'transparent' }}></div>
+      <div className="glass-card rounded-3xl" style={{ padding: 40, textAlign: 'center' }}>
+        <div className="w-10 h-10 rounded-full border-2 border-white/30 animate-spin mx-auto"
+          style={{ borderTopColor: themeColor }}></div>
       </div>
     );
   }
 
   if (orders.length === 0) {
     return (
-      <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+      <div className="glass-card rounded-3xl fade-enter" style={{ padding: '48px 20px', textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-        <h3 style={{ fontWeight: 700, fontSize: 16, color: textColor, marginBottom: 8 }}>
+        <h3 className="font-serif" style={{ fontWeight: 700, fontSize: 17, color: textColor, marginBottom: 8 }}>
           Henüz aktif siparişiniz yok
         </h3>
         <p style={{ fontSize: 13, color: textMuted, lineHeight: 1.5 }}>
@@ -109,16 +109,13 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
   const totalOfAll = orders.reduce((sum, o) => sum + orderTotal(o.items), 0);
 
   return (
-    <div style={{ padding: '12px 16px 100px' }}>
+    <div style={{ padding: '0 0 24px' }}>
       {orders.map(order => {
         const meta = STATUS_META[order.status] || STATUS_META.pending;
         const total = orderTotal(order.items);
 
         return (
-          <div key={order.id} style={{
-            background: cardBg,
-            border: `1px solid ${cardBorder}`,
-            borderRadius: 16,
+          <div key={order.id} className="glass-dark rounded-3xl fade-enter" style={{
             overflow: 'hidden',
             marginBottom: 12
           }}>
@@ -126,22 +123,23 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
             <div style={{
               padding: '12px 14px',
               background: meta.bg,
+              borderBottom: '1px solid rgba(255,255,255,0.14)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>{meta.icon}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="glass-pill w-9 h-9 rounded-xl flex items-center justify-center" style={{ fontSize: 18 }}>{meta.icon}</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: meta.color }}>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: meta.color }}>
                     {meta.label}
                   </div>
-                  <div style={{ fontSize: 11, color: meta.color, opacity: 0.7 }}>
+                  <div style={{ fontSize: 11, color: textMuted }}>
                     {timeAgo(order.created_at)}
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: meta.color, opacity: 0.7 }}>
+              <div className="glass-pill font-mono" style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, fontWeight: 700 }}>
                 {new Date(order.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
@@ -153,29 +151,28 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '6px 0',
-                  borderBottom: `1px solid ${cardBorder}`
+                  padding: '7px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.12)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 8,
-                      background: themeColor,
-                      color: 'white',
+                    <span className="btn-accent" style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 9,
                       fontSize: 11,
-                      fontWeight: 700,
+                      fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      flexShrink: 0
                     }}>
                       {item.quantity}
                     </span>
-                    <span style={{ fontSize: 13, color: textColor, fontWeight: 500 }}>
+                    <span style={{ fontSize: 13, color: textColor, fontWeight: 600 }}>
                       {item.product_name}
                     </span>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: textMuted }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: textMuted }}>
                     {formatPrice(item.price_int * item.quantity)}
                   </span>
                 </div>
@@ -185,10 +182,11 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
                 <div style={{
                   marginTop: 8,
                   padding: '8px 10px',
-                  borderRadius: 8,
-                  background: darkMode ? '#334155' : '#FEF3C7',
+                  borderRadius: 12,
+                  background: 'rgba(245,158,11,0.2)',
+                  border: '1px solid rgba(251,191,36,0.35)',
                   fontSize: 12,
-                  color: darkMode ? '#FCD34D' : '#92400E'
+                  color: '#FDE68A'
                 }}>
                   📝 {order.note}
                 </div>
@@ -199,11 +197,10 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 marginTop: 10,
-                paddingTop: 8,
-                borderTop: `1px solid ${cardBorder}`
+                paddingTop: 8
               }}>
                 <span style={{ fontSize: 12, color: textMuted, fontWeight: 600 }}>Toplam</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: themeColor }}>
+                <span className="text-amber-300" style={{ fontSize: 16, fontWeight: 800 }}>
                   {formatPrice(total)}
                 </span>
               </div>
@@ -214,18 +211,16 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
 
       {/* Tüm siparişlerin toplamı */}
       {orders.length > 1 && (
-        <div style={{
-          background: themeColor,
-          borderRadius: 16,
+        <div className="btn-accent" style={{
+          borderRadius: 24,
           padding: 16,
           marginTop: 12,
-          color: 'white',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>
+          <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4, fontWeight: 600 }}>
             Aktif Siparişlerinizin Toplamı
           </div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>
+          <div style={{ fontSize: 24, fontWeight: 800 }}>
             {formatPrice(totalOfAll)}
           </div>
         </div>

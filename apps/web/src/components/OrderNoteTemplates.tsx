@@ -25,8 +25,8 @@ const CATEGORIES: Category[] = [
     id: 'temp',
     emoji: '🔥',
     label: 'Sıcak/Soğuk',
-    color: '#B45309',
-    bg: '#FEF3C7',
+    color: '#FCD34D',
+    bg: 'rgba(245,158,11,0.18)',
     templates: [
       'Çok sıcak olsun',
       'Ilık olsun',
@@ -42,8 +42,8 @@ const CATEGORIES: Category[] = [
     id: 'cook',
     emoji: '🥩',
     label: 'Pişirme',
-    color: '#9A3412',
-    bg: '#FFEDD5',
+    color: '#FDBA74',
+    bg: 'rgba(249,115,22,0.18)',
     templates: [
       'Az pişmiş',
       'Orta pişmiş',
@@ -58,8 +58,8 @@ const CATEGORIES: Category[] = [
     id: 'remove',
     emoji: '🚫',
     label: 'İstemiyorum',
-    color: '#991B1B',
-    bg: '#FEE2E2',
+    color: '#FDA4AF',
+    bg: 'rgba(244,63,94,0.18)',
     templates: [
       'Soğansız',
       'Sarımsaksız',
@@ -78,8 +78,8 @@ const CATEGORIES: Category[] = [
     id: 'add',
     emoji: '➕',
     label: 'Ekstra',
-    color: '#15803D',
-    bg: '#DCFCE7',
+    color: '#6EE7B7',
+    bg: 'rgba(16,185,129,0.18)',
     templates: [
       'Ekstra acı',
       'Ekstra peynir',
@@ -96,8 +96,8 @@ const CATEGORIES: Category[] = [
     id: 'serve',
     emoji: '🍽️',
     label: 'Servis',
-    color: '#1E40AF',
-    bg: '#DBEAFE',
+    color: '#93C5FD',
+    bg: 'rgba(59,130,246,0.18)',
     templates: [
       'Sos ayrı gelsin',
       'Yanında ayrı tabakta',
@@ -113,8 +113,8 @@ const CATEGORIES: Category[] = [
     id: 'health',
     emoji: '⚠️',
     label: 'Sağlık',
-    color: '#7C2D12',
-    bg: '#FEF2F2',
+    color: '#FCA5A5',
+    bg: 'rgba(239,68,68,0.18)',
     templates: [
       'Glutensiz',
       'Laktozsuz',
@@ -164,29 +164,30 @@ export function OrderNoteTemplates({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>
+        <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
           {label}
         </label>
         {value.trim() && (
           <button onClick={clearNote}
-            className="text-xs"
-            style={{ color: '#DC2626' }}>
+            className="text-xs font-bold px-2 py-1 rounded-lg spring-btn"
+            style={{ color: 'var(--danger)' }}>
             ✕ Temizle
           </button>
         )}
       </div>
 
       {/* Kategori chip'leri — yatay scroll */}
-      <div className="-mx-1 px-1 mb-2 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="-mx-1 px-1 pb-1 mb-2 overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex gap-1.5" style={{ minWidth: 'min-content' }}>
           {CATEGORIES.map(cat => (
             <button key={cat.id}
               onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap"
+              className="glass-pill min-h-[36px] px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap spring-btn"
               style={{
-                background: expandedCat === cat.id ? cat.color : cat.bg,
+                background: expandedCat === cat.id ? cat.color + '55' : cat.bg,
                 color: expandedCat === cat.id ? 'white' : cat.color,
-                border: '1px solid ' + (expandedCat === cat.id ? cat.color : 'transparent')
+                borderColor: expandedCat === cat.id ? cat.color : cat.color + '55',
+                boxShadow: expandedCat === cat.id ? `0 6px 16px ${cat.color}40, inset 0 1px 1px rgba(255,255,255,0.6)` : undefined
               }}>
               {cat.emoji} {cat.label}
             </button>
@@ -196,17 +197,12 @@ export function OrderNoteTemplates({
 
       {/* Açılan kategorinin şablonları */}
       {expandedCat && (
-        <div className="mb-2 p-2 rounded-xl" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+        <div className="mb-2 p-2 rounded-2xl bg-black/25 border border-white/15 fade-enter">
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.find(c => c.id === expandedCat)?.templates.map(tpl => (
               <button key={tpl}
                 onClick={() => appendTemplate(tpl)}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold active:scale-95 transition-transform"
-                style={{
-                  background: 'white',
-                  color: '#0F172A',
-                  border: '1px solid #CBD5E1'
-                }}>
+                className="glass-pill min-h-[32px] px-3 py-1 rounded-xl text-xs font-semibold spring-btn">
                 + {tpl}
               </button>
             ))}
@@ -219,8 +215,7 @@ export function OrderNoteTemplates({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none"
-        style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
+        className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
     </div>
   );
 }

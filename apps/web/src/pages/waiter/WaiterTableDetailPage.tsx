@@ -126,25 +126,23 @@ export function WaiterTableDetailPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <div className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-3"
-          style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
-        <p className="text-sm" style={{ color: '#64748B' }}>Yükleniyor...</p>
+      <div className="glass-panel rounded-3xl text-center py-14 text-white">
+        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+        <p className="text-sm font-semibold text-white/80">Yükleniyor...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div>
+      <div className="text-white">
         <button onClick={() => navigate('/garson')}
-          className="mb-4 px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: '#F1F5F9', color: '#64748B' }}>
+          className="glass-pill mb-3 min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn">
           ← Masalar
         </button>
-        <div className="text-center py-16 bg-white rounded-2xl" style={{ border: '1px solid #FECACA' }}>
+        <div className="glass-card text-center py-14 rounded-3xl" style={{ borderColor: 'rgba(251,113,133,0.55)' }}>
           <div className="text-4xl mb-3">⚠️</div>
-          <p className="text-sm" style={{ color: '#DC2626' }}>{error ?? 'Masa bulunamadı.'}</p>
+          <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>{error ?? 'Masa bulunamadı.'}</p>
         </div>
       </div>
     );
@@ -153,32 +151,29 @@ export function WaiterTableDetailPage() {
   const canCancelOrders = waiter?.permissions.can_delete_items ?? false;
 
   return (
-    <div style={{ paddingBottom: 100 }}>
+    <div className="text-white" style={{ paddingBottom: 100 }}>
 
       {toast && (
-        <div className="fixed top-20 left-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg mx-auto"
+        <div className="fixed top-24 left-4 right-4 z-50 glass-panel px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter"
           style={{
-            background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4',
-            color: toast.type === 'error' ? '#DC2626' : '#16A34A',
-            border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`,
+            background: toast.type === 'error' ? 'rgba(225,29,72,0.85)' : 'rgba(5,150,105,0.85)',
+            color: '#fff',
             maxWidth: 480
           }}>
           {toast.message}
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-4">
-        <button onClick={() => navigate('/garson')}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: '#F1F5F9', color: '#64748B' }}>
-          ←
+      <div className="glass-panel rounded-3xl p-2.5 flex items-center gap-2 mb-3">
+        <button onClick={() => navigate('/garson')} aria-label="Masalar"
+          className="glass-pill w-10 h-10 rounded-2xl text-sm font-bold flex items-center justify-center flex-shrink-0 spring-btn">
+          <i className="fa-solid fa-chevron-left" />
         </button>
-        <h2 className="font-bold text-xl flex-1" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <h2 className="font-serif font-bold text-xl flex-1 truncate">
           🍽️ {data.table.name}
         </h2>
-        <button onClick={() => loadDetail()}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: '#F1F5F9', color: '#64748B' }}>
+        <button onClick={() => loadDetail()} aria-label="Yenile"
+          className="glass-pill w-10 h-10 rounded-2xl text-sm flex items-center justify-center flex-shrink-0 spring-btn">
           🔄
         </button>
       </div>
@@ -187,20 +182,18 @@ export function WaiterTableDetailPage() {
       {/* ÇAĞRILAR — call_type ile zenginleştirilmiş      */}
       {/* ─────────────────────────────────────────────── */}
       {data.active_calls.length > 0 && (
-        <div className="space-y-2 mb-4">
+        <div className="space-y-2 mb-3">
           {data.active_calls.map(call => {
             const info = getCallInfo(call.call_type);
-            const cardBg = info.critical ? '#FEF2F2' : '#FFFBEB';
-            const cardBorder = info.critical ? '#FECACA' : '#FDE68A';
-            const titleColor = info.critical ? '#991B1B' : '#92400E';
-            const accentColor = info.critical ? '#DC2626' : '#B45309';
+            const edgeColor = info.critical ? '#FB7185' : '#FBBF24';
+            const accentColor = info.critical ? 'var(--danger)' : 'var(--warning)';
 
             return (
               <div key={call.id}
-                className="rounded-2xl overflow-hidden"
+                className="glass-dark rounded-3xl overflow-hidden fade-enter"
                 style={{
-                  background: cardBg,
-                  border: `2px solid ${cardBorder}`
+                  background: info.critical ? 'rgba(60,14,22,0.66)' : 'rgba(40,28,12,0.64)',
+                  borderLeft: `5px solid ${edgeColor}`
                 }}>
                 <div style={{
                   padding: '14px',
@@ -208,30 +201,26 @@ export function WaiterTableDetailPage() {
                   alignItems: 'center',
                   gap: 12
                 }}>
-                  <div style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }}>
+                  <div className="glass-pill w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ fontSize: 28, lineHeight: 1 }}>
                     {info.emoji}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 10, fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '0.05em',
+                      fontSize: 10, fontWeight: 800,
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
                       color: accentColor, marginBottom: 2
                     }}>
                       {info.critical ? '⚠️ Acil İstek' : 'Müşteri Çağrısı'}
                     </div>
-                    <div style={{
-                      fontSize: 16, fontWeight: 800,
-                      color: titleColor, lineHeight: 1.2,
-                      fontFamily: 'Georgia, serif'
-                    }}>
+                    <div className="font-serif font-bold text-white" style={{ fontSize: 16, lineHeight: 1.2 }}>
                       {info.label}
                     </div>
                     {call.note && call.note.trim() && (
-                      <div style={{
-                        fontSize: 13, color: '#0F172A',
-                        marginTop: 6, padding: '6px 8px',
-                        background: 'white', borderRadius: 6,
-                        border: `1px solid ${cardBorder}`
+                      <div className="glass-pill" style={{
+                        fontSize: 13,
+                        marginTop: 6, padding: '6px 9px',
+                        borderRadius: 10
                       }}>
                         📝 {call.note}
                       </div>
@@ -240,10 +229,10 @@ export function WaiterTableDetailPage() {
                 </div>
                 <div style={{
                   padding: '8px 14px',
-                  background: 'rgba(255,255,255,0.5)',
-                  borderTop: `1px solid ${cardBorder}`,
+                  background: 'rgba(0,0,0,0.2)',
+                  borderTop: '1px solid rgba(255,255,255,0.14)',
                   fontSize: 11,
-                  color: '#64748B',
+                  color: 'var(--text-muted)',
                   textAlign: 'center'
                 }}>
                   💡 İlgilenmek için Çağrılar sekmesine git
@@ -256,32 +245,35 @@ export function WaiterTableDetailPage() {
 
       {data.session ? (
         <>
-          <div className="mb-4 p-4 rounded-2xl bg-white" style={{ border: '1px solid #E2E8F0' }}>
+          <div className="glass-panel mb-3 p-4 rounded-3xl">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">
                   Açık Adisyon
                 </div>
-                <div className="font-bold text-2xl mt-1" style={{ color: '#0D9488', fontFamily: 'Georgia, serif' }}>
+                <div className="font-serif font-bold text-3xl mt-1 text-amber-300">
                   {formatPrice(data.session.total_int)}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-xs" style={{ color: '#64748B' }}>Açılış</div>
-                <div className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+              <div className="glass-pill text-right rounded-2xl px-3 py-1.5">
+                <div className="text-[10px] text-white/70 font-medium">Açılış</div>
+                <div className="text-sm font-extrabold">
                   {new Date(data.session.opened_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mb-4">
-            <div className="font-bold text-sm mb-2" style={{ color: '#0F172A' }}>
-              📋 Siparişler ({data.orders.length})
+          <div className="mb-3">
+            <div className="flex items-center gap-3 mb-3 px-1">
+              <div className="font-serif font-bold text-base">
+                📋 Siparişler ({data.orders.length})
+              </div>
+              <div className="flex-1 h-px bg-white/20" />
             </div>
             {data.orders.length === 0 ? (
-              <div className="text-center py-8 bg-white rounded-2xl" style={{ border: '1px dashed #E2E8F0' }}>
-                <p className="text-sm" style={{ color: '#94A3B8' }}>Henüz sipariş yok</p>
+              <div className="glass-card text-center py-8 rounded-3xl">
+                <p className="text-sm text-white/70">Henüz sipariş yok</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -291,20 +283,20 @@ export function WaiterTableDetailPage() {
                   const orderLabel = `#${idx + 1}`;
 
                   return (
-                    <div key={order.id} className="bg-white rounded-2xl overflow-hidden"
-                      style={{ border: '1px solid #E2E8F0' }}>
-                      <div className="px-4 py-2 flex items-center justify-between"
+                    <div key={order.id} className="glass-dark rounded-3xl overflow-hidden">
+                      <div className="px-4 py-2.5 flex items-center justify-between"
                         style={{
-                          background: order.status === 'delivered' ? '#F0FDF4' :
-                                      order.status === 'cancelled' ? '#FEF2F2' :
-                                      order.status === 'ready' ? '#D1FAE5' :
-                                      order.status === 'preparing' ? '#E0F2FE' : '#FFFBEB'
+                          borderBottom: '1px solid rgba(255,255,255,0.14)',
+                          background: order.status === 'delivered' ? 'var(--success-bg)' :
+                                      order.status === 'cancelled' ? 'var(--danger-bg)' :
+                                      order.status === 'ready' ? 'var(--success-bg)' :
+                                      order.status === 'preparing' ? 'var(--info-bg)' : 'var(--warning-bg)'
                         }}>
-                        <span className="text-xs font-bold" style={{
-                          color: order.status === 'delivered' ? '#065F46' :
-                                 order.status === 'cancelled' ? '#991B1B' :
-                                 order.status === 'ready' ? '#065F46' :
-                                 order.status === 'preparing' ? '#0369A1' : '#B45309'
+                        <span className="text-xs font-extrabold" style={{
+                          color: order.status === 'delivered' ? 'var(--success)' :
+                                 order.status === 'cancelled' ? 'var(--danger)' :
+                                 order.status === 'ready' ? 'var(--success)' :
+                                 order.status === 'preparing' ? 'var(--info)' : 'var(--warning)'
                         }}>
                           {orderLabel} · {
                             order.status === 'pending' ? 'Bekliyor' :
@@ -315,11 +307,11 @@ export function WaiterTableDetailPage() {
                           }
                         </span>
                         {order.waiter_name ? (
-                          <span className="text-xs font-semibold" style={{ color: '#0D9488' }}>
+                          <span className="text-xs font-bold" style={{ color: '#FDBA74' }}>
                             👤 {order.waiter_name}
                           </span>
                         ) : (
-                          <span className="text-xs" style={{ color: '#94A3B8' }}>
+                          <span className="text-xs text-white/60">
                             📱 Müşteri
                           </span>
                         )}
@@ -328,39 +320,35 @@ export function WaiterTableDetailPage() {
                         {order.items.map(item => (
                           <div key={item.id}
                             className="py-2"
-                            style={{ borderBottom: '1px solid #F8FAFC' }}>
+                            style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                             <div className="flex items-center gap-2">
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+                                <div className="text-sm font-bold">
                                   {item.product_name}
                                 </div>
-                                <div className="text-xs" style={{ color: '#64748B' }}>
-                                  {formatPrice(item.price_int)} × {item.quantity} = {formatPrice(item.price_int * item.quantity)}
+                                <div className="text-xs text-white/65">
+                                  {formatPrice(item.price_int)} × {item.quantity} = <span className="font-bold text-amber-300">{formatPrice(item.price_int * item.quantity)}</span>
                                 </div>
                               </div>
 
                               {isEditable ? (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
                                     disabled={item.quantity <= 1}
-                                    className="w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center"
+                                    className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn"
                                     style={{
-                                      background: '#F1F5F9',
-                                      color: '#0F172A',
                                       opacity: item.quantity <= 1 ? 0.3 : 1
                                     }}>−</button>
-                                  <span className="font-bold text-sm w-6 text-center" style={{ color: '#0F172A' }}>
+                                  <span className="font-extrabold text-sm w-6 text-center">
                                     {item.quantity}
                                   </span>
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
-                                    className="w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center text-white"
-                                    style={{ background: '#0D9488' }}>+</button>
+                                    className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">+</button>
                                 </div>
                               ) : (
-                                <span className="text-xs px-2 py-1 rounded-lg"
-                                  style={{ background: '#F1F5F9', color: '#94A3B8' }}>
+                                <span className="glass-pill text-xs font-bold px-2.5 py-1 rounded-lg text-white/75">
                                   {item.quantity}x
                                 </span>
                               )}
@@ -368,35 +356,35 @@ export function WaiterTableDetailPage() {
 
                             {/* ÜRÜN BAŞINA NOT — sarı şerit */}
                             {item.note && item.note.trim() && (
-                              <div className="mt-1.5 px-2 py-1 rounded-lg text-xs"
-                                style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
+                              <div className="mt-1.5 px-2.5 py-1.5 rounded-xl text-xs"
+                                style={{ background: 'rgba(245,158,11,0.2)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
                                 📝 {item.note}
                               </div>
                             )}
                           </div>
                         ))}
                         {order.note && (
-                          <div className="mt-2 px-2 py-1 rounded-lg text-xs"
-                            style={{ background: '#FEF3C7', color: '#92400E' }}>
+                          <div className="mt-2 mb-1 px-2.5 py-1.5 rounded-xl text-xs"
+                            style={{ background: 'rgba(245,158,11,0.2)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
                             📋 <strong>Genel:</strong> {order.note}
                           </div>
                         )}
                       </div>
 
                       {isEditable && canCancelOrders && (
-                        <div className="px-4 py-2" style={{ borderTop: '1px solid #F1F5F9' }}>
+                        <div className="px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                           <button
                             onClick={() => openCancelModal(order.id, orderLabel)}
-                            className="w-full py-2 rounded-xl text-xs font-semibold"
-                            style={{ background: '#FEF2F2', color: '#DC2626' }}>
+                            className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn"
+                            style={{ background: 'var(--danger-bg)', color: '#FECDD3', border: '1px solid rgba(251,113,133,0.45)' }}>
                             ❌ Siparişi İptal Et
                           </button>
                         </div>
                       )}
 
                       {isDelivered && (
-                        <div className="px-4 py-2" style={{ borderTop: '1px solid #F1F5F9' }}>
-                          <div className="text-xs text-center" style={{ color: '#94A3B8' }}>
+                        <div className="px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                          <div className="text-xs text-center text-white/55">
                             Teslim edildi · Adisyon kasada kapatılır
                           </div>
                         </div>
@@ -409,56 +397,56 @@ export function WaiterTableDetailPage() {
           </div>
         </>
       ) : (
-        <div className="mb-4 p-8 rounded-2xl bg-white text-center" style={{ border: '1px dashed #E2E8F0' }}>
+        <div className="glass-card mb-3 p-8 rounded-3xl text-center">
           <div className="text-4xl mb-2">🪑</div>
-          <p className="font-semibold text-sm" style={{ color: '#0F172A' }}>Masa boş</p>
-          <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+          <p className="font-serif font-bold text-base">Masa boş</p>
+          <p className="text-xs mt-1 text-white/65">
             Sipariş alarak yeni adisyon açın.
           </p>
         </div>
       )}
 
-      <div className="fixed bottom-20 left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
+      <div className="fixed bottom-[92px] left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
         <button
           onClick={() => navigate(`/garson/masa/${id}/menu`)}
-          className="w-full py-3 rounded-2xl text-sm font-bold text-white shadow-2xl"
-          style={{ background: '#0D9488' }}>
-          ➕ Sipariş Al
+          className="btn-accent w-full py-3.5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 spring-btn">
+          <i className="fa-solid fa-plus" /> Sipariş Al
         </button>
       </div>
 
       {cancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(15,23,42,0.7)' }}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-5 py-4" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h3 className="font-bold text-base" style={{ color: '#DC2626', fontFamily: 'Georgia, serif' }}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark sheet-enter w-full max-w-[520px] rounded-t-[32px] flex flex-col border-t border-white/60 text-white"
+            style={{ maxHeight: '90vh' }}>
+            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
+            <div className="px-5 pt-3 pb-3 border-b border-white/20">
+              <h3 className="font-serif font-bold text-lg" style={{ color: 'var(--danger)' }}>
                 ❌ Sipariş İptal — {cancelModal.orderLabel}
               </h3>
-              <p className="text-xs mt-1" style={{ color: '#64748B' }}>
+              <p className="text-xs mt-1 text-white/65">
                 İptal sebebini seç. Bu işlem loglanır.
               </p>
             </div>
             <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '60vh' }}>
               <div>
-                <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-white/70">
                   İptal Sebebi
                 </label>
                 <div className="space-y-1.5">
                   {CANCEL_REASON_OPTIONS.map(opt => (
                     <label key={opt.code}
-                      className="flex items-center gap-2 p-2.5 rounded-xl cursor-pointer"
+                      className="flex items-center gap-2.5 p-3 min-h-[44px] rounded-2xl cursor-pointer transition-colors"
                       style={{
-                        background: cancelReason === opt.code ? '#FEF2F2' : '#F8FAFC',
-                        border: '1px solid ' + (cancelReason === opt.code ? '#FECACA' : '#E2E8F0')
+                        background: cancelReason === opt.code ? 'var(--danger-bg)' : 'rgba(255,255,255,0.1)',
+                        border: '1px solid ' + (cancelReason === opt.code ? 'rgba(251,113,133,0.7)' : 'rgba(255,255,255,0.22)')
                       }}>
                       <input type="radio"
                         name="reason"
                         value={opt.code}
                         checked={cancelReason === opt.code}
                         onChange={() => setCancelReason(opt.code)}
-                        style={{ width: 16, height: 16 }} />
-                      <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+                        style={{ width: 16, height: 16, accentColor: '#FB7185' }} />
+                      <span className="text-sm font-semibold">
                         {opt.label}
                       </span>
                     </label>
@@ -468,29 +456,31 @@ export function WaiterTableDetailPage() {
 
               {cancelReason === 'other' && (
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                     Açıklama (zorunlu, min 3 karakter)
                   </label>
                   <textarea value={cancelText}
                     onChange={e => setCancelText(e.target.value)}
                     placeholder="İptal sebebini açıkla..."
                     rows={2}
-                    className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none"
-                    style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
+                    className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
                 </div>
               )}
             </div>
-            <div className="px-5 py-4 flex gap-2" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-5 pt-3 pb-6 flex gap-2 border-t border-white/20">
               <button onClick={() => setCancelModal(null)}
                 disabled={cancelling}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: '#F1F5F9', color: '#64748B' }}>
+                className="glass-pill flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">
                 Vazgeç
               </button>
               <button onClick={handleCancelOrder}
                 disabled={cancelling}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
-                style={{ background: cancelling ? '#475569' : '#DC2626' }}>
+                className="flex-1 py-3 rounded-full text-sm font-bold text-white spring-btn disabled:opacity-60"
+                style={{
+                  background: cancelling ? 'rgba(255,255,255,0.18)' : 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)',
+                  border: '1px solid rgba(255,255,255,0.55)',
+                  boxShadow: cancelling ? 'none' : '0 8px 20px rgba(225,29,72,0.4), inset 0 1px 1px rgba(255,255,255,0.7)'
+                }}>
                 {cancelling ? 'İptal ediliyor...' : 'Siparişi İptal Et'}
               </button>
             </div>

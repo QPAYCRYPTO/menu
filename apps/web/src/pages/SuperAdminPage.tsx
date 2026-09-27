@@ -18,6 +18,12 @@ import {
 import { OwnerManagementModal } from './superadmin/OwnerManagementModal';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
+// Warm glass rozet/buton stilleri (semantik tokenlar)
+const BADGE_SUCCESS: React.CSSProperties = { background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.4)' };
+const BADGE_WARNING: React.CSSProperties = { background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.4)' };
+const BADGE_DANGER: React.CSSProperties = { background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' };
+const BADGE_NEUTRAL: React.CSSProperties = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.22)' };
+
 export function SuperAdminPage() {
   const { accessToken, role, logout } = useAuth();
   const navigate = useNavigate();
@@ -149,70 +155,64 @@ export function SuperAdminPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen text-white">
       <Toast state={toast} />
 
       {/* HEADER — Responsive */}
-      <div className="bg-white sticky top-0 z-30" style={{ borderBottom: '1px solid #E2E8F0' }}>
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
+      <div className="sticky top-0 z-30 px-3 md:px-6 pt-3">
+        <div className="glass-panel max-w-7xl mx-auto rounded-3xl px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Logo + başlık */}
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#0F172A' }}>
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/60"
+                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
                 <span className="text-base md:text-lg">🏢</span>
               </div>
               <div className="min-w-0">
-                <h1 className="font-bold text-sm md:text-base truncate" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+                <h1 className="font-serif font-bold text-sm md:text-base truncate text-white">
                   Atlas Super Admin
                 </h1>
-                <p className="text-xs hidden sm:block" style={{ color: '#64748B' }}>{businesses.length} işletme kayıtlı</p>
+                <p className="text-xs hidden sm:block text-white/65">{businesses.length} işletme kayıtlı</p>
               </div>
             </div>
 
             {/* Desktop butonlar */}
             <div className="hidden md:flex gap-2 flex-shrink-0">
-              <button onClick={loadBusinesses} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#0F172A' }}>🔄 Yenile</button>
-              <button onClick={() => navigate('/superadmin/errors')} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#FEE2E2', color: '#991B1B' }}>⚠️ Hatalar</button>
-              <button onClick={() => setShowResetModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#FEF3C7', color: '#92400E' }}>🔑 Admin Şifre</button>
-              <button onClick={() => setShowNewModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: '#0D9488' }}>+ Yeni</button>
-              <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 rounded-xl text-sm font-semibold" style={{ background: '#FEF2F2', color: '#DC2626' }}>Çıkış</button>
+              <button onClick={loadBusinesses} className="glass-pill px-3 py-2 rounded-xl text-sm font-semibold spring-btn">🔄 Yenile</button>
+              <button onClick={() => navigate('/superadmin/errors')} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_DANGER}>⚠️ Hatalar</button>
+              <button onClick={() => setShowResetModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_WARNING}>🔑 Admin Şifre</button>
+              <button onClick={() => setShowNewModal(true)} className="btn-accent px-3 py-2 rounded-xl text-sm font-bold spring-btn">+ Yeni</button>
+              <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_DANGER}>Çıkış</button>
             </div>
 
             {/* Mobil hamburger */}
             <button onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: '#F1F5F9' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2">
-                {menuOpen ? (
-                  <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
-                ) : (
-                  <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>
-                )}
-              </svg>
+              className="glass-pill md:hidden w-9 h-9 rounded-xl flex items-center justify-center spring-btn">
+              <i className={`fa-solid ${menuOpen ? 'fa-xmark' : 'fa-bars'} text-sm`} />
             </button>
           </div>
 
           {/* Mobil menu drawer */}
           {menuOpen && (
-            <div className="md:hidden mt-3 pt-3 border-t flex flex-col gap-2" style={{ borderColor: '#E2E8F0' }}>
+            <div className="md:hidden mt-3 pt-3 border-t border-white/20 flex flex-col gap-2 fade-enter">
               <button onClick={() => { loadBusinesses(); setMenuOpen(false); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#F1F5F9', color: '#0F172A' }}>
+                className="glass-pill px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
                 🔄 Yenile
               </button>
               <button onClick={() => { navigate('/superadmin/errors'); setMenuOpen(false); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#FEE2E2', color: '#991B1B' }}>
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={BADGE_DANGER}>
                 ⚠️ Hata Logu
               </button>
               <button onClick={() => { setShowResetModal(true); setMenuOpen(false); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#FEF3C7', color: '#92400E' }}>
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={BADGE_WARNING}>
                 🔑 Admin Şifre Sıfırla
               </button>
               <button onClick={() => { setShowNewModal(true); setMenuOpen(false); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left text-white" style={{ background: '#0D9488' }}>
+                className="btn-accent px-3 py-2.5 rounded-xl text-sm font-bold text-left">
                 + Yeni İşletme
               </button>
               <button onClick={() => { logout(); navigate('/login'); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={{ background: '#FEF2F2', color: '#DC2626' }}>
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={BADGE_DANGER}>
                 Çıkış Yap
               </button>
             </div>
@@ -221,35 +221,38 @@ export function SuperAdminPage() {
       </div>
 
       {/* İSTATİSTİK KARTLARI - Responsive grid */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-6">
+      <div className="max-w-7xl mx-auto px-3 md:px-6 pt-4 md:pt-6">
         <div className="grid gap-3 mb-4 md:mb-6"
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-4" style={{ border: '1px solid #E2E8F0' }}>
-            <div className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: '#64748B' }}>Toplam İşletme</div>
-            <div className="text-xl md:text-2xl font-bold" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>{businesses.length}</div>
+          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Toplam İşletme</div>
+            <div className="font-serif text-xl md:text-2xl font-bold text-white">{businesses.length}</div>
           </div>
-          <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-4" style={{ border: '1px solid #E2E8F0' }}>
-            <div className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: '#64748B' }}>Aktif</div>
-            <div className="text-xl md:text-2xl font-bold" style={{ color: '#0D9488', fontFamily: 'Georgia, serif' }}>{businesses.filter(b => b.is_active).length}</div>
+          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Aktif</div>
+            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--success)' }}>{businesses.filter(b => b.is_active).length}</div>
           </div>
-          <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-4" style={{ border: '1px solid #E2E8F0' }}>
-            <div className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: '#64748B' }}>Pasif</div>
-            <div className="text-xl md:text-2xl font-bold" style={{ color: '#DC2626', fontFamily: 'Georgia, serif' }}>{businesses.filter(b => !b.is_active).length}</div>
+          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Pasif</div>
+            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--danger)' }}>{businesses.filter(b => !b.is_active).length}</div>
           </div>
-          <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-4" style={{ border: '1px solid #E2E8F0' }}>
-            <div className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: '#64748B' }}>Toplam Owner</div>
-            <div className="text-xl md:text-2xl font-bold" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Toplam Owner</div>
+            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--accent)' }}>
               {businesses.reduce((sum, b) => sum + Number(b.owner_count), 0)}
             </div>
           </div>
         </div>
 
-        <h2 className="font-bold text-base mb-3" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>📋 İşletmeler</h2>
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <h2 className="font-serif font-bold text-base text-white">📋 İşletmeler</h2>
+          <div className="flex-1 h-px bg-white/20" />
+        </div>
 
         {/* DESKTOP — Tablo görünümü */}
-        <div className="hidden lg:block bg-white rounded-2xl overflow-hidden mb-8" style={{ border: '1px solid #E2E8F0' }}>
-          <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', background: '#F8FAFC', color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>
+        <div className="hidden lg:block glass-dark rounded-3xl overflow-hidden mb-8">
+          <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-white/60 border-b border-white/15"
+            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', background: 'rgba(255,255,255,0.06)' }}>
             <div>İşletme</div><div>Slug</div><div>Admin E-posta</div>
             <div className="text-center">Owner</div><div className="text-center">Kat.</div><div className="text-center">Ürün</div>
             <div className="text-center">Garson</div>
@@ -257,50 +260,48 @@ export function SuperAdminPage() {
           </div>
 
           {businesses.map(b => (
-            <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm"
-              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', borderBottom: '1px solid #F1F5F9', background: b.is_active ? 'white' : '#FEF8F8' }}>
+            <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm border-b border-white/10 hover:bg-white/5 transition-colors"
+              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', background: b.is_active ? undefined : 'rgba(244,63,94,0.08)' }}>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ background: b.is_active ? '#0D9488' : '#94A3B8' }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                  style={{ background: b.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
                   {b.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div className="font-semibold truncate" style={{ color: '#0F172A' }}>{b.name}</div>
-                  <div className="text-xs" style={{ color: b.is_active ? '#0D9488' : '#DC2626' }}>{b.is_active ? '● Aktif' : '● Pasif'}</div>
+                  <div className="font-semibold truncate text-white">{b.name}</div>
+                  <div className="text-xs" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}>{b.is_active ? '● Aktif' : '● Pasif'}</div>
                 </div>
               </div>
               <div>
                 <a href={`https://www.atlasqrmenu.com/m/${b.slug}`} target="_blank" rel="noreferrer"
-                  className="text-xs font-mono truncate block" style={{ color: '#0D9488' }}>/{b.slug}</a>
+                  className="text-xs font-mono truncate block text-amber-300 hover:text-amber-200">/{b.slug}</a>
               </div>
-              <div className="text-xs truncate" style={{ color: '#64748B' }}>{b.admin_email || '-'}</div>
+              <div className="text-xs truncate text-white/65">{b.admin_email || '-'}</div>
 
               <div className="text-center">
                 <button onClick={() => setOwnerModalBusiness(b)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold active:scale-95 transition-transform"
-                  style={{ background: b.owner_count > 0 ? '#F0FDF4' : '#FEF3C7',
-                    color: b.owner_count > 0 ? '#16A34A' : '#92400E' }}
+                  className="px-2 py-1 rounded-lg text-xs font-bold spring-btn"
+                  style={b.owner_count > 0 ? BADGE_SUCCESS : BADGE_WARNING}
                   title="Owner yönetimi">
                   👤 {b.owner_count}
                 </button>
               </div>
 
-              <div className="text-center font-semibold" style={{ color: '#0F172A' }}>{b.category_count}</div>
-              <div className="text-center font-semibold" style={{ color: '#0F172A' }}>{b.product_count}</div>
+              <div className="text-center font-semibold text-white">{b.category_count}</div>
+              <div className="text-center font-semibold text-white">{b.product_count}</div>
 
               <div className="text-center">
                 <button onClick={() => toggleWaiter(b)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: b.waiter_module_enabled ? '#F0FDF4' : '#F1F5F9',
-                    color: b.waiter_module_enabled ? '#16A34A' : '#64748B' }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn"
+                  style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}
                   title={b.waiter_module_enabled ? 'Garson modülü AÇIK' : 'Garson modülü KAPALI'}>
                   {b.waiter_module_enabled ? '✅ Açık' : '⚪ Kapalı'}
                 </button>
               </div>
 
               <div className="flex justify-end">
-                <button onClick={() => toggleActive(b)} className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: b.is_active ? '#FEF2F2' : '#F0FDF4', color: b.is_active ? '#DC2626' : '#16A34A' }}>
+                <button onClick={() => toggleActive(b)} className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn"
+                  style={b.is_active ? BADGE_DANGER : BADGE_SUCCESS}>
                   {b.is_active ? 'Pasif Yap' : 'Aktif Yap'}
                 </button>
               </div>
@@ -310,7 +311,7 @@ export function SuperAdminPage() {
           {businesses.length === 0 && (
             <div className="text-center py-16">
               <div className="text-4xl mb-3">🏢</div>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>Henüz işletme yok</p>
+              <p className="text-sm text-white/60">Henüz işletme yok</p>
             </div>
           )}
         </div>
@@ -318,33 +319,33 @@ export function SuperAdminPage() {
         {/* MOBİL & TABLET — Kart görünümü */}
         <div className="lg:hidden flex flex-col gap-3 mb-8">
           {businesses.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-2xl" style={{ border: '1px solid #E2E8F0' }}>
+            <div className="glass-card text-center py-16 rounded-3xl">
               <div className="text-4xl mb-3">🏢</div>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>Henüz işletme yok</p>
+              <p className="text-sm text-white/60">Henüz işletme yok</p>
             </div>
           )}
 
           {businesses.map(b => (
-            <div key={b.id} className="bg-white rounded-2xl p-4"
-              style={{ border: '1px solid #E2E8F0', background: b.is_active ? 'white' : '#FEF8F8' }}>
+            <div key={b.id} className="glass-card rounded-3xl p-4"
+              style={b.is_active ? undefined : { background: 'rgba(244,63,94,0.14)', borderColor: 'rgba(251,113,133,0.45)' }}>
 
               {/* Üst: Avatar + İsim + Durum */}
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                  style={{ background: b.is_active ? '#0D9488' : '#94A3B8' }}>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                  style={{ background: b.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
                   {b.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm" style={{ color: '#0F172A' }}>{b.name}</div>
-                  <div className="text-xs mt-0.5" style={{ color: b.is_active ? '#0D9488' : '#DC2626' }}>
+                  <div className="font-serif font-bold text-sm text-white">{b.name}</div>
+                  <div className="text-xs mt-0.5" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}>
                     {b.is_active ? '● Aktif' : '● Pasif'}
                   </div>
                   <a href={`https://www.atlasqrmenu.com/m/${b.slug}`} target="_blank" rel="noreferrer"
-                    className="text-xs font-mono block mt-1 truncate" style={{ color: '#0D9488' }}>
+                    className="text-xs font-mono block mt-1 truncate text-amber-300">
                     /{b.slug}
                   </a>
                   {b.admin_email && (
-                    <div className="text-xs mt-1 truncate" style={{ color: '#64748B' }}>✉️ {b.admin_email}</div>
+                    <div className="text-xs mt-1 truncate text-white/65">✉️ {b.admin_email}</div>
                   )}
                 </div>
               </div>
@@ -352,19 +353,16 @@ export function SuperAdminPage() {
               {/* Sayılar grid */}
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <button onClick={() => setOwnerModalBusiness(b)}
-                  className="px-2 py-2 rounded-lg text-xs font-bold flex flex-col items-center"
-                  style={{ background: b.owner_count > 0 ? '#F0FDF4' : '#FEF3C7',
-                    color: b.owner_count > 0 ? '#16A34A' : '#92400E' }}>
+                  className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center spring-btn"
+                  style={b.owner_count > 0 ? BADGE_SUCCESS : BADGE_WARNING}>
                   <span>👤 {b.owner_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Owner</span>
                 </button>
-                <div className="px-2 py-2 rounded-lg text-xs font-bold flex flex-col items-center"
-                  style={{ background: '#F1F5F9', color: '#0F172A' }}>
+                <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-black/25 border border-white/15 text-white">
                   <span>📁 {b.category_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Kategori</span>
                 </div>
-                <div className="px-2 py-2 rounded-lg text-xs font-bold flex flex-col items-center"
-                  style={{ background: '#F1F5F9', color: '#0F172A' }}>
+                <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-black/25 border border-white/15 text-white">
                   <span>🛒 {b.product_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Ürün</span>
                 </div>
@@ -373,15 +371,13 @@ export function SuperAdminPage() {
               {/* Aksiyonlar */}
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => toggleWaiter(b)}
-                  className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold"
-                  style={{ background: b.waiter_module_enabled ? '#F0FDF4' : '#F1F5F9',
-                    color: b.waiter_module_enabled ? '#16A34A' : '#64748B' }}>
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn"
+                  style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}>
                   {b.waiter_module_enabled ? '✅ Garson Açık' : '⚪ Garson Kapalı'}
                 </button>
                 <button onClick={() => toggleActive(b)}
-                  className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold"
-                  style={{ background: b.is_active ? '#FEF2F2' : '#F0FDF4',
-                    color: b.is_active ? '#DC2626' : '#16A34A' }}>
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn"
+                  style={b.is_active ? BADGE_DANGER : BADGE_SUCCESS}>
                   {b.is_active ? 'Pasif Yap' : 'Aktif Yap'}
                 </button>
               </div>
@@ -392,56 +388,56 @@ export function SuperAdminPage() {
 
       {/* YENİ İŞLETME MODAL — mobile uyumlu */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
-            <div className="px-5 md:px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>Yeni İşletme Ekle</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden max-h-[95vh] flex flex-col">
+            <div className="px-5 md:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg text-white">Yeni İşletme Ekle</h2>
               <button onClick={() => { setShowNewModal(false); setFieldErrors({}); }}
-                className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
             <div className="p-5 md:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>İşletme Adı</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">İşletme Adı</label>
                 <input value={newForm.business_name} onChange={(e) => setNewForm(p => ({ ...p, business_name: e.target.value }))}
-                  placeholder="Örn: Harika Kafe" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A' }} />
+                  placeholder="Örn: Harika Kafe" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Slug (Menü URL'i)</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Slug (Menü URL'i)</label>
                 <input value={newForm.slug} onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="Örn: harika-kafe" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: `1.5px solid ${fieldErrors.slug ? '#DC2626' : '#E2E8F0'}`, background: '#F8FAFC', color: '#0F172A' }} />
-                {fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{ color: '#DC2626' }}>⚠️ {fieldErrors.slug}</p>}
-                {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{ color: '#0D9488' }}>✅ Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
+                  placeholder="Örn: harika-kafe" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
+                  style={fieldErrors.slug ? { borderColor: 'var(--danger)' } : undefined} />
+                {fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ {fieldErrors.slug}</p>}
+                {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--success)' }}>✅ Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Admin E-posta</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Admin E-posta</label>
                 <input type="email" value={newForm.email} onChange={(e) => setNewForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="admin@kafe.com" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: `1.5px solid ${fieldErrors.email ? '#DC2626' : '#E2E8F0'}`, background: '#F8FAFC', color: '#0F172A' }} />
-                {fieldErrors.email && <p className="text-xs mt-1 font-medium" style={{ color: '#DC2626' }}>⚠️ {fieldErrors.email}</p>}
+                  placeholder="admin@kafe.com" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
+                  style={fieldErrors.email ? { borderColor: 'var(--danger)' } : undefined} />
+                {fieldErrors.email && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ {fieldErrors.email}</p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Şifre</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Şifre</label>
                 <div style={{ position: 'relative' }}>
                   <input type={showNewPassword ? 'text' : 'password'} value={newForm.password}
                     onChange={(e) => setNewForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="Min 8 karakter" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ border: `1.5px solid ${fieldErrors.password ? '#DC2626' : '#E2E8F0'}`, background: '#F8FAFC', color: '#0F172A', paddingRight: 44, boxSizing: 'border-box' }} />
+                    placeholder="Min 8 karakter" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
+                    style={{ ...(fieldErrors.password ? { borderColor: 'var(--danger)' } : {}), paddingRight: 44, boxSizing: 'border-box' }} />
                   <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>
                     {showNewPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
-                {fieldErrors.password && <p className="text-xs mt-1 font-medium" style={{ color: '#DC2626' }}>⚠️ {fieldErrors.password}</p>}
+                {fieldErrors.password && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ {fieldErrors.password}</p>}
               </div>
             </div>
-            <div className="px-5 md:px-6 py-4 flex gap-3 flex-shrink-0" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-5 md:px-6 py-4 flex gap-3 flex-shrink-0 border-t border-white/15">
               <button onClick={() => { setShowNewModal(false); setFieldErrors({}); }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#64748B' }}>İptal</button>
+                className="glass-pill flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">İptal</button>
               <button onClick={createBusiness} disabled={loading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
-                style={{ background: loading ? '#475569' : '#0D9488', cursor: loading ? 'not-allowed' : 'pointer' }}>
+                className="btn-accent flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn">
                 {loading ? 'Oluşturuluyor...' : 'Oluştur'}
               </button>
             </div>
@@ -451,30 +447,31 @@ export function SuperAdminPage() {
 
       {/* ADMIN ŞİFRE SIFIRLA MODAL — mobile uyumlu */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-5 md:px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>🔑 Admin Şifre Sıfırla</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-5 md:px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg text-white">🔑 Admin Şifre Sıfırla</h2>
               <button onClick={() => setShowResetModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
             <div className="p-5 md:p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>İşletme Seç</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">İşletme Seç</label>
                 <select value={resetForm.businessId} onChange={(e) => setResetForm(p => ({ ...p, businessId: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A' }}>
+                  className="glass-input w-full px-4 py-2.5 rounded-xl text-sm">
                   <option value="">Seçin</option>
                   {businesses.map(b => <option key={b.id} value={b.id}>{b.name} ({b.admin_email})</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>Yeni Şifre</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Yeni Şifre</label>
                 <div style={{ position: 'relative' }}>
                   <input type={showResetPassword ? 'text' : 'password'} value={resetForm.new_password}
                     onChange={(e) => setResetForm(p => ({ ...p, new_password: e.target.value }))}
-                    placeholder="Min 8 karakter" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', paddingRight: 44, boxSizing: 'border-box' }} />
+                    placeholder="Min 8 karakter" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
+                    style={{ paddingRight: 44, boxSizing: 'border-box' }} />
                   <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>
                     {showResetPassword ? '🙈' : '👁️'}
@@ -482,11 +479,11 @@ export function SuperAdminPage() {
                 </div>
               </div>
             </div>
-            <div className="px-5 md:px-6 py-4 flex gap-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-5 md:px-6 py-4 flex gap-3 border-t border-white/15">
               <button onClick={() => setShowResetModal(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#64748B' }}>İptal</button>
+                className="glass-pill flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">İptal</button>
               <button onClick={resetAdminPassword}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#D97706' }}>Şifreyi Güncelle</button>
+                className="btn-accent flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn">Şifreyi Güncelle</button>
             </div>
           </div>
         </div>

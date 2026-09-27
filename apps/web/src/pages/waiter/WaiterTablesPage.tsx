@@ -67,36 +67,37 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: 'rgba(15,23,42,0.7)' }} onClick={onClose}>
-      <div className="w-full bg-white rounded-t-3xl p-6 max-w-lg"
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+      onClick={onClose}>
+      <div className="glass-dark sheet-enter w-full max-w-[520px] rounded-t-[32px] border-t border-white/60 text-white px-5 pb-6"
         onClick={e => e.stopPropagation()}>
-        <h3 className="font-bold text-base mb-1" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 mb-3" />
+        <h3 className="font-serif font-bold text-lg mb-1 flex items-center gap-2">
           🔄 Masa Taşı
         </h3>
-        <p className="text-xs mb-4" style={{ color: '#64748B' }}>
-          <strong>{table.name}</strong> masasını boş bir masaya taşı
+        <p className="text-xs mb-4 text-white/65">
+          <strong className="text-white">{table.name}</strong> masasını boş bir masaya taşı
         </p>
 
         {emptyTables.length === 0 ? (
-          <div className="text-center py-6 rounded-xl mb-4"
-            style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-            <p className="text-sm font-semibold" style={{ color: '#DC2626' }}>Boş masa yok</p>
+          <div className="text-center py-6 rounded-2xl mb-4"
+            style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.45)' }}>
+            <p className="text-sm font-bold" style={{ color: 'var(--danger)' }}>Boş masa yok</p>
           </div>
         ) : (
           <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
             {emptyTables.map(t => (
               <label key={t.id}
-                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer"
+                className="flex items-center gap-3 p-3 min-h-[48px] rounded-2xl cursor-pointer transition-colors"
                 style={{
-                  background: targetTableId === t.id ? '#F0FDFA' : '#F8FAFC',
-                  border: `1.5px solid ${targetTableId === t.id ? '#0D9488' : '#E2E8F0'}`
+                  background: targetTableId === t.id ? 'var(--accent-soft)' : 'rgba(255,255,255,0.1)',
+                  border: `1.5px solid ${targetTableId === t.id ? 'var(--accent)' : 'rgba(255,255,255,0.22)'}`
                 }}>
                 <input type="radio" name="target" value={t.id}
                   checked={targetTableId === t.id}
                   onChange={() => setTargetTableId(t.id)}
-                  style={{ width: 18, height: 18 }} />
-                <span className="font-semibold text-sm" style={{ color: '#0F172A' }}>
+                  style={{ width: 18, height: 18, accentColor: '#FF7A29' }} />
+                <span className="font-bold text-sm">
                   🟢 {t.name}
                 </span>
               </label>
@@ -106,12 +107,10 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
 
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: '#F1F5F9', color: '#64748B' }}>İptal</button>
+            className="glass-pill flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">İptal</button>
           <button onClick={handleMove}
             disabled={loading || !targetTableId || emptyTables.length === 0}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
-            style={{ background: loading || !targetTableId ? '#94A3B8' : '#0D9488' }}>
+            className="btn-accent flex-1 py-3 rounded-full text-sm font-bold spring-btn">
             {loading ? 'Taşınıyor...' : 'Taşı'}
           </button>
         </div>
@@ -153,41 +152,42 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: 'rgba(15,23,42,0.7)' }} onClick={onClose}>
-      <div className="w-full bg-white rounded-t-3xl p-6 max-w-lg"
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+      onClick={onClose}>
+      <div className="glass-dark sheet-enter w-full max-w-[520px] rounded-t-[32px] border-t border-white/60 text-white px-5 pb-6"
         onClick={e => e.stopPropagation()}>
-        <h3 className="font-bold text-base mb-1" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 mb-3" />
+        <h3 className="font-serif font-bold text-lg mb-1 flex items-center gap-2">
           🔗 Masa Birleştir
         </h3>
-        <p className="text-xs mb-4" style={{ color: '#64748B' }}>
-          <strong>{table.name}</strong> masasını başka bir masayla birleştir.
+        <p className="text-xs mb-4 text-white/65">
+          <strong className="text-white">{table.name}</strong> masasını başka bir masayla birleştir.
         </p>
 
         {occupiedTables.length === 0 ? (
-          <div className="text-center py-6 rounded-xl mb-4"
-            style={{ background: '#FEF3C7', border: '1px solid #FDE68A' }}>
-            <p className="text-sm font-semibold" style={{ color: '#92400E' }}>Birleştirilecek masa yok</p>
-            <p className="text-xs mt-1" style={{ color: '#64748B' }}>Başka açık masa bulunmuyor.</p>
+          <div className="text-center py-6 rounded-2xl mb-4"
+            style={{ background: 'var(--warning-bg)', border: '1px solid rgba(251,191,36,0.45)' }}>
+            <p className="text-sm font-bold" style={{ color: 'var(--warning)' }}>Birleştirilecek masa yok</p>
+            <p className="text-xs mt-1 text-white/65">Başka açık masa bulunmuyor.</p>
           </div>
         ) : (
           <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
             {occupiedTables.map(t => (
               <label key={t.id}
-                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer"
+                className="flex items-center gap-3 p-3 min-h-[48px] rounded-2xl cursor-pointer transition-colors"
                 style={{
-                  background: targetSessionId === t.session_id ? '#FFFBEB' : '#F8FAFC',
-                  border: `1.5px solid ${targetSessionId === t.session_id ? '#F59E0B' : '#E2E8F0'}`
+                  background: targetSessionId === t.session_id ? 'var(--accent-soft)' : 'rgba(255,255,255,0.1)',
+                  border: `1.5px solid ${targetSessionId === t.session_id ? 'var(--accent)' : 'rgba(255,255,255,0.22)'}`
                 }}>
                 <input type="radio" name="target" value={t.session_id ?? ''}
                   checked={targetSessionId === t.session_id}
                   onChange={() => setTargetSessionId(t.session_id ?? '')}
-                  style={{ width: 18, height: 18 }} />
+                  style={{ width: 18, height: 18, accentColor: '#FF7A29' }} />
                 <div className="flex-1">
-                  <span className="font-semibold text-sm" style={{ color: '#0F172A' }}>
+                  <span className="font-bold text-sm">
                     🔴 {t.name}
                   </span>
-                  <span className="text-xs ml-2" style={{ color: '#64748B' }}>
+                  <span className="text-xs ml-2 text-white/65">
                     {formatPrice(t.total_int)} · {t.order_count} sipariş
                   </span>
                 </div>
@@ -196,18 +196,17 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
           </div>
         )}
 
-        <div className="p-3 rounded-xl mb-4 text-xs" style={{ background: '#FEF3C7', color: '#92400E' }}>
-          ⚠️ <strong>{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.
+        <div className="p-3 rounded-2xl mb-4 text-xs"
+          style={{ background: 'var(--warning-bg)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
+          ⚠️ <strong className="text-white">{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.
         </div>
 
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: '#F1F5F9', color: '#64748B' }}>İptal</button>
+            className="glass-pill flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">İptal</button>
           <button onClick={handleMerge}
             disabled={loading || !targetSessionId || occupiedTables.length === 0}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
-            style={{ background: loading || !targetSessionId ? '#94A3B8' : '#F59E0B' }}>
+            className="btn-accent flex-1 py-3 rounded-full text-sm font-bold spring-btn">
             {loading ? 'Birleştiriliyor...' : 'Birleştir'}
           </button>
         </div>
@@ -228,10 +227,9 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
   const orderCount = tables.reduce((sum, t) => sum + t.order_count, 0);
 
   return (
-    <div style={{
-      background: '#EFF6FF',
-      border: '2px solid #3B82F6',
-      borderRadius: 16,
+    <div className="glass-card rounded-3xl text-white" style={{
+      background: 'rgba(14,165,233,0.2)',
+      borderColor: 'rgba(125,211,252,0.6)',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column'
@@ -239,54 +237,55 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
       {/* Header */}
       <div style={{
         padding: '8px 14px',
-        background: '#1D4ED8',
-        color: 'white',
-        fontWeight: 700,
+        background: 'rgba(14,165,233,0.35)',
+        borderBottom: '1px solid rgba(125,211,252,0.4)',
+        color: '#E0F2FE',
+        fontWeight: 800,
         fontSize: 11,
         textTransform: 'uppercase',
-        letterSpacing: '0.05em',
+        letterSpacing: '0.06em',
       }}>
         🔵 BİRLEŞİK MASA GRUBU
       </div>
 
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 14 }}>
         {/* Masa isimleri */}
         {tables.map(t => (
-          <div key={t.id} style={{
-            fontSize: 20, fontWeight: 700, color: '#1D4ED8',
-            fontFamily: 'Georgia, serif', lineHeight: 1.3
+          <div key={t.id} className="font-serif" style={{
+            fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1.3
           }}>
             {t.name}
           </div>
         ))}
 
-        <div style={{ height: 1, background: '#BFDBFE', margin: '10px 0' }} />
+        <div style={{ height: 1, background: 'rgba(125,211,252,0.35)', margin: '10px 0' }} />
 
         {/* Adisyon */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '6px 10px', background: 'white', borderRadius: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Toplam Adisyon</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: '#1D4ED8' }}>
+          padding: '7px 10px', background: 'rgba(0,0,0,0.28)', borderRadius: 12, marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Toplam Adisyon</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--info)' }}>
             {formatPrice(totalInt)}
           </span>
         </div>
 
-        <div style={{ padding: '5px 8px', background: 'white', borderRadius: 8,
+        <div style={{ padding: '5px 8px', background: 'rgba(0,0,0,0.28)', borderRadius: 12,
           textAlign: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Toplam Sipariş
           </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{orderCount}</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{orderCount}</div>
         </div>
 
         {/* Her masaya git linkleri */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {tables.map(t => (
             <Link key={t.id} to={`/garson/masa/${t.id}`}
+              className="glass-pill spring-btn"
               style={{
-                textDecoration: 'none', padding: '8px 10px',
-                background: '#DBEAFE', borderRadius: 8,
-                fontSize: 12, fontWeight: 600, color: '#1D4ED8', textAlign: 'center',
+                textDecoration: 'none', padding: '9px 10px',
+                borderRadius: 14, minHeight: 36,
+                fontSize: 12, fontWeight: 700, textAlign: 'center',
                 display: 'block'
               }}>
               📋 {t.name} — Adisyon Aç
@@ -297,18 +296,17 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
 
       {/* Operasyon butonları */}
       {(canTransfer || canMerge) && tables[0] && (
-        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid #BFDBFE', display: 'flex', gap: 6 }}>
+        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid rgba(125,211,252,0.35)', display: 'flex', gap: 6 }}>
           {canTransfer && (
             <button onClick={() => onMove(tables[0])}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn">
               🔄 Taşı
             </button>
           )}
           {canMerge && (
             <button onClick={() => onMerge(tables[0])}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: '#FFFBEB', color: '#B45309' }}>
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn"
+              style={{ background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
               🔗 Ekle
             </button>
           )}
@@ -331,72 +329,76 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
   const duration = isOccupied && table.opened_at ? useDuration(table.opened_at) : null;
 
   const colors = hasCall
-    ? { bg: '#FEE2E2', border: '#DC2626', accent: '#DC2626' }
+    ? { bg: 'rgba(244,63,94,0.3)', border: 'rgba(251,113,133,0.9)', accent: 'var(--danger)', header: 'rgba(225,29,72,0.55)' }
     : isOccupied
-    ? { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626' }
-    : { bg: '#F0FDF4', border: '#A7F3D0', accent: '#059669' };
+    ? { bg: 'rgba(244,63,94,0.18)', border: 'rgba(251,113,133,0.5)', accent: 'var(--danger)', header: 'rgba(244,63,94,0.3)' }
+    : { bg: 'rgba(16,185,129,0.18)', border: 'rgba(52,211,153,0.5)', accent: 'var(--success)', header: 'rgba(16,185,129,0.3)' };
 
   return (
-    <div style={{
+    <div className="glass-card glass-card-hover rounded-3xl text-white" style={{
       background: colors.bg,
-      border: `2px solid ${colors.border}`,
-      borderRadius: 16,
-      overflow: 'hidden',
+      borderColor: colors.border,
+      borderWidth: hasCall ? 2 : 1,
+      overflow: 'visible',
       display: 'flex',
       flexDirection: 'column',
       position: 'relative'
     }}>
       {hasCall && (
-        <div style={{
+        <div className="animate-pulse" style={{
           position: 'absolute', top: -8, right: -8,
-          width: 28, height: 28, borderRadius: '50%',
-          background: '#DC2626', color: 'white',
+          width: 30, height: 30, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #FB7185, #E11D48)', color: 'white',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: '0 6px 14px rgba(225,29,72,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14, zIndex: 1
         }}>🔔</div>
       )}
 
       <div style={{
-        padding: '8px 14px', background: colors.accent, color: 'white',
-        fontWeight: 700, fontSize: 11, textTransform: 'uppercase',
-        letterSpacing: '0.05em',
+        padding: '8px 14px', background: colors.header, color: 'white',
+        borderBottom: `1px solid ${colors.border}`,
+        borderTopLeftRadius: 23, borderTopRightRadius: 23,
+        fontWeight: 800, fontSize: 11, textTransform: 'uppercase',
+        letterSpacing: '0.06em',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
       }}>
         <span>{hasCall ? '🔔 ÇAĞRI' : isOccupied ? '● Dolu' : '○ Boş'}</span>
         {isOccupied && duration && (
-          <span style={{ fontFamily: 'monospace' }}>⏱ {duration}</span>
+          <span className="font-mono text-white/90">⏱ {duration}</span>
         )}
       </div>
 
-      <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none', flex: 1 }}>
-        <div style={{ padding: 16 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 20, color: '#0F172A',
-            fontFamily: 'Georgia, serif', lineHeight: 1.1, marginBottom: 12 }}>
+      <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none', flex: 1, color: 'inherit' }}>
+        <div style={{ padding: 14 }}>
+          <h3 className="font-serif" style={{ fontWeight: 700, fontSize: 20, color: '#fff',
+            lineHeight: 1.1, marginBottom: 12 }}>
             {table.name}
           </h3>
 
           {isOccupied && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', padding: '6px 10px', background: 'white', borderRadius: 8 }}>
-                <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Adisyon</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: colors.accent }}>
+                alignItems: 'center', padding: '7px 10px', background: 'rgba(0,0,0,0.28)', borderRadius: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Adisyon</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#FCD34D' }}>
                   {formatPrice(table.total_int)}
                 </span>
               </div>
-              <div style={{ padding: '5px 8px', background: 'white', borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
+              <div style={{ padding: '5px 8px', background: 'rgba(0,0,0,0.28)', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Sipariş
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{table.order_count}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{table.order_count}</div>
               </div>
             </div>
           )}
 
           {!isOccupied && (
             <div style={{ padding: '14px 8px', textAlign: 'center',
-              background: 'white', borderRadius: 10, border: '1px dashed #A7F3D0' }}>
-              <div style={{ fontSize: 11, color: '#065F46', fontWeight: 600 }}>Müşteri bekleniyor</div>
+              background: 'rgba(0,0,0,0.2)', borderRadius: 14, border: '1px dashed rgba(52,211,153,0.6)' }}>
+              <div style={{ fontSize: 11, color: colors.accent, fontWeight: 700 }}>Müşteri bekleniyor</div>
             </div>
           )}
         </div>
@@ -404,29 +406,28 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
 
       {/* Operasyon butonları */}
       {isOccupied && (canTransfer || canMerge) && (
-        <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 6 }}>
+        <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.16)', display: 'flex', gap: 6 }}>
           {canTransfer && (
             <button onClick={e => { e.preventDefault(); onMove(); }}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: '#EFF6FF', color: '#1D4ED8' }}>
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn"
+              style={{ background: 'var(--info-bg)', color: '#E0F2FE', borderColor: 'rgba(125,211,252,0.45)' }}>
               🔄 Taşı
             </button>
           )}
           {canMerge && (
             <button onClick={e => { e.preventDefault(); onMerge(); }}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={{ background: '#FFFBEB', color: '#B45309' }}>
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn"
+              style={{ background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
               🔗 Birleştir
             </button>
           )}
         </div>
       )}
 
-      <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.04)',
-        background: 'rgba(255,255,255,0.5)' }}>
-        <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none' }}>
-          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700,
-            color: isOccupied ? '#0F172A' : '#059669' }}>
+      <div style={{ padding: '8px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.16)' }}>
+        <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none' }}
+          className={`${isOccupied ? 'glass-pill' : 'btn-accent'} spring-btn flex items-center justify-center min-h-[38px] rounded-full`}>
+          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#fff' }}>
             {isOccupied ? '📋 Adisyonu Aç' : '➕ Sipariş Al'}
           </div>
         </Link>
@@ -507,69 +508,66 @@ export function WaiterTablesPage() {
   const totalOpen = tables.reduce((sum, t) => sum + (t.total_int || 0), 0);
 
   return (
-    <div>
+    <div className="text-white">
       {toast && (
-        <div className="fixed top-20 left-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg mx-auto"
+        <div className="fixed top-24 left-4 right-4 z-50 glass-panel px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter"
           style={{
-            background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4',
-            color: toast.type === 'error' ? '#DC2626' : '#16A34A',
-            border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`,
+            background: toast.type === 'error' ? 'rgba(225,29,72,0.85)' : 'rgba(5,150,105,0.85)',
+            color: '#fff',
             maxWidth: 480
           }}>
           {toast.message}
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-lg" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+      <div className="glass-panel rounded-3xl px-4 py-3 flex items-center justify-between mb-3">
+        <h2 className="font-serif font-bold text-lg flex items-center gap-2">
           🍽️ Masalar
         </h2>
         <button onClick={() => loadTables()}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: '#F1F5F9', color: '#64748B' }}>
+          className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn">
           🔄 Yenile
         </button>
       </div>
 
       {/* İstatistikler */}
       {tables.length > 0 && (
-        <div className="flex gap-2 mb-4 flex-wrap">
-          <div className="px-3 py-1.5 rounded-xl" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
-            <span className="text-xs font-semibold" style={{ color: '#065F46' }}>🟢 Boş: {emptyCount}</span>
+        <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
+          <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--success-bg)', borderColor: 'rgba(52,211,153,0.5)' }}>
+            <span className="text-xs font-bold" style={{ color: '#A7F3D0' }}>🟢 Boş: {emptyCount}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-xl" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-            <span className="text-xs font-semibold" style={{ color: '#991B1B' }}>🔴 Dolu: {busyCount}</span>
+          <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--danger-bg)', borderColor: 'rgba(251,113,133,0.5)' }}>
+            <span className="text-xs font-bold" style={{ color: '#FECDD3' }}>🔴 Dolu: {busyCount}</span>
           </div>
           {mergedCount > 0 && (
-            <div className="px-3 py-1.5 rounded-xl" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <span className="text-xs font-semibold" style={{ color: '#1D4ED8' }}>🔵 Birleşik: {mergedCount} grup</span>
+            <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--info-bg)', borderColor: 'rgba(125,211,252,0.5)' }}>
+              <span className="text-xs font-bold" style={{ color: '#E0F2FE' }}>🔵 Birleşik: {mergedCount} grup</span>
             </div>
           )}
           {totalOpen > 0 && (
-            <div className="px-3 py-1.5 rounded-xl" style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-              <span className="text-xs font-semibold" style={{ color: '#0C4A6E' }}>💰 {formatPrice(totalOpen)}</span>
+            <div className="btn-accent flex-shrink-0 px-3 py-1.5 rounded-2xl">
+              <span className="text-xs font-extrabold">💰 {formatPrice(totalOpen)}</span>
             </div>
           )}
         </div>
       )}
 
       {loading && tables.length === 0 && (
-        <div className="text-center py-16">
-          <div className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-3"
-            style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
-          <p className="text-sm" style={{ color: '#64748B' }}>Masalar yükleniyor...</p>
+        <div className="glass-panel rounded-3xl text-center py-14">
+          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+          <p className="text-sm font-semibold text-white/80">Masalar yükleniyor...</p>
         </div>
       )}
 
       {!loading && tables.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-2xl" style={{ border: '1px dashed #E2E8F0' }}>
+        <div className="glass-card text-center py-14 rounded-3xl">
           <div className="text-4xl mb-3">🪑</div>
-          <p className="text-sm" style={{ color: '#94A3B8' }}>Henüz masa yok</p>
+          <p className="text-sm text-white/70">Henüz masa yok</p>
         </div>
       )}
 
       {tables.length > 0 && (
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
           {/* Birleşik masa grupları — tek kart */}
           {[...mergeGroupMap.entries()].map(([groupId, groupTables]) => (
             <MergeGroupCard

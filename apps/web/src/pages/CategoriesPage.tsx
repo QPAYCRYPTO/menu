@@ -95,12 +95,14 @@ export function CategoriesPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl text-white">
       <Toast state={toast} />
 
       {/* Ekle */}
-      <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm" style={{border: '1px solid #E2E8F0'}}>
-        <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{color: '#64748B'}}>Yeni Kategori</h2>
+      <div className="glass-panel rounded-3xl p-6 mb-6">
+        <h2 className="text-[11px] font-bold mb-4 uppercase tracking-wider text-white/70 flex items-center gap-2">
+          <i className="fa-solid fa-folder-plus text-amber-300" /> Yeni Kategori
+        </h2>
         <div className="flex gap-3">
           <input
             value={newName}
@@ -108,15 +110,13 @@ export function CategoriesPage() {
             onKeyDown={e => e.key === 'Enter' && addCategory()}
             placeholder="Kategori adı..."
             maxLength={120}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
-            style={{border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A'}}
+            className="glass-input flex-1 min-w-0 px-4 py-2.5 rounded-2xl text-sm"
           />
           <button
             onClick={addCategory}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
-            style={{background: '#0F172A'}}
+            className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 spring-btn flex-shrink-0"
           >
-            + Ekle
+            <i className="fa-solid fa-plus" /> Ekle
           </button>
         </div>
       </div>
@@ -124,46 +124,50 @@ export function CategoriesPage() {
       {/* Liste */}
       <div className="space-y-3">
         {sortedItems.map((item, index) => (
-          <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3"
-            style={{border: `1px solid ${item.is_active ? '#E2E8F0' : '#FEE2E2'}`, opacity: item.is_active ? 1 : 0.7}}>
+          <div key={item.id} className="glass-card rounded-3xl p-4 flex items-center gap-3"
+            style={{borderColor: item.is_active ? undefined : 'var(--danger)', opacity: item.is_active ? 1 : 0.75}}>
 
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-              style={{background: item.is_active ? '#CCFBF1' : '#FEE2E2', color: item.is_active ? '#0F766E' : '#DC2626'}}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold flex-shrink-0"
+              style={item.is_active
+                ? {background: 'var(--accent-soft)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)'}
+                : {background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>
               {item.sort_order}
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {editingId === item.id ? (
                 <input
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
                   autoFocus
-                  className="w-full px-3 py-1.5 rounded-lg text-sm outline-none"
-                  style={{border: '1.5px solid #0D9488', background: '#F8FAFC'}}
+                  className="glass-input w-full px-3 py-1.5 rounded-xl text-sm"
+                  style={{borderColor: 'var(--accent)'}}
                 />
               ) : (
-                <div>
-                  <span className="font-semibold text-sm" style={{color: '#0F172A'}}>{item.name}</span>
-                  {!item.is_active && <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{background: '#FEE2E2', color: '#DC2626'}}>Pasif</span>}
+                <div className="truncate">
+                  <span className="font-serif font-bold text-sm">{item.name}</span>
+                  {!item.is_active && <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold" style={{background: 'var(--danger-bg)', color: 'var(--danger)'}}>Pasif</span>}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {editingId === item.id ? (
                 <>
-                  <button onClick={() => saveCategory(item)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{background: '#0D9488'}}>Kaydet</button>
-                  <button onClick={() => { setEditingId(null); setEditingName(''); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background: '#F1F5F9', color: '#64748B'}}>İptal</button>
+                  <button onClick={() => saveCategory(item)} className="btn-accent px-3 py-1.5 rounded-xl text-xs font-bold spring-btn">Kaydet</button>
+                  <button onClick={() => { setEditingId(null); setEditingName(''); }} className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn">İptal</button>
                 </>
               ) : (
                 <>
                   <button onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{background: '#F1F5F9', color: '#0F172A'}}>
-                    Düzenle
+                    className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn">
+                    <i className="fa-solid fa-pen text-[10px]" /> Düzenle
                   </button>
                   <button onClick={() => toggleActive(item)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                    style={{background: item.is_active ? '#FEF2F2' : '#F0FDF4', color: item.is_active ? '#DC2626' : '#16A34A'}}>
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
+                    style={item.is_active
+                      ? {background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}
+                      : {background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)'}}>
                     {item.is_active ? 'Pasif' : 'Aktif'}
                   </button>
                 </>
@@ -171,21 +175,21 @@ export function CategoriesPage() {
 
               <div className="flex flex-col gap-1">
                 <button disabled={index === 0} onClick={() => moveCategory(index, 'up')}
-                  className="w-6 h-5 rounded flex items-center justify-center text-xs disabled:opacity-30"
-                  style={{background: '#F1F5F9', color: '#64748B'}}>↑</button>
+                  className="glass-pill w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
+                  aria-label="Yukarı taşı"><i className="fa-solid fa-chevron-up" /></button>
                 <button disabled={index === sortedItems.length - 1} onClick={() => moveCategory(index, 'down')}
-                  className="w-6 h-5 rounded flex items-center justify-center text-xs disabled:opacity-30"
-                  style={{background: '#F1F5F9', color: '#64748B'}}>↓</button>
+                  className="glass-pill w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
+                  aria-label="Aşağı taşı"><i className="fa-solid fa-chevron-down" /></button>
               </div>
             </div>
           </div>
         ))}
 
         {sortedItems.length === 0 && (
-          <div className="text-center py-16 rounded-2xl" style={{background: 'white', border: '1px dashed #E2E8F0'}}>
+          <div className="glass-card text-center py-16 rounded-3xl border-dashed">
             <div className="text-4xl mb-3">📂</div>
-            <p className="text-sm" style={{color: '#94A3B8'}}>Henüz kategori yok</p>
-            <p className="text-xs mt-1" style={{color: '#CBD5E1'}}>Yukarıdan yeni kategori ekleyin</p>
+            <p className="text-sm text-white/75">Henüz kategori yok</p>
+            <p className="text-xs mt-1 text-white/50">Yukarıdan yeni kategori ekleyin</p>
           </div>
         )}
       </div>

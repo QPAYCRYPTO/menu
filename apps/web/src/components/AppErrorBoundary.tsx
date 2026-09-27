@@ -67,18 +67,15 @@ export class AppErrorBoundary extends Component<Props, State> {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '24px',
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif'
+          color: 'var(--text)'
         }}
       >
         <div
+          className="glass-dark rounded-3xl fade-enter"
           style={{
             maxWidth: '480px',
             width: '100%',
-            background: 'white',
-            borderRadius: '16px',
             padding: '40px 32px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
             textAlign: 'center'
           }}
         >
@@ -92,10 +89,11 @@ export class AppErrorBoundary extends Component<Props, State> {
           </div>
 
           <h1
+            className="font-serif"
             style={{
-              fontSize: '20px',
+              fontSize: '22px',
               fontWeight: 700,
-              color: '#0F172A',
+              color: 'var(--text)',
               marginBottom: '12px'
             }}
           >
@@ -105,7 +103,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           <p
             style={{
               fontSize: '14px',
-              color: '#64748B',
+              color: 'var(--text-muted)',
               marginBottom: '24px',
               lineHeight: 1.5
             }}
@@ -117,13 +115,13 @@ export class AppErrorBoundary extends Component<Props, State> {
           {this.state.errorMessage && (
             <div
               style={{
-                background: '#FEF2F2',
-                border: '1px solid #FECACA',
-                borderRadius: '8px',
+                background: 'var(--danger-bg)',
+                border: '1px solid rgba(251,113,133,0.45)',
+                borderRadius: '14px',
                 padding: '12px',
                 marginBottom: '20px',
                 fontSize: '12px',
-                color: '#991B1B',
+                color: '#FECDD3',
                 fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace',
                 wordBreak: 'break-word',
                 textAlign: 'left'
@@ -143,12 +141,10 @@ export class AppErrorBoundary extends Component<Props, State> {
           >
             <button
               onClick={this.handleReload}
+              className="btn-accent spring-btn"
               style={{
                 padding: '10px 20px',
-                background: '#0D9488',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
+                borderRadius: '999px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer'
@@ -158,12 +154,10 @@ export class AppErrorBoundary extends Component<Props, State> {
             </button>
             <button
               onClick={this.handleGoHome}
+              className="glass-pill spring-btn"
               style={{
                 padding: '10px 20px',
-                background: 'white',
-                color: '#0F172A',
-                border: '1.5px solid #E2E8F0',
-                borderRadius: '8px',
+                borderRadius: '999px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer'

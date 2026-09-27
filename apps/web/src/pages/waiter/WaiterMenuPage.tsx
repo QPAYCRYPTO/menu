@@ -248,10 +248,9 @@ export function WaiterMenuPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <div className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-3"
-          style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
-        <p className="text-sm" style={{ color: '#64748B' }}>Menü yükleniyor...</p>
+      <div className="glass-panel rounded-3xl text-center py-14 text-white">
+        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+        <p className="text-sm font-semibold text-white/80">Menü yükleniyor...</p>
       </div>
     );
   }
@@ -260,71 +259,60 @@ export function WaiterMenuPage() {
   const isFavoritesView = selectedCatId === FAVORITES_CAT_ID;
 
   return (
-    <div style={{ paddingBottom: cart.length > 0 ? 100 : 24 }}>
+    <div className="text-white" style={{ paddingBottom: cart.length > 0 ? 100 : 24 }}>
 
       {toast && (
-        <div className="fixed top-20 left-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-lg mx-auto"
+        <div className="fixed top-24 left-4 right-4 z-[60] glass-panel px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter"
           style={{
-            background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4',
-            color: toast.type === 'error' ? '#DC2626' : '#16A34A',
-            border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`,
+            background: toast.type === 'error' ? 'rgba(225,29,72,0.85)' : 'rgba(5,150,105,0.85)',
+            color: '#fff',
             maxWidth: 480
           }}>
           {toast.message}
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => navigate(`/garson/masa/${tableId}`)}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-          style={{ background: '#F1F5F9', color: '#64748B' }}>
-          ←
+      <div className="glass-panel rounded-3xl p-2.5 flex items-center gap-3 mb-3">
+        <button onClick={() => navigate(`/garson/masa/${tableId}`)} aria-label="Geri"
+          className="glass-pill w-10 h-10 rounded-2xl text-sm font-bold flex items-center justify-center flex-shrink-0 spring-btn">
+          <i className="fa-solid fa-chevron-left" />
         </button>
-        <h2 className="font-bold text-lg flex-1" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <h2 className="font-serif font-bold text-lg flex-1 truncate">
           🍽️ {tableName}
         </h2>
       </div>
 
       {activeOrderId && (
-        <div className="mb-3 p-3 rounded-xl text-xs"
-          style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}>
+        <div className="mb-3 p-3 rounded-2xl text-xs font-semibold"
+          style={{ background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', color: '#E0F2FE' }}>
           ℹ️ Açık sipariş var. Eklediğin ürünler mevcut siparişe eklenecek.
         </div>
       )}
 
-      <div className="mb-3">
+      <div className="relative mb-3">
+        <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 text-xs pointer-events-none" />
         <input type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="🔍 Ürün ara..."
-          className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-          style={{ border: '1.5px solid #E2E8F0', background: 'white' }} />
+          placeholder="Ürün ara..."
+          className="glass-input w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium" />
       </div>
 
       {!searchQuery && (
-        <div className="mb-3 -mx-4 px-4 overflow-x-auto"
+        <div className="mb-3 -mx-3.5 px-3.5 overflow-x-auto scrollbar-none pb-1"
           style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex gap-2" style={{ minWidth: 'min-content' }}>
             {showFavoritesTab && (
               <button onClick={() => setSelectedCatId(FAVORITES_CAT_ID)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5"
-                style={{
-                  background: isFavoritesView ? '#F59E0B' : 'white',
-                  color: isFavoritesView ? 'white' : '#92400E',
-                  border: '1px solid ' + (isFavoritesView ? '#F59E0B' : '#FED7AA')
-                }}>
+                className={`flex-shrink-0 px-4 py-2 min-h-[36px] rounded-2xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 spring-btn ${isFavoritesView ? 'btn-accent' : 'glass-pill'}`}
+                style={isFavoritesView ? undefined : { background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
                 ⭐ Favoriler ({favorites.length})
               </button>
             )}
             {categories.map(cat => (
               <button key={cat.id}
                 onClick={() => setSelectedCatId(cat.id)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
-                style={{
-                  background: selectedCatId === cat.id ? '#0D9488' : 'white',
-                  color: selectedCatId === cat.id ? 'white' : '#64748B',
-                  border: '1px solid ' + (selectedCatId === cat.id ? '#0D9488' : '#E2E8F0')
-                }}>
+                className={`flex-shrink-0 px-4 py-2 min-h-[36px] rounded-2xl text-xs font-semibold whitespace-nowrap spring-btn ${selectedCatId === cat.id ? 'btn-accent' : 'glass-pill'}`}>
                 {cat.name}
               </button>
             ))}
@@ -333,116 +321,128 @@ export function WaiterMenuPage() {
       )}
 
       {isFavoritesView && filteredProducts.length === 0 && !searchQuery && (
-        <div className="text-center py-12 bg-white rounded-2xl" style={{ border: '1px dashed #FED7AA' }}>
+        <div className="glass-card text-center py-10 rounded-3xl" style={{ borderColor: 'rgba(251,191,36,0.5)' }}>
           <div className="text-4xl mb-2">⭐</div>
-          <p className="text-sm font-semibold" style={{ color: '#92400E' }}>Favori ürün yok</p>
-          <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+          <p className="text-sm font-bold text-amber-300">Favori ürün yok</p>
+          <p className="text-xs mt-1 text-white/65 px-4">
             Bir kategoriden ürün seçip yıldıza basarak favorilere ekle.
           </p>
         </div>
       )}
 
       {filteredProducts.length === 0 && !(isFavoritesView && !searchQuery) ? (
-        <div className="text-center py-12 bg-white rounded-2xl" style={{ border: '1px dashed #E2E8F0' }}>
+        <div className="glass-card text-center py-10 rounded-3xl">
           <div className="text-3xl mb-2">🔍</div>
-          <p className="text-sm" style={{ color: '#94A3B8' }}>
+          <p className="text-sm text-white/70">
             {searchQuery ? 'Ürün bulunamadı' : 'Bu kategoride ürün yok'}
           </p>
         </div>
       ) : (
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+        <div className="space-y-2.5">
           {filteredProducts.map(p => {
             const inCart = cart.find(i => i.product_id === p.id);
             const isFav = favorites.includes(p.id);
             return (
               <div key={p.id}
-                className="bg-white rounded-2xl overflow-hidden relative"
-                style={{ border: inCart ? '2px solid #0D9488' : '1px solid #E2E8F0' }}>
+                className="glass-card rounded-3xl p-3 flex gap-3 relative"
+                style={inCart ? { borderColor: 'rgba(255,140,56,0.95)', boxShadow: '0 0 0 1px rgba(255,122,41,0.6), var(--glass-shadow-sm)' } : undefined}>
 
-                {inCart && (
-                  <div className="absolute top-2 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                    style={{ background: '#0D9488', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
-                    {inCart.quantity}
-                  </div>
-                )}
+                {/* Görsel alanı */}
+                <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white/10 shadow-md">
+                  {p.image_url ? (
+                    <button onClick={() => addToCart(p)}
+                      className="block w-full h-full"
+                      style={{
+                        background: `rgba(255,255,255,0.1) url(${p.image_url}) center/cover no-repeat`
+                      }}
+                      aria-label={`${p.name} sepete ekle`}>
+                    </button>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
+                  )}
 
-                {inCart && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFromCart(p.id);
-                    }}
-                    className="absolute top-10 left-2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold active:scale-90 transition-transform"
-                    style={{ background: '#DC2626', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
-                    title="Bu üründen vazgeç">
-                    ✕
+                  {inCart && (
+                    <div className="absolute top-1.5 left-1.5 z-10 btn-accent w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold pointer-events-none">
+                      {inCart.quantity}
+                    </div>
+                  )}
+
+                  {inCart && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromCart(p.id);
+                      }}
+                      className="absolute bottom-1.5 left-1.5 z-10 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold spring-btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #FB7185, #E11D48)',
+                        border: '1px solid rgba(255,255,255,0.7)',
+                        boxShadow: '0 4px 10px rgba(225,29,72,0.45)'
+                      }}
+                      title="Bu üründen vazgeç">
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <button onClick={() => addToCart(p)}
+                    className="w-full text-left flex-1 flex flex-col">
+                    <div className="font-serif font-bold text-sm leading-snug pr-9">
+                      {p.name}
+                    </div>
+                    {p.description && (
+                      <div className="text-[11px] text-white/75 leading-tight mt-1 font-medium line-clamp-2 pr-2">
+                        {p.description}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-auto pt-2 w-full">
+                      <span className="text-sm font-extrabold tracking-tight">
+                        {formatPrice(p.price_int)}
+                      </span>
+                      {!inCart && (
+                        <span className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn" aria-hidden="true">
+                          <i className="fa-solid fa-plus" />
+                        </span>
+                      )}
+                    </div>
                   </button>
-                )}
+
+                  {inCart && (
+                    <div className="mt-2 flex items-center justify-between gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          decrementCart(p.id);
+                        }}
+                        className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn">−</button>
+                      <span className="font-extrabold text-xs">
+                        {inCart.quantity} adet
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(p);
+                        }}
+                        className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">+</button>
+                    </div>
+                  )}
+                </div>
 
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFavorite(p.id);
                   }}
-                  className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-base"
-                  style={{
-                    background: isFav ? '#F59E0B' : 'rgba(255,255,255,0.9)',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                    border: isFav ? 'none' : '1px solid #E2E8F0'
-                  }}
+                  className={`absolute top-2 right-2 z-10 w-9 h-9 rounded-full flex items-center justify-center text-base spring-btn ${isFav ? '' : 'glass-pill'}`}
+                  style={isFav ? {
+                    background: 'linear-gradient(135deg, #FCD34D, #F59E0B)',
+                    border: '1px solid rgba(255,255,255,0.7)',
+                    boxShadow: '0 4px 12px rgba(245,158,11,0.45)'
+                  } : undefined}
                   title={isFav ? 'Favorilerden çıkar' : 'Favorilere ekle'}>
                   {isFav ? '⭐' : '☆'}
                 </button>
-
-                {p.image_url && (
-                  <button onClick={() => addToCart(p)}
-                    className="block w-full"
-                    style={{
-                      background: `#F8FAFC url(${p.image_url}) center/cover no-repeat`,
-                      height: 110,
-                      borderBottom: '1px solid #F1F5F9'
-                    }}
-                    aria-label={`${p.name} sepete ekle`}>
-                  </button>
-                )}
-
-                <button onClick={() => addToCart(p)}
-                  className="w-full p-3 text-left">
-                  <div className="font-semibold text-sm mb-1 pr-6" style={{ color: '#0F172A' }}>
-                    {p.name}
-                  </div>
-                  {p.description && (
-                    <div className="text-xs mb-2 line-clamp-2" style={{ color: '#94A3B8' }}>
-                      {p.description}
-                    </div>
-                  )}
-                  <div className="text-sm font-bold" style={{ color: '#0D9488' }}>
-                    {formatPrice(p.price_int)}
-                  </div>
-                </button>
-
-                {inCart && (
-                  <div className="px-2 pb-2 flex items-center justify-between"
-                    style={{ background: '#F0FDFA', borderTop: '1px solid #99F6E4' }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        decrementCart(p.id);
-                      }}
-                      className="w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center text-white active:scale-90 transition-transform"
-                      style={{ background: '#0D9488' }}>−</button>
-                    <span className="font-bold text-sm" style={{ color: '#0D9488' }}>
-                      {inCart.quantity} adet
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart(p);
-                      }}
-                      className="w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center text-white active:scale-90 transition-transform"
-                      style={{ background: '#0D9488' }}>+</button>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -450,80 +450,76 @@ export function WaiterMenuPage() {
       )}
 
       {cart.length > 0 && (
-        <div className="fixed bottom-20 left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
+        <div className="fixed bottom-[92px] left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
           <button onClick={() => setCartOpen(true)}
-            className="w-full py-3 rounded-2xl text-white shadow-2xl flex items-center justify-between px-5"
-            style={{ background: '#0D9488' }}>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              🛒 Sepet ({cartItemCount})
+            className="btn-accent w-full py-3.5 rounded-full flex items-center justify-between px-5 spring-btn">
+            <div className="flex items-center gap-2 text-sm font-extrabold">
+              <i className="fa-solid fa-cart-shopping" /> Sepet ({cartItemCount})
             </div>
-            <div className="text-base font-bold">
-              {formatPrice(cartTotal)} ▶
+            <div className="text-sm font-extrabold flex items-center gap-1.5">
+              {formatPrice(cartTotal)} <i className="fa-solid fa-chevron-right text-[10px] text-white/80" />
             </div>
           </button>
         </div>
       )}
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center"
-          style={{ background: 'rgba(15,23,42,0.6)' }}
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
           onClick={() => setCartOpen(false)}>
-          <div className="w-full bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col"
+          <div className="glass-dark sheet-enter w-full rounded-t-[32px] max-h-[90vh] flex flex-col border-t border-white/60 text-white"
             style={{ maxWidth: 600 }}
             onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
 
-            <div className="px-5 py-4 flex items-center justify-between"
-              style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h3 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+            <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-white/20">
+              <h3 className="font-serif font-bold text-lg">
                 🛒 Sepet — {tableName}
               </h3>
-              <button onClick={() => setCartOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+              <button onClick={() => setCartOpen(false)} aria-label="Kapat"
+                className="glass-pill w-9 h-9 rounded-full flex items-center justify-center text-xs spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-3">
               {cart.length === 0 ? (
-                <p className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>Sepet boş</p>
+                <p className="text-center py-12 text-sm text-white/65">Sepet boş</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {cart.map(item => {
                     const isNoteOpen = openNoteFor === item.product_id;
                     const hasNote = item.note && item.note.trim().length > 0;
 
                     return (
                       <div key={item.product_id}
-                        className="bg-white rounded-2xl overflow-hidden"
-                        style={{ border: hasNote ? '1.5px solid #F59E0B' : '1px solid #E2E8F0' }}>
+                        className={`glass-card rounded-2xl overflow-hidden ${hasNote ? 'border-amber-300/70' : ''}`}>
 
                         {/* Ürün satırı */}
                         <div className="p-3">
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-start justify-between mb-2 gap-2">
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>
+                              <div className="font-bold text-sm">
                                 {item.product_name}
                               </div>
-                              <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                              <div className="text-xs mt-0.5 text-white/65">
                                 {formatPrice(item.price_int)} / adet
                               </div>
                             </div>
                             <button onClick={() => removeFromCart(item.product_id)}
-                              className="text-xs"
-                              style={{ color: '#DC2626' }}>
+                              className="text-xs font-bold px-2 py-1.5 rounded-lg spring-btn"
+                              style={{ color: 'var(--danger)' }}>
                               ✕ Çıkar
                             </button>
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
                               <button onClick={() => changeQuantity(item.product_id, -1)}
-                                className="w-8 h-8 rounded-xl font-bold text-lg flex items-center justify-center"
-                                style={{ background: '#F1F5F9', color: '#0F172A' }}>−</button>
-                              <span className="font-bold text-sm w-8 text-center">{item.quantity}</span>
+                                className="w-9 h-9 rounded-lg bg-white/20 font-bold text-lg flex items-center justify-center spring-btn">−</button>
+                              <span className="font-extrabold text-sm w-7 text-center">{item.quantity}</span>
                               <button onClick={() => changeQuantity(item.product_id, 1)}
-                                className="w-8 h-8 rounded-xl font-bold text-lg flex items-center justify-center text-white"
-                                style={{ background: '#0D9488' }}>+</button>
+                                className="btn-accent w-9 h-9 rounded-lg font-bold text-lg flex items-center justify-center spring-btn">+</button>
                             </div>
-                            <div className="font-bold text-sm" style={{ color: '#0D9488' }}>
+                            <div className="font-extrabold text-sm text-amber-300">
                               {formatPrice(item.price_int * item.quantity)}
                             </div>
                           </div>
@@ -531,14 +527,12 @@ export function WaiterMenuPage() {
 
                         {/* Mevcut not özeti — kapalıyken göster */}
                         {hasNote && !isNoteOpen && (
-                          <div className="px-3 py-2 flex items-center justify-between gap-2"
-                            style={{ background: '#FFFBEB', borderTop: '1px solid #FDE68A' }}>
-                            <div className="text-xs flex-1 min-w-0" style={{ color: '#92400E' }}>
+                          <div className="px-3 py-2 bg-amber-500/20 border-t border-amber-300/30 flex items-center justify-between gap-2">
+                            <div className="text-xs text-amber-100 flex-1 min-w-0">
                               📝 <strong>{item.note}</strong>
                             </div>
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              className="text-xs font-semibold whitespace-nowrap"
-                              style={{ color: '#B45309' }}>
+                              className="text-xs font-bold text-amber-300 whitespace-nowrap px-1 py-1.5">
                               Düzenle
                             </button>
                           </div>
@@ -546,10 +540,9 @@ export function WaiterMenuPage() {
 
                         {/* Not yok ve kapalıyken: "Not Ekle" butonu */}
                         {!hasNote && !isNoteOpen && (
-                          <div className="px-3 pb-3">
+                          <div className="px-3 pb-2.5">
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              className="text-xs font-semibold flex items-center gap-1"
-                              style={{ color: '#0D9488' }}>
+                              className="text-xs font-semibold flex items-center gap-1 text-amber-300 py-1">
                               📝 + Bu ürüne özel not ekle
                             </button>
                           </div>
@@ -557,8 +550,7 @@ export function WaiterMenuPage() {
 
                         {/* Not paneli açıkken: OrderNoteTemplates */}
                         {isNoteOpen && (
-                          <div className="px-3 pb-3 pt-2"
-                            style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0' }}>
+                          <div className="px-3 pb-3 pt-2.5 bg-black/25 border-t border-white/20">
                             <OrderNoteTemplates
                               value={item.note ?? ''}
                               onChange={(newNote) => updateItemNote(item.product_id, newNote)}
@@ -567,8 +559,7 @@ export function WaiterMenuPage() {
                               rows={2}
                             />
                             <button onClick={() => setOpenNoteFor(null)}
-                              className="mt-2 w-full py-1.5 rounded-lg text-xs font-semibold"
-                              style={{ background: '#0F172A', color: 'white' }}>
+                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn">
                               ✓ Tamam
                             </button>
                           </div>
@@ -581,42 +572,40 @@ export function WaiterMenuPage() {
 
               {/* GENEL not — sipariş geneli */}
               {cart.length > 0 && !activeOrderId && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px dashed #CBD5E1' }}>
-                  <div className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <div className="mt-4 pt-4 border-t border-dashed border-white/25">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-white/70">
                     📋 Sipariş Geneli Not (opsiyonel)
                   </div>
-                  <p className="text-xs mb-2" style={{ color: '#94A3B8' }}>
+                  <p className="text-[11px] mb-2 text-white/55">
                     Tüm sipariş için geçerli notlar (örn: "acele edin", "kapı kenarındaki masa")
                   </p>
                   <textarea value={note}
                     onChange={e => setNote(e.target.value)}
                     placeholder="Genel not..."
                     rows={2}
-                    className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none"
-                    style={{ border: '1px solid #E2E8F0', background: '#F8FAFC' }} />
+                    className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
                 </div>
               )}
 
               {activeOrderId && (
-                <div className="mt-3 p-2.5 rounded-lg text-xs"
-                  style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}>
+                <div className="mt-3 p-3 rounded-2xl text-xs font-semibold"
+                  style={{ background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', color: '#E0F2FE' }}>
                   ℹ️ Eklediğin ürünler mevcut siparişe iliştirilecek. Her ürünün kendi notu kaydedilir.
                 </div>
               )}
             </div>
 
             {cart.length > 0 && (
-              <div className="px-5 py-4" style={{ borderTop: '1px solid #E2E8F0' }}>
+              <div className="px-5 pt-3 pb-6 border-t border-white/20">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold" style={{ color: '#64748B' }}>Toplam</span>
-                  <span className="text-xl font-bold" style={{ color: '#0D9488', fontFamily: 'Georgia, serif' }}>
+                  <span className="text-sm font-bold text-white/75">Toplam</span>
+                  <span className="text-xl font-extrabold text-amber-300">
                     {formatPrice(cartTotal)}
                   </span>
                 </div>
                 <button onClick={handleSendOrder}
                   disabled={sending}
-                  className="w-full py-3 rounded-2xl text-sm font-bold text-white shadow-lg"
-                  style={{ background: sending ? '#475569' : '#0D9488' }}>
+                  className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
                   {sending ? 'Gönderiliyor...' : (activeOrderId ? '✓ Siparişe Ekle' : '✓ Mutfağa Gönder')}
                 </button>
               </div>

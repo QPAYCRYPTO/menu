@@ -43,10 +43,10 @@ const TONES: Record<ConfirmTone, {
   iconPath: ReactNode;
 }> = {
   danger: {
-    iconBg: '#FEF2F2',
-    iconColor: '#DC2626',
-    buttonBg: '#DC2626',
-    buttonHover: '#B91C1C',
+    iconBg: 'var(--danger-bg)',
+    iconColor: 'var(--danger)',
+    buttonBg: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)',
+    buttonHover: '#BE123C',
     iconPath: (
       <>
         <path d="M3 6h18"/>
@@ -58,10 +58,10 @@ const TONES: Record<ConfirmTone, {
     )
   },
   warning: {
-    iconBg: '#FEF3C7',
-    iconColor: '#D97706',
-    buttonBg: '#D97706',
-    buttonHover: '#B45309',
+    iconBg: 'var(--warning-bg)',
+    iconColor: 'var(--warning)',
+    buttonBg: 'var(--accent-gradient)',
+    buttonHover: '#FF5A1F',
     iconPath: (
       <>
         <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -71,10 +71,10 @@ const TONES: Record<ConfirmTone, {
     )
   },
   info: {
-    iconBg: '#EFF6FF',
-    iconColor: '#2563EB',
-    buttonBg: '#2563EB',
-    buttonHover: '#1D4ED8',
+    iconBg: 'var(--info-bg)',
+    iconColor: 'var(--info)',
+    buttonBg: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
+    buttonHover: '#0369A1',
     iconPath: (
       <>
         <circle cx="12" cy="12" r="10"/>
@@ -144,19 +144,20 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
-        background: visible ? 'rgba(15, 23, 42, 0.6)' : 'rgba(15, 23, 42, 0)',
-        transition: 'background 0.2s ease-out'
+        background: visible ? 'var(--overlay)' : 'rgba(10, 7, 5, 0)',
+        backdropFilter: visible ? 'blur(12px)' : 'blur(0px)',
+        WebkitBackdropFilter: visible ? 'blur(12px)' : 'blur(0px)',
+        transition: 'background 0.2s ease-out, backdrop-filter 0.2s ease-out'
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="glass-dark rounded-3xl"
         style={{
-          background: 'white',
-          borderRadius: 16,
           width: '100%',
           maxWidth: 380,
           overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+          color: 'var(--text)',
           transform: visible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-10px)',
           opacity: visible ? 1 : 0,
           transition: 'transform 0.2s ease-out, opacity 0.2s ease-out'
@@ -169,6 +170,7 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
             width: 56,
             height: 56,
             background: tone.iconBg,
+            border: '1px solid rgba(255,255,255,0.22)',
             borderRadius: '50%',
             alignItems: 'center',
             justifyContent: 'center',
@@ -180,18 +182,17 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
               {tone.iconPath}
             </svg>
           </div>
-          <div style={{
-            fontSize: 17,
+          <div className="font-serif" style={{
+            fontSize: 18,
             fontWeight: 700,
-            color: '#0F172A',
-            fontFamily: 'Georgia, serif',
+            color: 'var(--text)',
             marginBottom: 8
           }}>
             {state.title}
           </div>
           <div style={{
             fontSize: 13,
-            color: '#64748B',
+            color: 'var(--text-muted)',
             lineHeight: 1.5
           }}>
             {state.message}
@@ -207,15 +208,13 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
           <button
             onClick={onClose}
             disabled={submitting}
+            className="glass-pill spring-btn"
             style={{
               flex: 1,
               padding: 11,
-              borderRadius: 12,
-              background: '#F1F5F9',
-              color: '#0F172A',
+              borderRadius: 999,
               fontWeight: 600,
               fontSize: 14,
-              border: 'none',
               cursor: submitting ? 'not-allowed' : 'pointer',
               opacity: submitting ? 0.6 : 1
             }}
@@ -225,15 +224,17 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
           <button
             onClick={handleConfirm}
             disabled={submitting}
+            className="spring-btn"
             style={{
               flex: 1,
               padding: 11,
-              borderRadius: 12,
+              borderRadius: 999,
               background: tone.buttonBg,
               color: 'white',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: 14,
-              border: 'none',
+              border: '1px solid rgba(255,255,255,0.5)',
+              boxShadow: '0 8px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.6)',
               cursor: submitting ? 'not-allowed' : 'pointer',
               opacity: submitting ? 0.7 : 1
             }}

@@ -22,38 +22,29 @@ export function PricingPage() {
   }, [location]);
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
+    <div className="text-white" style={{ minHeight: '100vh' }}>
       <PublicHeader />
 
       {/* ═══════ HERO ═══════ */}
-      <section
-        className="relative overflow-hidden px-4 md:px-6 py-12 md:py-20"
-        style={{ background: 'linear-gradient(135deg, #0F172A 0%, #134E4A 50%, #0F172A 100%)' }}
-      >
+      <section className="relative overflow-hidden px-4 md:px-6 py-12 md:py-20">
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
-            backgroundSize: '50px 50px',
-          }}
+          style={{ background: 'radial-gradient(circle at 50% 30%, rgba(255, 122, 41, 0.18), transparent 60%)' }}
         />
-        <div className="max-w-3xl mx-auto text-center relative z-10">
+        <div className="max-w-3xl mx-auto text-center relative z-10 fade-enter">
           <span
-            className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold mb-5"
-            style={{
-              background: 'rgba(13, 148, 136, 0.15)',
-              color: '#0D9488',
-              border: '1px solid rgba(13, 148, 136, 0.25)',
-              letterSpacing: '1.5px',
-            }}
+            className="glass-pill inline-block px-4 py-1.5 rounded-full text-xs font-bold mb-5"
+            style={{ letterSpacing: '1.5px' }}
           >
             FİYATLANDIRMA
           </span>
-          <h1 className="text-white font-bold mb-4" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(32px, 5vw, 52px)', lineHeight: 1.1, letterSpacing: '-1.5px' }}>
-            Restoranın için <em style={{ color: '#0D9488', fontStyle: 'italic' }}>basit, net</em> fiyatlandırma.
+          <h1
+            className="font-serif text-white font-bold mb-4"
+            style={{ fontSize: 'clamp(32px, 5vw, 52px)', lineHeight: 1.1, letterSpacing: '-1px', textShadow: '0 4px 24px rgba(0,0,0,0.35)' }}
+          >
+            Restoranın için <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>basit, net</em> fiyatlandırma.
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 17 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 17 }}>
             Gizli ücret yok, üyelik tuzağı yok. İhtiyacın kadar öde, istediğin zaman büyüt.
           </p>
         </div>
@@ -149,19 +140,19 @@ export function PricingPage() {
       </section>
 
       {/* ═══════ INCLUDED FEATURES ═══════ */}
-      <section className="bg-white border-t" style={{ borderColor: '#E2E8F0' }}>
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
+      <section className="px-4 md:px-6">
+        <div className="glass-panel rounded-3xl max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
           <div className="text-center mb-14">
             <span
               className="block text-xs font-semibold mb-3 uppercase"
-              style={{ letterSpacing: '2.5px', color: '#0D9488' }}
+              style={{ letterSpacing: '2.5px', color: 'var(--accent)' }}
             >
               Her Pakete Dahil
             </span>
-            <h2 className="font-bold mb-3" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-1px' }}>
+            <h2 className="font-serif font-bold mb-3" style={{ fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-0.5px' }}>
               Kullanmaya başlamak için ihtiyacın olan her şey.
             </h2>
-            <p className="mx-auto" style={{ color: '#64748B', fontSize: 16, maxWidth: 520 }}>
+            <p className="mx-auto" style={{ color: 'var(--text-muted)', fontSize: 16, maxWidth: 520 }}>
               Ekstra modül, gizli ücret, beklenmedik faturalar yok.
             </p>
           </div>
@@ -177,17 +168,15 @@ export function PricingPage() {
             ].map((f, i) => (
               <div key={i} className="p-6">
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                  style={{ background: '#CCFBF1' }}
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
+                  <i className="fa-solid fa-check" style={{ color: '#FF8C38', fontSize: 20 }} />
                 </div>
-                <h3 className="font-semibold mb-2" style={{ fontFamily: 'Georgia, serif', fontSize: 22, letterSpacing: '-0.3px' }}>
+                <h3 className="font-serif font-semibold mb-2" style={{ fontSize: 22, letterSpacing: '-0.3px' }}>
                   {f.title}
                 </h3>
-                <p style={{ color: '#64748B', fontSize: 14.5, lineHeight: 1.6 }}>{f.desc}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 14.5, lineHeight: 1.6 }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -195,16 +184,16 @@ export function PricingPage() {
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section className="px-4 md:px-6 py-16 md:py-20" style={{ background: '#F8FAFC' }}>
+      <section className="px-4 md:px-6 py-16 md:py-20">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <span
               className="block text-xs font-semibold mb-3 uppercase"
-              style={{ letterSpacing: '2.5px', color: '#0D9488' }}
+              style={{ letterSpacing: '2.5px', color: 'var(--accent)' }}
             >
               Sıkça Sorulanlar
             </span>
-            <h2 className="font-bold" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-1px' }}>
+            <h2 className="font-serif font-bold" style={{ fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-0.5px' }}>
               Karar vermeden önce bilmek istediklerin.
             </h2>
           </div>
@@ -243,28 +232,30 @@ export function PricingPage() {
       </section>
 
       {/* ═══════ FINAL CTA ═══════ */}
-      <section className="px-4 md:px-6 py-16 md:py-20 text-white text-center relative overflow-hidden" style={{ background: '#0F172A' }}>
+      <section className="px-4 md:px-6 pb-16 md:pb-20 text-white text-center">
+        <div className="glass-panel rounded-3xl max-w-5xl mx-auto px-6 py-14 md:py-16 relative overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 30% 50%, rgba(13, 148, 136, 0.15), transparent 50%)' }}
+          style={{ background: 'radial-gradient(circle at 30% 50%, rgba(255, 122, 41, 0.25), transparent 55%)' }}
         />
         <div className="max-w-2xl mx-auto relative z-10">
-          <h2 className="font-bold mb-4" style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-1px', lineHeight: 1.15 }}>
-            Bugün başla, yarın <em style={{ color: '#0D9488', fontStyle: 'italic' }}>fark</em> et.
+          <h2 className="font-serif font-bold mb-4" style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
+            Bugün başla, yarın <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>fark</em> et.
           </h2>
-          <p className="mb-8" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 17 }}>
+          <p className="mb-8" style={{ color: 'var(--text-muted)', fontSize: 17 }}>
             Demo görmek, fiyat sormak veya sadece konuşmak için yaz.
           </p>
           <a
             href={WA_LINK('Merhaba, AtlasQR hakkında bilgi almak istiyorum')}
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white"
-            style={{ background: '#0D9488', textDecoration: 'none', fontSize: 16 }}
+            className="btn-accent spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
+            style={{ textDecoration: 'none', fontSize: 16 }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.1 4.9 4.3 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.4c1.4.8 3.1 1.2 4.8 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
             </svg>
             WhatsApp'tan Yaz
           </a>
+        </div>
         </div>
       </section>
 
@@ -294,19 +285,20 @@ type PlanCardProps = {
 function PlanCard({ name, tagline, price, period, extra, savings, original, features, ctaLabel, ctaLink, featured, badge, badgeColor }: PlanCardProps) {
   return (
     <article
-      className="rounded-2xl p-7 md:p-8 flex flex-col relative transition-all"
+      className="glass-card rounded-3xl p-7 md:p-8 flex flex-col relative text-white"
       style={{
-        background: featured ? '#0F172A' : 'white',
-        color: featured ? 'white' : '#0F172A',
-        border: featured ? '2px solid #0D9488' : '1px solid #E2E8F0',
-        boxShadow: featured ? '0 24px 48px rgba(15, 23, 42, 0.15)' : 'none',
+        background: featured ? 'rgba(255, 255, 255, 0.26)' : undefined,
+        border: featured ? '2px solid var(--accent)' : undefined,
+        boxShadow: featured ? 'var(--accent-glow), 0 24px 48px rgba(0, 0, 0, 0.3)' : undefined,
       }}
     >
       {badge && (
         <span
-          className="absolute -top-3 left-1/2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase"
+          className="absolute -top-3 left-1/2 px-4 py-1.5 rounded-full text-xs font-bold uppercase whitespace-nowrap"
           style={{
-            background: badgeColor || '#0D9488',
+            background: badgeColor ? `linear-gradient(135deg, ${badgeColor} 0%, #D97706 100%)` : 'var(--accent-gradient)',
+            border: '1px solid rgba(255,255,255,0.6)',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
             color: 'white',
             transform: 'translateX(-50%)',
             letterSpacing: '1px',
@@ -316,36 +308,36 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
         </span>
       )}
 
-      <h2 className="font-semibold mb-2" style={{ fontFamily: 'Georgia, serif', fontSize: 28, letterSpacing: '-0.5px' }}>
+      <h2 className="font-serif font-bold mb-2" style={{ fontSize: 28, letterSpacing: '-0.3px' }}>
         {name}
       </h2>
-      <p className="mb-7 text-sm" style={{ color: featured ? 'rgba(255,255,255,0.6)' : '#64748B', minHeight: 42 }}>
+      <p className="mb-7 text-sm" style={{ color: 'var(--text-muted)', minHeight: 42 }}>
         {tagline}
       </p>
 
       <div className="flex items-baseline gap-1.5 mb-1">
         <span
-          className="font-bold"
+          className="font-serif font-bold"
           style={{
-            fontFamily: 'Georgia, serif',
             fontSize: 44,
-            letterSpacing: '-1.5px',
+            letterSpacing: '-1px',
             lineHeight: 1,
-            color: featured ? '#0D9488' : '#0F172A',
+            color: featured ? 'var(--accent)' : '#fff',
           }}
         >
           {price}
         </span>
-        <span style={{ fontSize: 22, fontWeight: 500, color: featured ? 'rgba(255,255,255,0.5)' : '#64748B' }}>₺</span>
-        <span style={{ fontSize: 14, color: featured ? 'rgba(255,255,255,0.5)' : '#64748B' }}>{period}</span>
+        <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--text-muted)' }}>₺</span>
+        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{period}</span>
       </div>
 
       {savings && (
         <span
-          className="inline-block px-3 py-1 rounded-md text-xs font-semibold mt-3 mb-7"
+          className="inline-block px-3 py-1 rounded-full text-xs font-bold mt-3 mb-7"
           style={{
-            background: featured ? 'rgba(13, 148, 136, 0.2)' : '#CCFBF1',
-            color: featured ? '#5EEAD4' : '#0D9488',
+            background: 'var(--accent-soft)',
+            border: '1px solid rgba(255, 122, 41, 0.5)',
+            color: '#FFB27A',
             width: 'fit-content',
           }}
         >
@@ -353,12 +345,12 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
         </span>
       )}
       {original && (
-        <p className="mb-7 text-sm line-through" style={{ color: featured ? 'rgba(255,255,255,0.4)' : '#94A3B8' }}>
+        <p className="mb-7 text-sm line-through" style={{ color: 'var(--text-faint)' }}>
           {original}
         </p>
       )}
       {extra && (
-        <p className="mb-7 text-sm" style={{ color: featured ? 'rgba(255,255,255,0.6)' : '#64748B' }}>
+        <p className="mb-7 text-sm" style={{ color: 'var(--text-muted)' }}>
           {extra}
         </p>
       )}
@@ -369,14 +361,14 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
             key={i}
             className="flex items-start gap-3 py-2.5 text-sm"
             style={{
-              borderBottom: i < features.length - 1 ? `1px solid ${featured ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}` : 'none',
+              borderBottom: i < features.length - 1 ? '1px solid var(--glass-border-soft)' : 'none',
             }}
           >
             <span
               className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
               style={{
-                background: featured ? 'rgba(13, 148, 136, 0.25)' : '#CCFBF1',
-                color: featured ? '#5EEAD4' : '#0D9488',
+                background: featured ? 'var(--accent-gradient)' : 'var(--accent-soft)',
+                color: featured ? '#fff' : '#FFB27A',
               }}
             >
               ✓
@@ -388,11 +380,8 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
 
       <a
         href={ctaLink}
-        className="block text-center py-4 rounded-xl font-semibold transition-all"
+        className={`${featured ? 'btn-accent' : 'glass-pill'} spring-btn block text-center py-4 rounded-full font-bold`}
         style={{
-          background: featured ? '#0D9488' : 'white',
-          color: featured ? 'white' : '#0F172A',
-          border: featured ? '2px solid #0D9488' : '2px solid #0F172A',
           textDecoration: 'none',
           fontSize: 15,
         }}
@@ -410,24 +399,24 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden bg-white transition-all"
-      style={{ border: '1px solid #E2E8F0' }}
+      className="glass-card rounded-2xl overflow-hidden"
+      style={open ? { borderColor: 'rgba(255, 122, 41, 0.7)' } : undefined}
     >
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-6 py-5 flex items-center justify-between font-semibold text-left"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#0F172A', fontSize: 16 }}
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 16 }}
       >
         <span className="flex-1 pr-4">{question}</span>
         <span
           className="text-2xl shrink-0 transition-transform"
-          style={{ color: '#0D9488', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
+          style={{ color: 'var(--accent)', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
         >
           +
         </span>
       </button>
       {open && (
-        <div className="px-6 pb-5" style={{ color: '#64748B', fontSize: 15, lineHeight: 1.7 }}>
+        <div className="px-6 pb-5 fade-enter" style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.7 }}>
           {answer}
         </div>
       )}

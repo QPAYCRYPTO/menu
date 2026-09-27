@@ -30,7 +30,7 @@ type ImageUploadFieldProps = {
   label?: string;
   /** Alt hint (örn: "PNG/JPG · max 5MB") */
   hint?: string;
-  /** Renk teması (varsayılan turkuaz) */
+  /** Renk teması (varsayılan turuncu vurgu) */
   themeColor?: string;
   /** Önizleme boyutu (varsayılan 96px = w-24) */
   previewSize?: number;
@@ -44,7 +44,7 @@ export function ImageUploadField({
   onRemove,
   label,
   hint = 'PNG, JPG · max 5MB',
-  themeColor = '#0D9488',
+  themeColor = '#FF7A29',
   previewSize = 96,
   rounded = false
 }: ImageUploadFieldProps) {
@@ -104,8 +104,7 @@ export function ImageUploadField({
   return (
     <div>
       {label && (
-        <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
-          style={{ color: '#64748B' }}>
+        <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
           {label}
         </label>
       )}
@@ -125,59 +124,32 @@ export function ImageUploadField({
 
       {/* GÖRSELLİ DURUM — preview + butonlar */}
       {hasImage && !uploading && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-          padding: 12,
-          background: '#F8FAFC',
-          border: '1.5px solid #E2E8F0',
-          borderRadius: 12
-        }}>
-          <div style={{
-            width: previewSize,
-            height: previewSize,
-            borderRadius: rounded ? '50%' : 12,
-            overflow: 'hidden',
-            border: `2px solid ${themeColor}`,
-            flexShrink: 0,
-            background: 'white'
-          }}>
+        <div className="glass-card flex items-center gap-4 p-3 rounded-2xl">
+          <div className="flex-shrink-0 overflow-hidden bg-white/10"
+            style={{
+              width: previewSize,
+              height: previewSize,
+              borderRadius: rounded ? '50%' : 14,
+              border: `2px solid ${themeColor}`
+            }}>
             <img src={value} alt="Önizleme"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>
-              ✓ Görsel yüklendi
+          <div className="flex-1 flex flex-col gap-2 min-w-0">
+            <div className="text-[13px] font-semibold text-white flex items-center gap-1.5">
+              <i className="fa-solid fa-circle-check" style={{ color: 'var(--success)' }} /> Görsel yüklendi
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="flex gap-2 flex-wrap">
               <button type="button" onClick={openFilePicker}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: themeColor,
-                  color: 'white',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}>
-                🔄 Değiştir
+                className="btn-accent px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 spring-btn">
+                <i className="fa-solid fa-arrows-rotate text-[10px]" /> Değiştir
               </button>
               {onRemove && (
                 <button type="button" onClick={handleRemove}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #FECACA',
-                    background: '#FEF2F2',
-                    color: '#DC2626',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}>
-                  🗑️ Kaldır
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn"
+                  style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+                  <i className="fa-solid fa-trash-can text-[10px]" /> Kaldır
                 </button>
               )}
             </div>
@@ -192,39 +164,24 @@ export function ImageUploadField({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
+          className="rounded-2xl text-center cursor-pointer"
           style={{
-            cursor: 'pointer',
-            padding: '32px 16px',
-            background: dragActive ? `${themeColor}15` : '#F8FAFC',
-            border: `2px dashed ${dragActive ? themeColor : '#CBD5E1'}`,
-            borderRadius: 12,
-            textAlign: 'center',
+            padding: '28px 16px',
+            background: dragActive ? 'var(--accent-soft)' : 'rgba(255,255,255,0.08)',
+            border: `2px dashed ${dragActive ? 'var(--accent)' : 'rgba(255,255,255,0.35)'}`,
             transition: 'all 0.2s'
           }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: `${themeColor}20`,
-            margin: '0 auto 12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-              stroke={themeColor} strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
+          <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-lg text-white border border-white/40"
+            style={{ background: 'var(--accent-soft)' }}>
+            <i className="fa-regular fa-image" />
           </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A', marginBottom: 4 }}>
+          <div className="text-sm font-semibold text-white mb-1">
             📷 Görsel Yükle
           </div>
-          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>
+          <div className="text-xs text-white/70 mb-2">
             Tıkla veya sürükleyip bırak
           </div>
-          <div style={{ fontSize: 11, color: '#94A3B8' }}>
+          <div className="text-[11px] text-white/50">
             {hint}
           </div>
         </div>
@@ -232,31 +189,16 @@ export function ImageUploadField({
 
       {/* YÜKLENİYOR */}
       {uploading && (
-        <div style={{
-          padding: '32px 16px',
-          background: '#F8FAFC',
-          border: '2px dashed #CBD5E1',
-          borderRadius: 12,
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: 32,
-            height: 32,
-            margin: '0 auto 12px',
-            borderRadius: '50%',
-            border: `3px solid ${themeColor}`,
-            borderTopColor: 'transparent',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-          <div style={{ fontSize: 13, fontWeight: 600, color: themeColor }}>
+        <div className="rounded-2xl text-center"
+          style={{
+            padding: '28px 16px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '2px dashed rgba(255,255,255,0.35)'
+          }}>
+          <div className="w-8 h-8 mx-auto mb-3 rounded-full border-[3px] border-white/25 border-t-[var(--accent)] animate-spin" />
+          <div className="text-[13px] font-semibold text-white/85">
             Yükleniyor...
           </div>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
         </div>
       )}
     </div>

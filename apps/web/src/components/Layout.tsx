@@ -16,15 +16,15 @@ type NavColor = {
 };
 
 const COLORS: Record<string, NavColor> = {
-  panel:      { base: '#8B5CF6', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(139,92,246,0.15)', bgAktif: '#8B5CF6' },
-  orders:     { base: '#F59E0B', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(245,158,11,0.15)', bgAktif: '#F59E0B' },
-  tables:     { base: '#10B981', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(16,185,129,0.15)', bgAktif: '#10B981' },
-  payment:    { base: '#0D9488', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(13,148,136,0.15)', bgAktif: '#0D9488' },
-  categories: { base: '#3B82F6', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(59,130,246,0.15)', bgAktif: '#3B82F6' },
-  products:   { base: '#A855F7', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(168,85,247,0.15)', bgAktif: '#A855F7' },
-  waiters:    { base: '#0D9488', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(13,148,136,0.18)', bgAktif: '#0D9488' },
-  settings:   { base: '#94A3B8', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(148,163,184,0.15)', bgAktif: '#94A3B8' },
-  qr:         { base: '#6366F1', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(99,102,241,0.15)', bgAktif: '#6366F1' }
+  panel:      { base: '#A78BFA', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(139,92,246,0.24)', bgAktif: '#8B5CF6' },
+  orders:     { base: '#FBBF24', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(245,158,11,0.24)', bgAktif: '#F59E0B' },
+  tables:     { base: '#34D399', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(16,185,129,0.24)', bgAktif: '#10B981' },
+  payment:    { base: '#FDBA74', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(255,122,41,0.22)', bgAktif: '#FF7A29' },
+  categories: { base: '#7DD3FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(14,165,233,0.24)', bgAktif: '#0EA5E9' },
+  products:   { base: '#D8B4FE', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(168,85,247,0.24)', bgAktif: '#A855F7' },
+  waiters:    { base: '#FF9A5A', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(255,122,41,0.24)', bgAktif: '#FF7A29' },
+  settings:   { base: '#E2E8F0', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(255,255,255,0.16)', bgAktif: '#94A3B8' },
+  qr:         { base: '#A5B4FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(99,102,241,0.26)', bgAktif: '#6366F1' }
 };
 
 export function AdminLayout() {
@@ -83,24 +83,24 @@ export function AdminLayout() {
 
   const SidebarContent = () => (
     <>
-      <div className="p-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+      <div className="p-5 border-b border-white/20">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#0D9488' }}>
+          <div className="btn-accent w-10 h-10 rounded-2xl flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/>
               <rect x="3" y="16" width="5" height="5"/><path d="M21 16h-6v5M16 11h5M11 3v5M11 11h5v5"/>
             </svg>
           </div>
           <div>
-            <div className="font-bold text-white text-base" style={{ fontFamily: 'Georgia, serif' }}>
-              Atlas<span style={{ color: '#0D9488' }}>QR</span>
+            <div className="font-serif font-bold text-white text-lg leading-tight tracking-wide">
+              Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
             </div>
-            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>YÖNETİM PANELİ</div>
+            <div className="text-[10px] font-semibold text-white/60" style={{ letterSpacing: '0.12em' }}>YÖNETİM PANELİ</div>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-none">
         {navItems.map(item => {
           const active = isActive(item.to);
           const color = COLORS[item.colorKey];
@@ -110,43 +110,44 @@ export function AdminLayout() {
           return (
             <Link key={item.to} to={item.to}
               onClick={() => setSidebarOpen(false)}
+              className={`spring-btn ${active ? 'btn-accent' : isSub ? 'bg-white/[0.04] hover:bg-white/15' : 'bg-white/[0.06] hover:bg-white/15'}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: isSub ? '7px 10px 7px 28px' : '9px 10px',
-                marginLeft: isSub ? 4 : 0,
-                background: active ? color.bgAktif : color.bgPasif,
-                border: active ? `1px solid ${color.bgAktif}` : '1px solid rgba(255,255,255,0.06)',
+                padding: isSub ? '7px 10px 7px 14px' : '9px 10px',
+                marginLeft: isSub ? 16 : 0,
+                border: active ? undefined : '1px solid transparent',
                 borderLeft: active
-                  ? `3px solid ${color.bgAktif}`
+                  ? undefined
                   : isSub
-                  ? `3px solid rgba(13,148,136,0.4)`
-                  : `3px solid ${color.base}`,
-                borderRadius: 10,
+                  ? '2px solid rgba(255,255,255,0.25)'
+                  : '1px solid transparent',
+                borderRadius: 14,
                 textDecoration: 'none',
-                transition: 'all 0.15s',
                 marginBottom: 2
               }}>
               <div style={{
-                width: isSub ? 24 : 28,
-                height: isSub ? 24 : 28,
-                borderRadius: isSub ? 6 : 7,
+                width: isSub ? 24 : 30,
+                height: isSub ? 24 : 30,
+                borderRadius: isSub ? 8 : 10,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: active ? 'rgba(255,255,255,0.2)' : color.bgIcon,
+                background: active ? 'rgba(255,255,255,0.25)' : color.bgIcon,
+                border: '1px solid rgba(255,255,255,0.2)',
                 color: active ? 'white' : color.base,
                 position: 'relative'
               }}>
                 {item.icon}
                 {badge > 0 && (
                   <span style={{
-                    position: 'absolute', top: -5, right: -5,
-                    background: '#DC2626', color: 'white',
+                    position: 'absolute', top: -6, right: -6,
+                    background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', color: 'white',
+                    border: '1px solid rgba(255,255,255,0.7)',
                     minWidth: 16, height: 16, borderRadius: 8,
-                    fontSize: 9, fontWeight: 700,
+                    fontSize: 9, fontWeight: 800,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '0 4px'
                   }}>
@@ -157,16 +158,18 @@ export function AdminLayout() {
               <span style={{
                 flex: 1,
                 fontSize: isSub ? 12 : 13,
-                fontWeight: isSub ? 500 : 500,
-                color: isSub ? 'rgba(255,255,255,0.75)' : 'white'
+                fontWeight: active ? 700 : 600,
+                color: active ? 'white' : isSub ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)'
               }}>
                 {item.label}
               </span>
               {badge > 0 && (
                 <span style={{
-                  background: active ? 'rgba(255,255,255,0.25)' : '#DC2626',
-                  color: 'white', fontSize: 10, fontWeight: 700,
-                  padding: '2px 6px', borderRadius: 999
+                  background: active ? 'rgba(255,255,255,0.28)' : 'var(--danger-bg)',
+                  color: active ? 'white' : 'var(--danger)',
+                  border: active ? '1px solid rgba(255,255,255,0.4)' : '1px solid rgba(251,113,133,0.45)',
+                  fontSize: 10, fontWeight: 800,
+                  padding: '2px 7px', borderRadius: 999
                 }}>
                   {badge}
                 </span>
@@ -176,13 +179,10 @@ export function AdminLayout() {
         })}
       </nav>
 
-      <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+      <div className="p-3 border-t border-white/20">
         <button onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium"
-          style={{ color: 'rgba(255,255,255,0.5)', background: 'transparent' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/15 spring-btn">
+          <i className="fa-solid fa-right-from-bracket w-4 text-center" />
           Çıkış Yap
         </button>
       </div>
@@ -190,17 +190,19 @@ export function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#F8FAFC' }} onClick={unlockAudio}>
+    <div className="min-h-screen flex text-white md:p-3 md:gap-3" onClick={unlockAudio}>
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col" style={{ width: 220, background: '#0F172A', minHeight: '100vh', flexShrink: 0 }}>
+      <div className="hidden md:flex flex-col glass-panel rounded-3xl overflow-hidden sticky top-3"
+        style={{ width: 232, height: 'calc(100vh - 24px)', flexShrink: 0 }}>
         <SidebarContent />
       </div>
 
       {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 flex flex-col" style={{ width: 260, background: '#0F172A' }}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-md fade-enter" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 flex flex-col glass-dark rounded-r-3xl overflow-hidden"
+            style={{ width: 260 }}>
             <SidebarContent />
           </div>
         </div>
@@ -208,48 +210,49 @@ export function AdminLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="px-4 md:px-8 py-4 border-b flex items-center justify-between"
-          style={{ background: 'white', borderColor: '#E2E8F0' }}>
-          <div className="flex items-center gap-3">
-            <button className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: '#F1F5F9' }} onClick={() => setSidebarOpen(true)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2">
-                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-              </svg>
-            </button>
-            <h1 className="font-semibold" style={{ color: '#0F172A', fontFamily: 'Georgia, serif', fontSize: 18 }}>
-              {currentLabel}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {pendingCount > 0 && (
-              <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold animate-pulse"
-                  style={{ background: '#FEF2F2', color: '#DC2626' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#DC2626' }} />
-                  {pendingCount} sipariş
+        <div className="px-3 pt-3 md:px-0 md:pt-0">
+          <div className="glass-panel rounded-3xl px-4 md:px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <button className="md:hidden glass-pill w-9 h-9 rounded-xl flex items-center justify-center spring-btn"
+                onClick={() => setSidebarOpen(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+              <h1 className="font-serif font-bold text-white truncate" style={{ fontSize: 20 }}>
+                {currentLabel}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              {pendingCount > 0 && (
+                <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse"
+                    style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.45)' }}>
+                    <div className="w-2 h-2 rounded-full" style={{ background: 'var(--danger)' }} />
+                    {pendingCount} sipariş
+                  </div>
+                </Link>
+              )}
+              {callCount > 0 && (
+                <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse"
+                    style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.45)' }}>
+                    🔔 {callCount} çağrı
+                  </div>
+                </Link>
+              )}
+              {pendingCount === 0 && callCount === 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
+                  style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.45)' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--success)' }} />
+                  <span className="hidden sm:inline">Aktif</span>
                 </div>
-              </Link>
-            )}
-            {callCount > 0 && (
-              <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold animate-pulse"
-                  style={{ background: '#FEF3C7', color: '#B45309' }}>
-                  🔔 {callCount} çağrı
-                </div>
-              </Link>
-            )}
-            {pendingCount === 0 && callCount === 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{ background: '#CCFBF1', color: '#0F766E' }}>
-                <div className="w-2 h-2 rounded-full" style={{ background: '#0D9488' }} />
-                <span className="hidden sm:inline">Aktif</span>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 md:p-8">
+        <div className="flex-1 overflow-auto p-4 md:px-2 md:py-6">
           <Outlet />
         </div>
       </div>

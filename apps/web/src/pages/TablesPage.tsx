@@ -188,35 +188,36 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
     .reduce((sum, i) => sum + i.price_int * i.quantity, 0) ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(15,23,42,0.75)' }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fade-enter"
+      style={{ background: 'var(--overlay)' }}
       onClick={onClose}>
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden flex flex-col text-white"
         style={{ maxHeight: '90vh' }}
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="px-5 py-4 flex items-center justify-between flex-shrink-0"
-          style={{ borderBottom: '1px solid #E2E8F0', background: '#0F172A' }}>
+        <div className="px-5 py-4 flex items-center justify-between flex-shrink-0 border-b border-white/15">
           <div>
-            <div className="font-bold text-base text-white" style={{ fontFamily: 'Georgia, serif' }}>
-              💳 Ödeme Al — {tableName}
+            <div className="font-serif font-bold text-lg text-white flex items-center gap-2">
+              <i className="fa-solid fa-credit-card text-amber-300 text-base" />
+              Ödeme Al — {tableName}
             </div>
             {bill && (
-              <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                Toplam: {formatPrice(bill.total_int)} · Kalan: {formatPrice(bill.remaining_int)}
+              <div className="text-xs mt-0.5 text-white/65">
+                Toplam: <span className="text-amber-300 font-semibold">{formatPrice(bill.total_int)}</span> · Kalan: <span className="text-amber-300 font-semibold">{formatPrice(bill.remaining_int)}</span>
               </div>
             )}
           </div>
           <button onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}>✕</button>
+            className="glass-pill w-8 h-8 rounded-full flex items-center justify-center spring-btn">
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
         </div>
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-16">
             <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
+              style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
           </div>
         ) : bill && openOrders ? (
           <OpenOrdersDecisionPanel
@@ -231,19 +232,14 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
           <>
             {/* Ödeme Yöntemi */}
             <div className="px-5 pt-4 flex-shrink-0">
-              <div className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#64748B' }}>
+              <div className="text-[11px] font-semibold mb-2 uppercase tracking-wider text-white/60">
                 Ödeme Yöntemi
               </div>
               <div className="flex gap-2 mb-4">
                 {PAYMENT_METHODS.map(pm => (
                   <button key={pm.value}
                     onClick={() => setPaymentMethod(pm.value)}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold"
-                    style={{
-                      background: paymentMethod === pm.value ? '#0D9488' : '#F1F5F9',
-                      color: paymentMethod === pm.value ? 'white' : '#0F172A',
-                      border: `2px solid ${paymentMethod === pm.value ? '#0D9488' : 'transparent'}`
-                    }}>
+                    className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold spring-btn ${paymentMethod === pm.value ? 'btn-accent' : 'glass-pill text-white/85'}`}>
                     {pm.icon} {pm.label}
                   </button>
                 ))}
@@ -256,12 +252,12 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
               {unpaidItems.length > 0 && (
                 <>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
                       Ödenmemiş ({unpaidItems.length})
                     </div>
                     <button onClick={selectAll}
-                      className="text-xs font-semibold"
-                      style={{ color: '#0D9488' }}>
+                      className="text-xs font-bold spring-btn"
+                      style={{ color: 'var(--accent)' }}>
                       Tümünü Seç
                     </button>
                   </div>
@@ -271,24 +267,24 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
                       return (
                         <div key={item.item_id}
                           onClick={() => toggleItem(item.item_id)}
-                          className="flex items-center gap-3 p-3 rounded-xl cursor-pointer"
+                          className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-colors"
                           style={{
-                            background: selected ? '#F0FDFA' : '#F8FAFC',
-                            border: `1.5px solid ${selected ? '#0D9488' : '#E2E8F0'}`
+                            background: selected ? 'var(--accent-soft)' : 'rgba(255,255,255,0.08)',
+                            border: `1.5px solid ${selected ? 'var(--accent)' : 'rgba(255,255,255,0.18)'}`
                           }}>
-                          <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
-                            style={{ background: selected ? '#0D9488' : 'white', border: `2px solid ${selected ? '#0D9488' : '#CBD5E1'}` }}>
-                            {selected && <span className="text-white text-xs">✓</span>}
+                          <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                            style={{ background: selected ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', border: `1.5px solid ${selected ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)'}` }}>
+                            {selected && <i className="fa-solid fa-check text-white text-[10px]" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+                            <div className="text-sm font-semibold text-white">
                               {item.quantity}x {item.product_name}
                             </div>
                             {item.note && (
-                              <div className="text-xs" style={{ color: '#92400E' }}>📝 {item.note}</div>
+                              <div className="text-xs text-amber-200/90">📝 {item.note}</div>
                             )}
                           </div>
-                          <div className="text-sm font-bold flex-shrink-0" style={{ color: '#0D9488' }}>
+                          <div className="text-sm font-bold flex-shrink-0 text-amber-300">
                             {formatPrice(item.price_int * item.quantity)}
                           </div>
                         </div>
@@ -301,24 +297,24 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
               {/* Ödenmiş */}
               {paidItems.length > 0 && (
                 <>
-                  <div className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+                  <div className="text-[11px] font-semibold mb-2 uppercase tracking-wider text-white/45">
                     Tahsil Edildi ({paidItems.length})
                   </div>
                   <div className="space-y-1.5 mb-4">
                     {paidItems.map(item => (
                       <div key={item.item_id}
-                        className="flex items-center gap-3 p-3 rounded-xl opacity-50"
-                        style={{ background: '#F1F5F9', border: '1.5px solid #E2E8F0' }}>
-                        <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
-                          style={{ background: '#16A34A' }}>
-                          <span className="text-white text-xs">✓</span>
+                        className="flex items-center gap-3 p-3 rounded-2xl opacity-50"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)' }}>
+                        <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'var(--success-bg)', border: '1.5px solid var(--success)' }}>
+                          <i className="fa-solid fa-check text-[10px]" style={{ color: 'var(--success)' }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold line-through" style={{ color: '#64748B' }}>
+                          <div className="text-sm font-semibold line-through text-white/70">
                             {item.quantity}x {item.product_name}
                           </div>
                         </div>
-                        <div className="text-sm font-bold flex-shrink-0 line-through" style={{ color: '#94A3B8' }}>
+                        <div className="text-sm font-bold flex-shrink-0 line-through text-white/55">
                           {formatPrice(item.price_int * item.quantity)}
                         </div>
                       </div>
@@ -328,22 +324,22 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
               )}
 
               {bill.items.length === 0 && (
-                <div className="text-center py-8" style={{ color: '#94A3B8' }}>
+                <div className="text-center py-8 text-white/50">
                   Bu adisyonda ürün yok.
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-5 py-4 flex-shrink-0 border-t border-white/15">
               {/* Seçili tutar */}
               {selectedItems.size > 0 && (
-                <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-xl"
-                  style={{ background: '#F0FDFA', border: '1px solid #99F6E4' }}>
-                  <span className="text-sm font-semibold" style={{ color: '#0F766E' }}>
+                <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-2xl"
+                  style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255,122,41,0.55)' }}>
+                  <span className="text-sm font-semibold text-white/90">
                     {selectedItems.size} ürün seçildi
                   </span>
-                  <span className="text-base font-bold" style={{ color: '#0D9488' }}>
+                  <span className="text-base font-extrabold text-amber-300">
                     {formatPrice(selectedTotal)}
                   </span>
                 </div>
@@ -352,14 +348,13 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
               <div className="flex gap-2">
                 <button onClick={() => handlePay()}
                   disabled={paying || selectedItems.size === 0}
-                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
-                  style={{ background: selectedItems.size === 0 || paying ? '#94A3B8' : '#0D9488' }}>
+                  className="btn-accent flex-1 py-3 rounded-2xl text-sm font-bold spring-btn">
                   {paying ? 'İşleniyor...' : `💳 Tahsil Et${selectedItems.size > 0 ? ` (${formatPrice(selectedTotal)})` : ''}`}
                 </button>
                 <button onClick={() => handleCloseTable()}
                   disabled={closing}
-                  className="px-4 py-3 rounded-xl text-sm font-bold"
-                  style={{ background: '#FEF2F2', color: '#DC2626', border: '1.5px solid #FECACA' }}>
+                  className="px-4 py-3 rounded-2xl text-sm font-bold spring-btn"
+                  style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1.5px solid var(--danger)' }}>
                   {closing ? '...' : '🔒 Kapat'}
                 </button>
               </div>
@@ -381,8 +376,8 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
 };
 
 const DECISION_OPTIONS: { value: OpenOrderDecision; label: string; hint: string; color: string; bg: string }[] = [
-  { value: 'customer_left', label: '✖ İptal Et', hint: 'Müşteri kalktı', color: '#B45309', bg: '#FFFBEB' },
-  { value: 'no_payment', label: '⚠ Zayi Say', hint: 'Hazırlandı, ödenmedi', color: '#DC2626', bg: '#FEF2F2' },
+  { value: 'customer_left', label: '✖ İptal Et', hint: 'Müşteri kalktı', color: 'var(--warning)', bg: 'var(--warning-bg)' },
+  { value: 'no_payment', label: '⚠ Zayi Say', hint: 'Hazırlandı, ödenmedi', color: 'var(--danger)', bg: 'var(--danger-bg)' },
 ];
 
 function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCancel, onConfirm }: {
@@ -399,9 +394,10 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
   return (
     <>
       <div className="flex-1 overflow-y-auto px-5 pt-4">
-        <div className="mb-3 px-3 py-2 rounded-xl text-xs font-semibold"
-          style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B' }}>
-          Masa kapatılmadan önce ödenmemiş açık siparişler için karar verin. Karar verilmeden masa kapatılamaz.
+        <div className="mb-3 px-3 py-2.5 rounded-2xl text-xs font-semibold flex gap-2 items-start"
+          style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.5)', color: '#FECDD3' }}>
+          <i className="fa-solid fa-triangle-exclamation mt-0.5" style={{ color: 'var(--danger)' }} />
+          <span>Masa kapatılmadan önce ödenmemiş açık siparişler için karar verin. Karar verilmeden masa kapatılamaz.</span>
         </div>
 
         <div className="space-y-3 mb-4">
@@ -409,25 +405,28 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
             const selected = decisions[order.order_id];
             const hasPaidItems = order.items.some(i => i.is_paid);
             return (
-              <div key={order.order_id} className="p-3 rounded-xl"
-                style={{ background: '#F8FAFC', border: `1.5px solid ${selected ? '#0D9488' : '#E2E8F0'}` }}>
+              <div key={order.order_id} className="p-3 rounded-2xl"
+                style={{
+                  background: selected ? 'var(--accent-soft)' : 'rgba(255,255,255,0.08)',
+                  border: `1.5px solid ${selected ? 'var(--accent)' : 'rgba(255,255,255,0.18)'}`
+                }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-bold" style={{ color: '#0F172A' }}>
+                  <span className="text-sm font-bold text-white">
                     {order.table_name} · {ORDER_STATUS_LABELS[order.status] ?? order.status}
                   </span>
-                  <span className="text-sm font-bold" style={{ color: '#DC2626' }}>
+                  <span className="text-sm font-bold" style={{ color: 'var(--danger)' }}>
                     {formatPrice(order.unpaid_total_int)}
                   </span>
                 </div>
-                <div className="text-xs mb-2" style={{ color: '#64748B' }}>
+                <div className="text-xs mb-2 text-white/65">
                   {order.items.map((i, idx) => (
-                    <span key={idx} style={i.is_paid ? { textDecoration: 'line-through' } : undefined}>
+                    <span key={idx} style={i.is_paid ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
                       {idx > 0 ? ', ' : ''}{i.quantity}x {i.product_name}
                     </span>
                   ))}
                 </div>
                 {hasPaidItems && (
-                  <div className="text-xs mb-2" style={{ color: '#92400E' }}>
+                  <div className="text-xs mb-2 text-amber-200/90">
                     Bu siparişte ödenmiş ürün de var; sipariş bütün olarak iptal edilir.
                   </div>
                 )}
@@ -435,10 +434,10 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
                   {DECISION_OPTIONS.map(opt => (
                     <button key={opt.value}
                       onClick={() => onDecide(order.order_id, opt.value)}
-                      className="flex-1 py-2 rounded-xl text-xs font-semibold"
+                      className="flex-1 py-2 rounded-2xl text-xs font-semibold spring-btn"
                       style={{
                         background: selected === opt.value ? opt.color : opt.bg,
-                        color: selected === opt.value ? 'white' : opt.color,
+                        color: selected === opt.value ? '#14110F' : opt.color,
                         border: `1.5px solid ${opt.color}`
                       }}>
                       {opt.label}
@@ -452,20 +451,18 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
         </div>
       </div>
 
-      <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: '1px solid #E2E8F0' }}>
-        <div className="text-xs mb-2 text-center" style={{ color: '#64748B' }}>
+      <div className="px-5 py-4 flex-shrink-0 border-t border-white/15">
+        <div className="text-xs mb-2 text-center text-white/60">
           {decidedCount}/{orders.length} sipariş için karar verildi
         </div>
         <div className="flex gap-2">
           <button onClick={onCancel} disabled={closing}
-            className="px-4 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: '#F1F5F9', color: '#64748B' }}>
+            className="glass-pill px-4 py-3 rounded-2xl text-sm font-semibold spring-btn">
             Vazgeç
           </button>
           <button onClick={onConfirm}
             disabled={closing || !allDecided}
-            className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
-            style={{ background: closing || !allDecided ? '#94A3B8' : '#DC2626' }}>
+            className="btn-accent flex-1 py-3 rounded-2xl text-sm font-bold spring-btn">
             {closing ? '...' : '🔒 Kararları Uygula ve Masayı Kapat'}
           </button>
         </div>
@@ -666,7 +663,7 @@ export function TablesPage() {
     const el = document.getElementById(`table-card-${tableId}`);
     if (!el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.style.boxShadow = '0 0 0 4px #3B82F6';
+    el.style.boxShadow = '0 0 0 4px #FF7A29, 0 0 32px rgba(255,122,41,0.6)';
     setTimeout(() => { el.style.boxShadow = ''; }, 1600);
   }
 
@@ -714,43 +711,43 @@ export function TablesPage() {
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
       {/* Masa Ekle */}
-      <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm max-w-2xl" style={{ border: '1px solid #E2E8F0' }}>
-        <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider" style={{ color: '#64748B' }}>Yeni Masa Ekle</h2>
+      <div className="glass-panel rounded-3xl p-6 mb-6 max-w-2xl">
+        <h2 className="text-[11px] font-semibold mb-4 uppercase tracking-wider text-white/70 flex items-center gap-2">
+          <i className="fa-solid fa-chair text-amber-300" /> Yeni Masa Ekle
+        </h2>
         <div className="flex gap-3">
           <input value={newName} onChange={e => setNewName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addTable()}
             placeholder="Örn: Masa 1, Bahçe 3, VIP..."
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
-            style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A' }} />
+            className="glass-input flex-1 min-w-0 px-4 py-2.5 rounded-2xl text-sm" />
           <button onClick={addTable}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
-            style={{ background: '#0F172A' }}>+ Ekle</button>
+            className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold spring-btn whitespace-nowrap">+ Ekle</button>
         </div>
       </div>
 
       {/* İstatistikler */}
       {tables.length > 0 && (
         <div className="flex gap-3 mb-4 flex-wrap">
-          <div className="px-4 py-2 rounded-xl" style={{ background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
-            <span className="text-xs font-semibold" style={{ color: '#065F46' }}>
+          <div className="px-4 py-2 rounded-2xl backdrop-blur-md" style={{ background: 'var(--success-bg)', border: '1px solid rgba(52,211,153,0.5)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--success)' }}>
               🟢 Boş: {tablesWithSession.filter(t => t.is_active && !t.session).length}
             </span>
           </div>
-          <div className="px-4 py-2 rounded-xl" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-            <span className="text-xs font-semibold" style={{ color: '#991B1B' }}>
+          <div className="px-4 py-2 rounded-2xl backdrop-blur-md" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.5)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>
               🔴 Dolu: {tablesWithSession.filter(t => t.is_active && t.session && !t.isMerged).length}
             </span>
           </div>
           {mergeGroups.size > 0 && (
-            <div className="px-4 py-2 rounded-xl" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <span className="text-xs font-semibold" style={{ color: '#1D4ED8' }}>
+            <div className="px-4 py-2 rounded-2xl backdrop-blur-md" style={{ background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.5)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--info)' }}>
                 🔵 Birleşik: {[...mergeGroups.values()].reduce((s, v) => s + v.length, 0)} masa
               </span>
             </div>
           )}
           {sessions.length > 0 && (
-            <div className="px-4 py-2 rounded-xl" style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-              <span className="text-xs font-semibold" style={{ color: '#0C4A6E' }}>
+            <div className="glass-pill px-4 py-2 rounded-2xl">
+              <span className="text-xs font-semibold text-amber-300">
                 💰 Toplam: {formatPrice(sessions.filter(s => s.status === 'open').reduce((sum, s) => sum + s.cached_total_int, 0))}
               </span>
             </div>
@@ -787,63 +784,67 @@ export function TablesPage() {
         ))}
 
         {tables.length === 0 && (
-          <div className="col-span-full text-center py-16 rounded-2xl" style={{ background: 'white', border: '1px dashed #E2E8F0' }}>
+          <div className="glass-card col-span-full text-center py-16 rounded-3xl" style={{ borderStyle: 'dashed' }}>
             <div className="text-4xl mb-3">🪑</div>
-            <p className="text-sm" style={{ color: '#94A3B8' }}>Henüz masa yok</p>
+            <p className="text-sm text-white/65">Henüz masa yok</p>
           </div>
         )}
       </div>
 
       {/* Adisyon Detay Modal */}
       {detailOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', padding: 16 }}
+        <div className="fade-enter" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--overlay)', padding: 16 }}
           onClick={() => { setDetailOpen(null); setDetailData(null); }}>
-          <div style={{ background: 'white', borderRadius: 20, maxWidth: 560, width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          <div className="glass-dark rounded-3xl text-white" style={{ maxWidth: 560, width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '20px 24px 12px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontWeight: 700, fontSize: 18, color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+            <div className="border-b border-white/15" style={{ padding: '20px 24px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 className="font-serif text-white flex items-center gap-2" style={{ fontWeight: 700, fontSize: 20 }}>
+                <i className="fa-solid fa-receipt text-amber-300 text-base" />
                 {detailData?.table?.name ?? 'Masa Detayı'}
               </h3>
               <button onClick={() => { setDetailOpen(null); setDetailData(null); }}
-                style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: '#F1F5F9', color: '#64748B', cursor: 'pointer' }}>✕</button>
+                className="glass-pill spring-btn flex items-center justify-center"
+                style={{ width: 32, height: 32, borderRadius: '50%', cursor: 'pointer' }}>
+                <i className="fa-solid fa-xmark text-sm" />
+              </button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
               {detailLoading ? (
                 <div style={{ textAlign: 'center', padding: 40 }}>
                   <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin mx-auto"
-                    style={{ borderColor: '#0D9488', borderTopColor: 'transparent' }} />
+                    style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
                 </div>
               ) : detailData ? (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
                     {[
-                      { label: 'Adisyon', value: formatPrice(detailData.session?.cached_total_int ?? 0), color: '#0D9488', bg: '#F0FDFA' },
-                      { label: 'Teslim', value: detailData.orders.filter(o => o.status === 'delivered').length, color: '#0F172A', bg: '#F8FAFC' },
-                      { label: 'Bekliyor', value: detailData.orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)).length, color: '#B45309', bg: '#FFFBEB' },
+                      { label: 'Adisyon', value: formatPrice(detailData.session?.cached_total_int ?? 0), color: '#FCD34D', bg: 'var(--accent-soft)' },
+                      { label: 'Teslim', value: detailData.orders.filter(o => o.status === 'delivered').length, color: 'var(--success)', bg: 'var(--success-bg)' },
+                      { label: 'Bekliyor', value: detailData.orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)).length, color: 'var(--warning)', bg: 'var(--warning-bg)' },
                     ].map(s => (
-                      <div key={s.label} style={{ padding: 10, background: s.bg, borderRadius: 10, textAlign: 'center' }}>
-                        <div style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>{s.label}</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: s.color, marginTop: 2 }}>{s.value}</div>
+                      <div key={s.label} style={{ padding: 10, background: s.bg, borderRadius: 14, textAlign: 'center', border: '1px solid rgba(255,255,255,0.15)' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>{s.label}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.value}</div>
                       </div>
                     ))}
                   </div>
                   {detailData.orders.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#94A3B8', fontSize: 13, padding: 20 }}>Henüz sipariş yok.</p>
+                    <p style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: 13, padding: 20 }}>Henüz sipariş yok.</p>
                   ) : detailData.orders.map((order, idx) => (
-                    <div key={order.id} style={{ marginBottom: 10, border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
-                      <div style={{ padding: '8px 12px', background: order.status === 'delivered' ? '#F0FDF4' : '#FFFBEB', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'delivered' ? '#065F46' : '#B45309' }}>
+                    <div key={order.id} style={{ marginBottom: 10, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
+                      <div style={{ padding: '8px 12px', background: order.status === 'delivered' ? 'var(--success-bg)' : 'var(--warning-bg)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'delivered' ? 'var(--success)' : 'var(--warning)' }}>
                           #{idx + 1} · {order.status === 'delivered' ? 'Teslim ✓' : order.status === 'pending' ? 'Bekliyor' : order.status}
                         </span>
-                        <span style={{ fontSize: 11, color: '#64748B' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {new Date(order.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <div style={{ padding: '8px 12px' }}>
                         {order.items.map(item => (
-                          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                          <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12, color: 'rgba(255,255,255,0.9)' }}>
                             <span>{item.quantity}x {item.product_name}</span>
-                            <span style={{ color: '#64748B' }}>{formatPrice(item.price_int * item.quantity)}</span>
+                            <span className="text-amber-300" style={{ fontWeight: 600 }}>{formatPrice(item.price_int * item.quantity)}</span>
                           </div>
                         ))}
                       </div>
@@ -853,19 +854,21 @@ export function TablesPage() {
               ) : null}
             </div>
             {detailData && detailData.session?.status === 'open' && (
-              <div style={{ padding: '12px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: 10 }}>
+              <div className="border-t border-white/15" style={{ padding: '12px 24px 16px', display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => {
                     setDetailOpen(null);
                     setDetailData(null);
                     if (detailData?.table) setPaymentSession({ sessionId: detailOpen!, tableName: detailData.table.name });
                   }}
-                  style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: '#0D9488', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                  className="btn-accent spring-btn"
+                  style={{ flex: 1, padding: 12, borderRadius: 16, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
                   💳 Ödeme Al
                 </button>
                 <button
                   onClick={() => startCloseFlow(detailOpen!, detailData?.table?.name ?? 'Masa')}
-                  style={{ flex: 1, padding: 12, borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                  className="spring-btn"
+                  style={{ flex: 1, padding: 12, borderRadius: 16, border: '1.5px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
                   🔒 Masayı Kapat
                 </button>
               </div>
@@ -876,28 +879,31 @@ export function TablesPage() {
 
       {/* Pending sipariş modal */}
       {closeModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.7)', padding: 16 }}
+        <div className="fade-enter" style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--overlay)', padding: 16 }}
           onClick={() => setCloseModal(null)}>
-          <div style={{ background: 'white', borderRadius: 20, maxWidth: 440, width: '100%', padding: 24 }}
+          <div className="glass-dark rounded-3xl text-white" style={{ maxWidth: 440, width: '100%', padding: 24 }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
-            <h3 style={{ fontWeight: 700, fontSize: 17, color: '#0F172A', textAlign: 'center', marginBottom: 8, fontFamily: 'Georgia, serif' }}>
+            <h3 className="font-serif text-white" style={{ fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 8 }}>
               Teslim Edilmemiş Sipariş Var
             </h3>
-            <p style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20, lineHeight: 1.5 }}>
-              <strong>{closeModal.tableName}</strong> masasında <strong>{closeModal.pendingCount}</strong> bekleyen sipariş var.
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 20, lineHeight: 1.5 }}>
+              <strong className="text-white">{closeModal.tableName}</strong> masasında <strong className="text-amber-300">{closeModal.pendingCount}</strong> bekleyen sipariş var.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={() => tryCloseSession(closeModal.sessionId, closeModal.tableName, 'transfer')}
-                style={{ padding: 12, borderRadius: 10, border: '1.5px solid #0D9488', background: 'white', color: '#0D9488', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
+                className="spring-btn"
+                style={{ padding: 12, borderRadius: 16, border: '1.5px solid var(--accent)', background: 'var(--accent-soft)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
                 🔄 Yeni müşteriye ait — yeni masa aç
               </button>
               <button onClick={() => cancelPendingAndOpenPayment(closeModal.sessionId, closeModal.tableName)}
-                style={{ padding: 12, borderRadius: 10, border: '1.5px solid #DC2626', background: 'white', color: '#DC2626', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
+                className="spring-btn"
+                style={{ padding: 12, borderRadius: 16, border: '1.5px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
                 ❌ Bekleyenleri İptal Et ve Ödemeye Geç
               </button>
               <button onClick={() => setCloseModal(null)}
-                style={{ padding: 12, borderRadius: 10, border: '1.5px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                className="glass-pill spring-btn"
+                style={{ padding: 12, borderRadius: 16, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                 Vazgeç
               </button>
             </div>
@@ -952,13 +958,17 @@ function TableCard({
   const duration = session ? useDuration(session.opened_at) : null;
 
   // Renk: mavi=birleşik, kırmızı=dolu, yeşil=boş, gri=pasif
+  // Glass varyantları: renkli tint + üst şerit, beyaz metin
   const colors = isPassive
-    ? { bg: '#F8FAFC', border: '#E2E8F0', accent: '#94A3B8' }
+    ? { bg: 'rgba(255,255,255,0.1)', border: 'rgba(255,255,255,0.25)', accent: 'rgba(255,255,255,0.22)', text: 'rgba(255,255,255,0.75)' }
     : isMerged
-    ? { bg: '#EFF6FF', border: '#3B82F6', accent: '#1D4ED8' }
+    ? { bg: 'rgba(14,165,233,0.22)', border: 'rgba(125,211,252,0.6)', accent: 'rgba(14,165,233,0.75)', text: '#7DD3FC' }
     : isOccupied
-    ? { bg: '#FEF2F2', border: '#FECACA', accent: '#DC2626' }
-    : { bg: '#F0FDF4', border: '#A7F3D0', accent: '#059669' };
+    ? { bg: 'rgba(244,63,94,0.2)', border: 'rgba(251,113,133,0.55)', accent: 'rgba(225,29,72,0.75)', text: '#FDA4AF' }
+    : { bg: 'rgba(16,185,129,0.2)', border: 'rgba(52,211,153,0.55)', accent: 'rgba(5,150,105,0.75)', text: '#6EE7B7' };
+
+  const innerBox = { background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.14)' } as const;
+  const smallBtn = { flex: 1, padding: '6px', borderRadius: 10, fontWeight: 600, fontSize: 11, cursor: 'pointer' } as const;
 
   const statusLabel = isPassive ? 'Pasif'
     : isMerged ? '🔵 Birleşik'
@@ -966,19 +976,20 @@ function TableCard({
     : '○ Boş';
 
   return (
-    <div id={`table-card-${table.id}`} style={{
+    <div id={`table-card-${table.id}`} className="glass-card glass-card-hover text-white" style={{
       background: colors.bg,
-      border: `2px solid ${colors.border}`,
-      borderRadius: 16,
+      border: `1.5px solid ${colors.border}`,
+      borderRadius: 24,
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      opacity: isPassive ? 0.7 : 1
+      opacity: isPassive ? 0.6 : 1
     }}>
       {/* Üst şerit */}
       <div style={{
         padding: '8px 14px',
         background: colors.accent,
+        borderBottom: '1px solid rgba(255,255,255,0.25)',
         color: 'white',
         fontWeight: 700,
         fontSize: 11,
@@ -997,61 +1008,64 @@ function TableCard({
       <div style={{ padding: 16, flex: 1 }}>
         {editing ? (
           <input value={editingName} onChange={e => onChangeEditName(e.target.value)}
-            autoFocus className="w-full px-3 py-2 rounded-lg text-sm outline-none mb-3"
-            style={{ border: '1.5px solid #0D9488', background: 'white' }} />
+            autoFocus className="glass-input w-full px-3 py-2 rounded-xl text-sm mb-3"
+            style={{ borderColor: 'var(--accent)' }} />
         ) : (
-          <h3 style={{ fontWeight: 700, fontSize: 20, color: '#0F172A', fontFamily: 'Georgia, serif', lineHeight: 1.1, marginBottom: 12 }}>
+          <h3 className="font-serif text-white" style={{ fontWeight: 700, fontSize: 22, lineHeight: 1.1, marginBottom: 12 }}>
             {table.name}
           </h3>
         )}
 
         {/* Birleşik masa görseli */}
         {isMerged && (
-          <div style={{ marginBottom: 10, padding: '6px 10px', background: '#DBEAFE', borderRadius: 8, fontSize: 11, color: '#1D4ED8', fontWeight: 600, textAlign: 'center' }}>
+          <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', borderRadius: 12, fontSize: 11, color: 'var(--info)', fontWeight: 600, textAlign: 'center' }}>
             🔗 Birleşik Masa Grubu
           </div>
         )}
 
         {/* Kaynak masa: siparişler hedef masada, burada adisyon/detay yok */}
         {mergedInto && (
-          <div style={{ marginBottom: 12, padding: '10px', background: 'white', borderRadius: 8, fontSize: 12, color: '#1D4ED8', fontWeight: 600, textAlign: 'center' }}>
-            Bu masa birleştirildi → <strong>{mergedInto.tableName}</strong>
+          <div style={{ ...innerBox, marginBottom: 12, padding: '10px', borderRadius: 12, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600, textAlign: 'center' }}>
+            Bu masa birleştirildi → <strong style={{ color: 'var(--info)' }}>{mergedInto.tableName}</strong>
           </div>
         )}
 
         {isOccupied && session && !mergedInto && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'white', borderRadius: 8 }}>
-              <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Adisyon</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: colors.accent }}>
+            <div style={{ ...innerBox, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', borderRadius: 12 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Adisyon</span>
+              <span className="text-amber-300" style={{ fontSize: 16, fontWeight: 800 }}>
                 {formatPrice(session.cached_total_int)}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <div style={{ flex: 1, padding: '5px 8px', background: 'white', borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>Teslim</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#065F46' }}>{session.delivered_count}</div>
+              <div style={{ ...innerBox, flex: 1, padding: '5px 8px', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Teslim</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--success)' }}>{session.delivered_count}</div>
               </div>
-              <div style={{ flex: 1, padding: '5px 8px', background: 'white', borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>Bekliyor</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#B45309' }}>{session.pending_count}</div>
+              <div style={{ ...innerBox, flex: 1, padding: '5px 8px', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Bekliyor</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--warning)' }}>{session.pending_count}</div>
               </div>
             </div>
           </div>
         )}
 
         {!isOccupied && !editing && !isPassive && (
-          <div style={{ padding: '14px 8px', textAlign: 'center', background: 'white', borderRadius: 10, border: '1px dashed #A7F3D0', marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: '#065F46', fontWeight: 600 }}>Müşteri bekleniyor</div>
+          <div style={{ padding: '14px 8px', textAlign: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: 14, border: '1px dashed rgba(110,231,183,0.55)', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: colors.text, fontWeight: 600 }}>
+              <i className="fa-regular fa-clock" style={{ marginRight: 6 }} />Müşteri bekleniyor
+            </div>
           </div>
         )}
       </div>
 
       {/* Butonlar */}
-      <div style={{ padding: '10px 14px 14px', borderTop: '1px solid rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ padding: '10px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.14)', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {mergedInto && !editing && (
           <button onClick={() => onGoToTable(mergedInto.tableId)}
-            style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none', background: '#1D4ED8', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+            className="spring-btn"
+            style={{ width: '100%', padding: '9px', borderRadius: 12, border: '1px solid rgba(125,211,252,0.6)', background: 'rgba(14,165,233,0.35)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
             → {mergedInto.tableName} masasına git
           </button>
         )}
@@ -1060,16 +1074,19 @@ function TableCard({
           <>
             {/* Ödeme Al butonu */}
             <button onClick={onOpenPayment}
-              style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none', background: '#0D9488', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+              className="btn-accent spring-btn"
+              style={{ width: '100%', padding: '9px', borderRadius: 12, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
               💳 Ödeme Al
             </button>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={onOpenDetail}
-                style={{ flex: 1, padding: '7px', borderRadius: 8, border: 'none', background: '#0F172A', color: 'white', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                className="glass-pill spring-btn"
+                style={{ flex: 1, padding: '7px', borderRadius: 12, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                 💰 Detay
               </button>
               <button onClick={onCloseSession}
-                style={{ flex: 1, padding: '7px', borderRadius: 8, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                className="spring-btn"
+                style={{ flex: 1, padding: '7px', borderRadius: 12, border: '1px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                 🔒 Kapat
               </button>
             </div>
@@ -1079,16 +1096,16 @@ function TableCard({
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {editing ? (
             <>
-              <button onClick={onSaveEdit} style={{ flex: 1, padding: '6px', borderRadius: 8, border: 'none', background: '#0D9488', color: 'white', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Kaydet</button>
-              <button onClick={onCancelEdit} style={{ flex: 1, padding: '6px', borderRadius: 8, border: 'none', background: '#F1F5F9', color: '#64748B', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>İptal</button>
+              <button onClick={onSaveEdit} className="btn-accent spring-btn" style={{ ...smallBtn, fontWeight: 700 }}>Kaydet</button>
+              <button onClick={onCancelEdit} className="glass-pill spring-btn" style={{ ...smallBtn, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>İptal</button>
             </>
           ) : (
             <>
-              <button onClick={onStartEdit} style={{ flex: 1, padding: '6px', borderRadius: 8, border: '1px solid #E2E8F0', background: 'white', color: '#0F172A', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>Düzenle</button>
-              <button onClick={onToggleActive} style={{ flex: 1, padding: '6px', borderRadius: 8, border: '1px solid #E2E8F0', background: 'white', color: table.is_active ? '#DC2626' : '#16A34A', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>
+              <button onClick={onStartEdit} className="glass-pill spring-btn" style={smallBtn}>Düzenle</button>
+              <button onClick={onToggleActive} className="glass-pill spring-btn" style={{ ...smallBtn, color: table.is_active ? 'var(--danger)' : 'var(--success)' }}>
                 {table.is_active ? 'Pasif' : 'Aktif'}
               </button>
-              <button onClick={onDelete} style={{ flex: 1, padding: '6px', borderRadius: 8, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>Sil</button>
+              <button onClick={onDelete} className="spring-btn" style={{ ...smallBtn, border: '1px solid rgba(251,113,133,0.55)', background: 'var(--danger-bg)', color: 'var(--danger)' }}>Sil</button>
             </>
           )}
         </div>

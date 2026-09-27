@@ -13,8 +13,11 @@ export function WaiterLayout() {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
-        <div className="text-sm" style={{ color: '#64748B' }}>Yükleniyor...</div>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="glass-panel rounded-3xl px-8 py-7 text-center fade-enter">
+          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+          <div className="text-sm font-semibold text-white/80">Yükleniyor...</div>
+        </div>
       </div>
     );
   }
@@ -37,57 +40,55 @@ export function WaiterLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen flex flex-col text-white">
 
-      <div className="sticky top-0 z-40 bg-white" style={{ borderBottom: '1px solid #E2E8F0' }}>
-        <div className="px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-40 px-3.5 pt-3">
+        <div className="mx-auto max-w-[520px] glass-panel rounded-3xl px-3.5 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-              style={{ background: '#0D9488' }}>
+            <div className="btn-accent w-11 h-11 rounded-2xl flex items-center justify-center text-base font-extrabold flex-shrink-0">
               {waiter.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="text-xs" style={{ color: '#64748B' }}>Hoşgeldin,</div>
-              <div className="font-bold text-sm truncate" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+              <div className="text-[11px] text-white/70 font-medium">Hoşgeldin,</div>
+              <div className="font-serif font-bold text-base leading-tight truncate">
                 {waiter.name}
               </div>
             </div>
           </div>
           <button onClick={logout}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-            style={{ background: '#FEF2F2', color: '#DC2626' }}>
-            Çıkış
+            className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn"
+            style={{ background: 'var(--danger-bg)', color: 'var(--danger)', borderColor: 'rgba(251,113,133,0.45)' }}>
+            <i className="fa-solid fa-right-from-bracket" /> Çıkış
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 pb-24">
-        <Outlet />
+      <div className="flex-1 overflow-auto px-3.5 pt-3 pb-28">
+        <div className="mx-auto w-full max-w-[520px]">
+          <Outlet />
+        </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white z-40"
-        style={{ borderTop: '1px solid #E2E8F0', boxShadow: '0 -4px 12px rgba(0,0,0,0.04)' }}>
-        <div className="flex items-center justify-around max-w-lg mx-auto">
+      <div className="fixed bottom-3 left-0 right-0 z-40 px-3.5">
+        <div className="mx-auto max-w-[520px] flex items-center gap-1 p-1.5 rounded-3xl bg-black/45 border border-white/25 backdrop-blur-xl"
+          style={{ boxShadow: 'var(--glass-shadow-sm)' }}>
           {navItems.map(item => {
             const active = isActive(item.to, item.exact);
             return (
               <Link key={item.to} to={item.to}
-                className="flex-1 flex flex-col items-center gap-1 py-3 relative"
-                style={{
-                  textDecoration: 'none',
-                  color: active ? '#0D9488' : '#94A3B8'
-                }}>
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl relative spring-btn ${active ? 'btn-accent' : 'text-white/70'}`}
+                style={{ textDecoration: 'none' }}>
                 <div style={{ position: 'relative' }}>
-                  <span className="text-xl">{item.icon}</span>
+                  <span className="text-lg leading-none">{item.icon}</span>
                   {item.badge > 0 && (
                     <span style={{
                       position: 'absolute',
                       top: -6,
-                      right: -10,
-                      background: '#DC2626',
+                      right: -12,
+                      background: 'linear-gradient(135deg, #FB7185, #E11D48)',
                       color: 'white',
                       fontSize: 10,
-                      fontWeight: 700,
+                      fontWeight: 800,
                       minWidth: 18,
                       height: 18,
                       borderRadius: 9,
@@ -95,14 +96,15 @@ export function WaiterLayout() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: '0 5px',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                      border: '1px solid rgba(255,255,255,0.7)',
+                      boxShadow: '0 4px 10px rgba(225,29,72,0.5)',
                       animation: 'badge-pulse 1.5s ease-in-out infinite'
                     }}>
                       {item.badge}
                     </span>
                   )}
                 </div>
-                <span className="text-xs font-semibold">{item.label}</span>
+                <span className="text-[11px] font-bold">{item.label}</span>
               </Link>
             );
           })}

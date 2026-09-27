@@ -24,6 +24,25 @@ const TAB_LABELS: Record<TabKey, { label: string; icon: string }> = {
   cancellations: { label: 'İptal & Risk', icon: '⚠️' }
 };
 
+// Koyu cam üzerinde okunur grafik stilleri
+const CHART_ACCENT = '#FF7A29';
+const CHART_TICK = { fontSize: 12, fill: 'rgba(255,255,255,0.7)' };
+const CHART_GRID = 'rgba(255,255,255,0.15)';
+const CHART_AXIS_LINE = { stroke: 'rgba(255,255,255,0.25)' };
+const CHART_TOOLTIP_CONTENT: React.CSSProperties = {
+  background: 'rgba(20,17,15,0.85)',
+  border: '1px solid rgba(255,255,255,0.25)',
+  borderRadius: 14,
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+  boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+  color: '#fff'
+};
+const CHART_TOOLTIP_LABEL: React.CSSProperties = { color: '#fff', fontWeight: 700 };
+const CHART_TOOLTIP_ITEM: React.CSSProperties = { color: 'rgba(255,255,255,0.9)' };
+const CHART_CURSOR_LINE = { stroke: 'rgba(255,255,255,0.35)' };
+const CHART_CURSOR_BAR = { fill: 'rgba(255,255,255,0.08)' };
+
 // ─────────────────────────────────────────────────────────────
 // TARİH FİLTRESİ
 // ─────────────────────────────────────────────────────────────
@@ -40,7 +59,7 @@ function DateRangeBar({ preset, customFrom, customTo, onPresetChange, onCustomCh
   const presets: DateRangePreset[] = ['today', 'yesterday', 'last_7', 'last_30', 'this_month'];
 
   return (
-    <div className="bg-white rounded-2xl p-3 mb-5" style={{ border: '1px solid #E2E8F0' }}>
+    <div className="glass-panel rounded-3xl p-3 mb-5">
       <div className="flex flex-wrap items-center gap-2">
         {presets.map(p => {
           const active = preset === p;
@@ -48,11 +67,7 @@ function DateRangeBar({ preset, customFrom, customTo, onPresetChange, onCustomCh
             <button
               key={p}
               onClick={() => onPresetChange(p)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold active:scale-95 transition-transform"
-              style={{
-                background: active ? '#0F172A' : '#F1F5F9',
-                color: active ? 'white' : '#0F172A'
-              }}
+              className={`px-3.5 py-1.5 rounded-2xl text-xs font-semibold spring-btn ${active ? 'btn-accent' : 'glass-pill'}`}
             >
               {PRESET_LABELS[p]}
             </button>
@@ -62,31 +77,25 @@ function DateRangeBar({ preset, customFrom, customTo, onPresetChange, onCustomCh
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold" style={{ color: '#64748B' }}>Özel:</span>
+          <span className="text-xs font-semibold text-white/70">
+            <i className="fa-regular fa-calendar mr-1" />Özel:
+          </span>
           <input
             type="date"
             value={customFrom}
             max={customTo}
             onChange={e => onCustomChange(e.target.value, customTo)}
-            className="px-2 py-1 rounded-lg text-xs outline-none"
-            style={{
-              border: '1px solid #E2E8F0',
-              background: preset === 'custom' ? 'white' : '#F8FAFC',
-              color: '#0F172A'
-            }}
+            className="glass-input px-2 py-1 rounded-xl text-xs"
+            style={preset === 'custom' ? { borderColor: 'var(--accent)' } : undefined}
           />
-          <span className="text-xs" style={{ color: '#94A3B8' }}>→</span>
+          <span className="text-xs text-white/50">→</span>
           <input
             type="date"
             value={customTo}
             min={customFrom}
             onChange={e => onCustomChange(customFrom, e.target.value)}
-            className="px-2 py-1 rounded-lg text-xs outline-none"
-            style={{
-              border: '1px solid #E2E8F0',
-              background: preset === 'custom' ? 'white' : '#F8FAFC',
-              color: '#0F172A'
-            }}
+            className="glass-input px-2 py-1 rounded-xl text-xs"
+            style={preset === 'custom' ? { borderColor: 'var(--accent)' } : undefined}
           />
         </div>
       </div>
@@ -105,17 +114,17 @@ type KpiCardProps = {
   color?: string;
 };
 
-function KpiCard({ label, value, sub, color = '#0F172A' }: KpiCardProps) {
+function KpiCard({ label, value, sub, color = '#FFFFFF' }: KpiCardProps) {
   return (
-    <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #E2E8F0' }}>
-      <div className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#64748B' }}>
+    <div className="glass-card rounded-3xl p-4">
+      <div className="text-[11px] font-semibold mb-2 uppercase tracking-wider text-white/70">
         {label}
       </div>
-      <div className="text-xl font-bold" style={{ color, fontFamily: 'Georgia, serif' }}>
+      <div className="font-serif text-xl font-bold" style={{ color }}>
         {value}
       </div>
       {sub && (
-        <div className="text-xs mt-1" style={{ color: '#94A3B8' }}>{sub}</div>
+        <div className="text-xs mt-1 text-white/60">{sub}</div>
       )}
     </div>
   );
@@ -123,7 +132,7 @@ function KpiCard({ label, value, sub, color = '#0F172A' }: KpiCardProps) {
 
 function KpiStrip({ data }: { data: ReportOverview }) {
   const k = data.kpi;
-  const cancelColor = k.cancellation_rate >= 10 ? '#DC2626' : k.cancellation_rate >= 5 ? '#D97706' : '#16A34A';
+  const cancelColor = k.cancellation_rate >= 10 ? 'var(--danger)' : k.cancellation_rate >= 5 ? 'var(--warning)' : 'var(--success)';
 
   return (
     <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}>
@@ -131,7 +140,7 @@ function KpiStrip({ data }: { data: ReportOverview }) {
         label="Ciro"
         value={formatCurrency(k.revenue_int)}
         sub={`${k.delivered_count} sipariş`}
-        color="#0D9488"
+        color="var(--accent)"
       />
       <KpiCard
         label="Sipariş Sayısı"
@@ -185,27 +194,31 @@ function SalesTab({ data }: { data: ReportOverview }) {
   return (
     <div className="space-y-5">
       {/* Günlük Trend */}
-      <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #E2E8F0' }}>
-        <h3 className="font-bold text-sm mb-4" style={{ color: '#0F172A' }}>
+      <div className="glass-dark rounded-3xl p-4 sm:p-5">
+        <h3 className="font-serif font-bold text-base mb-4 text-white">
           📈 Günlük Ciro Trendi
         </h3>
         {dailyData.length === 0 ? (
-          <div className="text-center py-12 text-sm" style={{ color: '#94A3B8' }}>
+          <div className="text-center py-12 text-sm text-white/60">
             Bu aralıkta veri yok
           </div>
         ) : (
           <div style={{ width: '100%', height: 280 }}>
             <ResponsiveContainer>
               <LineChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#64748B' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis dataKey="dateLabel" tick={CHART_TICK} axisLine={CHART_AXIS_LINE} tickLine={CHART_AXIS_LINE} />
+                <YAxis tick={CHART_TICK} axisLine={CHART_AXIS_LINE} tickLine={CHART_AXIS_LINE} />
                 <Tooltip
                   formatter={(value) => [`${Number(value).toFixed(2)} TL`, 'Ciro']}
-                  labelStyle={{ color: '#0F172A', fontWeight: 600 }}
-                  contentStyle={{ border: '1px solid #E2E8F0', borderRadius: 8 }}
+                  labelStyle={CHART_TOOLTIP_LABEL}
+                  contentStyle={CHART_TOOLTIP_CONTENT}
+                  itemStyle={CHART_TOOLTIP_ITEM}
+                  cursor={CHART_CURSOR_LINE}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="#0D9488" strokeWidth={2} dot={{ fill: '#0D9488', r: 4 }} />
+                <Line type="monotone" dataKey="revenue" stroke={CHART_ACCENT} strokeWidth={2.5}
+                  dot={{ fill: CHART_ACCENT, stroke: '#fff', strokeWidth: 1, r: 4 }}
+                  activeDot={{ fill: CHART_ACCENT, stroke: '#fff', strokeWidth: 2, r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -213,52 +226,54 @@ function SalesTab({ data }: { data: ReportOverview }) {
       </div>
 
       {/* Saatlik Yoğunluk */}
-      <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #E2E8F0' }}>
-        <h3 className="font-bold text-sm mb-4" style={{ color: '#0F172A' }}>
+      <div className="glass-dark rounded-3xl p-4 sm:p-5">
+        <h3 className="font-serif font-bold text-base mb-4 text-white">
           🕐 Saatlik Sipariş Yoğunluğu
         </h3>
         <div style={{ width: '100%', height: 280 }}>
           <ResponsiveContainer>
             <BarChart data={hourlyFull}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="hourLabel" tick={{ fontSize: 10, fill: '#64748B' }} interval={1} />
-              <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+              <XAxis dataKey="hourLabel" tick={{ ...CHART_TICK, fontSize: 10 }} interval={1} axisLine={CHART_AXIS_LINE} tickLine={CHART_AXIS_LINE} />
+              <YAxis tick={CHART_TICK} axisLine={CHART_AXIS_LINE} tickLine={CHART_AXIS_LINE} />
               <Tooltip
                 formatter={(value) => [`${Number(value)} sipariş`, 'Sipariş']}
-                labelStyle={{ color: '#0F172A', fontWeight: 600 }}
-                contentStyle={{ border: '1px solid #E2E8F0', borderRadius: 8 }}
+                labelStyle={CHART_TOOLTIP_LABEL}
+                contentStyle={CHART_TOOLTIP_CONTENT}
+                itemStyle={CHART_TOOLTIP_ITEM}
+                cursor={CHART_CURSOR_BAR}
               />
-              <Bar dataKey="orders" fill="#0D9488" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="orders" fill={CHART_ACCENT} radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Masa Performansı */}
-      <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #E2E8F0' }}>
-        <h3 className="font-bold text-sm mb-4" style={{ color: '#0F172A' }}>
+      <div className="glass-dark rounded-3xl p-4 sm:p-5">
+        <h3 className="font-serif font-bold text-base mb-4 text-white">
           🪑 Masa Performansı (Top 20)
         </h3>
         {data.tables.length === 0 ? (
-          <div className="text-center py-8 text-sm" style={{ color: '#94A3B8' }}>
+          <div className="text-center py-8 text-sm text-white/60">
             Bu aralıkta veri yok
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                  <th className="text-left py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>Masa</th>
-                  <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>Sipariş</th>
-                  <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>Ciro</th>
+                <tr className="border-b border-white/20">
+                  <th className="text-left py-2 text-xs font-semibold uppercase tracking-wider text-white/60">Masa</th>
+                  <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider text-white/60">Sipariş</th>
+                  <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider text-white/60">Ciro</th>
                 </tr>
               </thead>
               <tbody>
                 {data.tables.map((t, i) => (
-                  <tr key={`${t.name}-${i}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td className="py-2 font-semibold" style={{ color: '#0F172A' }}>{t.name}</td>
-                    <td className="py-2 text-right" style={{ color: '#64748B' }}>{t.orders}</td>
-                    <td className="py-2 text-right font-semibold" style={{ color: '#0D9488' }}>
+                  <tr key={`${t.name}-${i}`} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                    <td className="py-2 font-semibold text-white">{t.name}</td>
+                    <td className="py-2 text-right text-white/70">{t.orders}</td>
+                    <td className="py-2 text-right font-bold" style={{ color: 'var(--accent)' }}>
                       {formatCurrency(t.revenue)}
                     </td>
                   </tr>
@@ -284,31 +299,21 @@ function ProductsTab({ data }: { data: ReportOverview }) {
     : data.top_products_by_revenue;
 
   return (
-    <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #E2E8F0' }}>
+    <div className="glass-dark rounded-3xl p-4 sm:p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="font-bold text-sm" style={{ color: '#0F172A' }}>
+        <h3 className="font-serif font-bold text-base text-white">
           📦 Top 10 Ürün
         </h3>
-        <div className="flex gap-1 p-1 rounded-lg" style={{ background: '#F1F5F9' }}>
+        <div className="flex gap-1 p-1 rounded-2xl bg-black/30 border border-white/20">
           <button
             onClick={() => setSortBy('quantity')}
-            className="px-3 py-1 rounded-md text-xs font-semibold"
-            style={{
-              background: sortBy === 'quantity' ? 'white' : 'transparent',
-              color: sortBy === 'quantity' ? '#0D9488' : '#64748B',
-              boxShadow: sortBy === 'quantity' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
-            }}
+            className={`px-3 py-1 rounded-xl text-xs font-semibold spring-btn ${sortBy === 'quantity' ? 'btn-accent' : 'text-white/70'}`}
           >
             Adet
           </button>
           <button
             onClick={() => setSortBy('revenue')}
-            className="px-3 py-1 rounded-md text-xs font-semibold"
-            style={{
-              background: sortBy === 'revenue' ? 'white' : 'transparent',
-              color: sortBy === 'revenue' ? '#0D9488' : '#64748B',
-              boxShadow: sortBy === 'revenue' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
-            }}
+            className={`px-3 py-1 rounded-xl text-xs font-semibold spring-btn ${sortBy === 'revenue' ? 'btn-accent' : 'text-white/70'}`}
           >
             Ciro
           </button>
@@ -316,27 +321,27 @@ function ProductsTab({ data }: { data: ReportOverview }) {
       </div>
 
       {products.length === 0 ? (
-        <div className="text-center py-8 text-sm" style={{ color: '#94A3B8' }}>
+        <div className="text-center py-8 text-sm text-white/60">
           Bu aralıkta veri yok
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
-                <th className="text-left py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>#</th>
-                <th className="text-left py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>Ürün</th>
-                <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>Adet</th>
-                <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748B' }}>Ciro</th>
+              <tr className="border-b border-white/20">
+                <th className="text-left py-2 text-xs font-semibold uppercase tracking-wider text-white/60">#</th>
+                <th className="text-left py-2 text-xs font-semibold uppercase tracking-wider text-white/60">Ürün</th>
+                <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider text-white/60">Adet</th>
+                <th className="text-right py-2 text-xs font-semibold uppercase tracking-wider text-white/60">Ciro</th>
               </tr>
             </thead>
             <tbody>
               {products.map((p, i) => (
-                <tr key={`${p.name}-${i}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                  <td className="py-2 text-xs font-mono" style={{ color: '#94A3B8' }}>{i + 1}</td>
-                  <td className="py-2 font-semibold" style={{ color: '#0F172A' }}>{p.name}</td>
-                  <td className="py-2 text-right" style={{ color: '#64748B' }}>{p.quantity}</td>
-                  <td className="py-2 text-right font-semibold" style={{ color: '#0D9488' }}>
+                <tr key={`${p.name}-${i}`} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                  <td className="py-2 text-xs font-mono text-white/50">{i + 1}</td>
+                  <td className="py-2 font-semibold text-white">{p.name}</td>
+                  <td className="py-2 text-right text-white/70">{p.quantity}</td>
+                  <td className="py-2 text-right font-bold" style={{ color: 'var(--accent)' }}>
                     {formatCurrency(p.revenue)}
                   </td>
                 </tr>
@@ -363,19 +368,19 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
       {/* Kasa Açığı Uyarısı */}
       {cashShortage > 0 && (
         <div
-          className="rounded-2xl p-5"
-          style={{ background: '#FEF2F2', border: '2px solid #FECACA' }}
+          className="rounded-3xl p-5 backdrop-blur-xl"
+          style={{ background: 'var(--danger-bg)', border: '1.5px solid rgba(251,113,133,0.55)', boxShadow: 'var(--glass-shadow-sm)' }}
         >
           <div className="flex items-start gap-3">
             <span className="text-2xl">💸</span>
             <div className="flex-1">
-              <div className="font-bold text-sm" style={{ color: '#991B1B' }}>
+              <div className="font-extrabold text-sm tracking-wide" style={{ color: 'var(--danger)' }}>
                 KASA AÇIĞI ALARMI
               </div>
-              <div className="mt-2 text-xl font-bold" style={{ color: '#DC2626', fontFamily: 'Georgia, serif' }}>
+              <div className="font-serif mt-2 text-2xl font-bold text-white">
                 {formatCurrency(cashShortage)}
               </div>
-              <div className="text-xs mt-1" style={{ color: '#7F1D1D' }}>
+              <div className="text-xs mt-1 text-white/75">
                 "Ödemeden gitti" olarak iptal edilen siparişlerin toplamı
               </div>
             </div>
@@ -384,19 +389,19 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
       )}
 
       {/* İptal Sebep Dağılımı */}
-      <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="glass-dark rounded-3xl p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h3 className="font-bold text-sm" style={{ color: '#0F172A' }}>
+          <h3 className="font-serif font-bold text-base text-white">
             ❌ İptal Sebep Dağılımı
           </h3>
-          <span className="text-xs font-semibold px-2 py-1 rounded-lg"
-            style={{ background: '#FEF3C7', color: '#92400E' }}>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.4)' }}>
             Toplam: {totalCancelled} iptal
           </span>
         </div>
 
         {cancellations.length === 0 ? (
-          <div className="text-center py-8 text-sm" style={{ color: '#94A3B8' }}>
+          <div className="text-center py-8 text-sm text-white/60">
             Bu aralıkta iptal edilen sipariş yok 🎉
           </div>
         ) : (
@@ -407,41 +412,44 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
               return (
                 <div
                   key={c.reason_code}
-                  className="p-3 rounded-xl"
+                  className="p-3 rounded-2xl"
                   style={{
-                    background: isCashLoss ? '#FEF2F2' : '#F8FAFC',
-                    border: `1px solid ${isCashLoss ? '#FECACA' : '#E2E8F0'}`
+                    background: isCashLoss ? 'var(--danger-bg)' : 'rgba(255,255,255,0.08)',
+                    border: `1px solid ${isCashLoss ? 'rgba(251,113,133,0.45)' : 'rgba(255,255,255,0.18)'}`
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-sm" style={{ color: '#0F172A' }}>
+                    <div className="font-semibold text-sm text-white">
                       {isCashLoss && '💸 '}
                       {cancelReasonLabel(c.reason_code)}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold" style={{ color: '#0F172A' }}>
+                      <span className="text-xs font-bold text-white">
                         {c.count} sipariş
                       </span>
                       {c.total_amount > 0 && (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded"
-                          style={{ background: isCashLoss ? '#FEE2E2' : '#E2E8F0', color: isCashLoss ? '#991B1B' : '#64748B' }}>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
+                          style={{
+                            background: isCashLoss ? 'rgba(244,63,94,0.3)' : 'rgba(255,255,255,0.14)',
+                            color: isCashLoss ? 'var(--danger)' : 'rgba(255,255,255,0.8)'
+                          }}>
                           {formatCurrency(c.total_amount)}
                         </span>
                       )}
                     </div>
                   </div>
                   {/* Yüzde çubuğu */}
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#E2E8F0' }}>
+                  <div className="h-1.5 rounded-full overflow-hidden bg-white/15">
                     <div
                       style={{
                         width: `${percentage}%`,
                         height: '100%',
-                        background: isCashLoss ? '#DC2626' : '#64748B',
+                        background: isCashLoss ? 'var(--danger)' : 'var(--accent-gradient)',
                         transition: 'width 0.3s'
                       }}
                     />
                   </div>
-                  <div className="text-xs mt-1 text-right" style={{ color: '#94A3B8' }}>
+                  <div className="text-xs mt-1 text-right text-white/55">
                     %{percentage.toFixed(1)}
                   </div>
                 </div>
@@ -514,7 +522,7 @@ export function OwnerDashboardPage() {
   }
 
   return (
-    <div>
+    <div className="text-white">
       {/* Tarih filtresi */}
       <DateRangeBar
         preset={preset}
@@ -527,14 +535,13 @@ export function OwnerDashboardPage() {
       {/* Hata */}
       {error && (
         <div
-          className="rounded-xl p-4 mb-5 text-sm"
-          style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' }}
+          className="rounded-2xl p-4 mb-5 text-sm font-medium backdrop-blur-xl"
+          style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.45)' }}
         >
           ⚠️ {error}
           <button
             onClick={loadReport}
-            className="ml-3 px-3 py-1 rounded-lg text-xs font-semibold"
-            style={{ background: 'white', color: '#DC2626', border: '1px solid #FECACA' }}
+            className="ml-3 px-3 py-1 rounded-xl text-xs font-semibold spring-btn glass-pill"
           >
             Tekrar Dene
           </button>
@@ -543,8 +550,11 @@ export function OwnerDashboardPage() {
 
       {/* Yükleniyor */}
       {loading && !data && (
-        <div className="text-center py-16">
-          <p className="text-sm" style={{ color: '#94A3B8' }}>Rapor yükleniyor...</p>
+        <div className="py-16 flex justify-center">
+          <div className="glass-panel rounded-3xl px-8 py-6 text-center fade-enter">
+            <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+            <p className="text-sm font-semibold text-white/80">Rapor yükleniyor...</p>
+          </div>
         </div>
       )}
 
@@ -555,7 +565,7 @@ export function OwnerDashboardPage() {
           <KpiStrip data={data} />
 
           {/* Sekmeler */}
-          <div className="flex gap-1 mb-4 p-1 rounded-xl bg-white" style={{ border: '1px solid #E2E8F0' }}>
+          <div className="flex gap-1 mb-4 p-1 rounded-2xl bg-black/35 border border-white/20 backdrop-blur-xl">
             {(Object.keys(TAB_LABELS) as TabKey[]).map(key => {
               const tab = TAB_LABELS[key];
               const active = activeTab === key;
@@ -563,11 +573,7 @@ export function OwnerDashboardPage() {
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold active:scale-95 transition-transform"
-                  style={{
-                    background: active ? '#0F172A' : 'transparent',
-                    color: active ? 'white' : '#64748B'
-                  }}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold spring-btn ${active ? 'btn-accent' : 'text-white/70 hover:text-white'}`}
                 >
                   {tab.icon} {tab.label}
                 </button>
@@ -583,7 +589,7 @@ export function OwnerDashboardPage() {
           {/* Yenileme indicator'ı */}
           {loading && (
             <div className="text-center mt-4">
-              <p className="text-xs" style={{ color: '#94A3B8' }}>Güncelleniyor...</p>
+              <p className="text-xs text-white/60">Güncelleniyor...</p>
             </div>
           )}
         </>

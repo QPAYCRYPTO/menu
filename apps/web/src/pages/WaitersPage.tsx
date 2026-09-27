@@ -245,9 +245,9 @@ export function WaitersPage() {
 
   function statusBadge(status: WaiterStatus) {
     const config = {
-      active: { label: '● Aktif', bg: '#F0FDF4', color: '#16A34A' },
-      on_leave: { label: '● İzinli', bg: '#FEF3C7', color: '#B45309' },
-      inactive: { label: '● Pasif', bg: '#FEF2F2', color: '#DC2626' }
+      active: { label: '● Aktif', bg: 'var(--success-bg)', color: 'var(--success)' },
+      on_leave: { label: '● İzinli', bg: 'var(--warning-bg)', color: 'var(--warning)' },
+      inactive: { label: '● Pasif', bg: 'var(--danger-bg)', color: 'var(--danger)' }
     }[status];
     return (
       <span className="text-xs font-semibold" style={{ color: config.color }}>
@@ -259,55 +259,53 @@ export function WaitersPage() {
   const activeCount = waiters.filter(w => w.status === 'active').length;
 
   return (
-    <div>
+    <div className="text-white">
       <Toast state={toast} />
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="font-bold text-xl" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+          <h1 className="font-serif font-bold text-2xl">
             👥 Garsonlar
           </h1>
-          <p className="text-sm mt-1" style={{ color: '#64748B' }}>
+          <p className="text-sm mt-1 text-white/70">
             {waiters.length} garson kayıtlı · {activeCount} aktif
           </p>
         </div>
         <button onClick={openCreateForm}
-          className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-          style={{ background: '#0D9488' }}>
-          + Yeni Garson
+          className="btn-accent px-4 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 spring-btn">
+          <i className="fa-solid fa-user-plus" /> Yeni Garson
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="glass-dark rounded-3xl overflow-hidden">
         {waiters.length === 0 && (
           <div className="text-center py-16">
             <div className="text-4xl mb-3">👥</div>
-            <p className="text-sm" style={{ color: '#94A3B8' }}>Henüz garson eklenmedi</p>
+            <p className="text-sm text-white/70">Henüz garson eklenmedi</p>
             <button onClick={openCreateForm}
-              className="mt-4 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-              style={{ background: '#0D9488' }}>
+              className="btn-accent mt-4 px-4 py-2 rounded-2xl text-sm font-bold spring-btn">
               İlk Garsonu Ekle
             </button>
           </div>
         )}
 
         {waiters.map(w => (
-          <div key={w.id} className="px-4 py-3"
-            style={{ borderBottom: '1px solid #F1F5F9', background: w.status === 'active' ? 'white' : '#FAFBFC' }}>
+          <div key={w.id} className="px-4 py-3 border-b border-white/10 last:border-b-0"
+            style={{ background: w.status === 'active' ? 'transparent' : 'rgba(0,0,0,0.18)' }}>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                style={{ background: w.status === 'active' ? '#0D9488' : '#94A3B8' }}>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-extrabold flex-shrink-0 border border-white/40"
+                style={{ background: w.status === 'active' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.15)' }}>
                 {w.name.charAt(0).toUpperCase()}
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate" style={{ color: '#0F172A' }}>{w.name}</div>
-                <div className="flex items-center gap-3 mt-0.5">
+                <div className="font-semibold truncate">{w.name}</div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                   {statusBadge(w.status)}
-                  {w.phone && <span className="text-xs" style={{ color: '#64748B' }}>📱 {w.phone}</span>}
-                  {w.email && <span className="text-xs truncate" style={{ color: '#64748B' }}>✉️ {w.email}</span>}
+                  {w.phone && <span className="text-xs text-white/65">📱 {w.phone}</span>}
+                  {w.email && <span className="text-xs truncate text-white/65">✉️ {w.email}</span>}
                 </div>
               </div>
 
@@ -315,41 +313,39 @@ export function WaitersPage() {
                 {w.status === 'active' && (
                   <>
                     <button onClick={() => setTokenModalWaiter(w)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: '#F0FDF4', color: '#16A34A' }}>
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
+                      style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)' }}>
                       📱 QR
                     </button>
                     <button onClick={() => askRevokeActiveSessions(w)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: '#FEF3C7', color: '#B45309' }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
+                      style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)' }}
                       title="Aktif QR'ları iptal et">
                       🚫
                     </button>
                   </>
                 )}
                 <button onClick={() => openEditForm(w)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: '#F1F5F9', color: '#64748B' }}>
+                  className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn">
                   ✏️
                 </button>
                 <button onClick={() => { setPasswordModalWaiter(w); setNewPasswordValue(''); }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: '#EFF6FF', color: '#2563EB' }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
+                  style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info)' }}
                   title="Şifre belirle/sıfırla">
                   🔑
                 </button>
                 <select
                   value={w.status}
                   onChange={(e) => handleStatusChange(w, e.target.value as WaiterStatus)}
-                  className="px-2 py-1.5 rounded-lg text-xs font-semibold outline-none"
-                  style={{ background: '#F1F5F9', color: '#0F172A', border: 'none' }}>
+                  className="glass-input px-2 py-1.5 rounded-xl text-xs font-semibold">
                   <option value="active">🟢 Aktif</option>
                   <option value="on_leave">🟡 İzinli</option>
                   <option value="inactive">🔴 Pasif</option>
                 </select>
                 <button onClick={() => askDeleteWaiter(w)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: '#FEF2F2', color: '#DC2626' }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
+                  style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}
                   title="Kalıcı sil">
                   🗑️
                 </button>
@@ -361,77 +357,74 @@ export function WaitersPage() {
 
       {/* YENİ/DÜZENLE FORM MODAL */}
       {formMode !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden my-8">
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden my-8">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg">
                 {formMode === 'create' ? 'Yeni Garson Ekle' : `${editingWaiter?.name} — Düzenle`}
               </h2>
-              <button onClick={closeForm}
-                className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+              <button onClick={closeForm} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh' }}>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
-                  Ad Soyad <span style={{ color: '#DC2626' }}>*</span>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                  Ad Soyad <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <input value={formData.name}
                   onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                   placeholder="Örn: Ahmet Yılmaz"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                   Telefon (WhatsApp için)
                 </label>
                 <input value={formData.phone}
                   onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))}
                   placeholder="0532 123 45 67"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
-                <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                <p className="text-xs mt-1 text-white/55">
                   QR linkini WhatsApp'tan göndermek için
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                   Email (opsiyonel)
                 </label>
                 <input type="email" value={formData.email}
                   onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
                   placeholder="ahmet@kafe.com"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
-                <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                <p className="text-xs mt-1 text-white/55">
                   Email verirseniz garson email+şifre ile de girebilir
                 </p>
               </div>
 
               {formMode === 'create' && (
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                     Şifre (email verdiyseniz zorunlu)
                   </label>
                   <input type="password" value={formData.password}
                     onChange={(e) => setFormData(p => ({ ...p, password: e.target.value }))}
                     placeholder="Min 8 karakter"
-                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
+                    className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-white/70">
                   Yetkiler
                 </label>
                 <div className="space-y-2">
                   {(Object.keys(PERMISSION_LABELS) as (keyof WaiterPermissions)[]).map(key => (
                     <label key={key}
-                      className="flex items-start gap-3 p-3 rounded-xl cursor-pointer"
-                      style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                      className="glass-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer">
                       <input type="checkbox"
                         checked={formData.permissions[key]}
                         onChange={(e) => setFormData(p => ({
@@ -439,12 +432,12 @@ export function WaitersPage() {
                           permissions: { ...p.permissions, [key]: e.target.checked }
                         }))}
                         className="mt-0.5"
-                        style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                        style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--accent)' }} />
                       <div className="flex-1">
-                        <div className="text-sm font-semibold" style={{ color: '#0F172A' }}>
+                        <div className="text-sm font-semibold text-white">
                           {PERMISSION_LABELS[key].label}
                         </div>
-                        <div className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                        <div className="text-xs mt-0.5 text-white/65">
                           {PERMISSION_LABELS[key].desc}
                         </div>
                       </div>
@@ -453,14 +446,13 @@ export function WaitersPage() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 flex gap-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
               <button onClick={closeForm}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#64748B' }}>
+                className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 İptal
               </button>
               <button onClick={handleSave} disabled={loading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
-                style={{ background: loading ? '#475569' : '#0D9488' }}>
+                className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
                 {loading ? 'Kaydediliyor...' : (formMode === 'create' ? 'Ekle' : 'Kaydet')}
               </button>
             </div>
@@ -469,40 +461,41 @@ export function WaitersPage() {
       )}
 
       {passwordModalWaiter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg">
                 🔑 Şifre Belirle — {passwordModalWaiter.name}
               </h2>
-              <button onClick={() => setPasswordModalWaiter(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+              <button onClick={() => setPasswordModalWaiter(null)} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                   Yeni Şifre
                 </label>
                 <input type="password" value={newPasswordValue}
                   onChange={(e) => setNewPasswordValue(e.target.value)}
                   placeholder="Min 8 karakter"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }}
+                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   autoFocus />
                 {!passwordModalWaiter.email && (
-                  <p className="text-xs mt-2" style={{ color: '#B45309' }}>
+                  <p className="text-xs mt-2" style={{ color: 'var(--warning)' }}>
                     ⚠️ Bu garsonun email'i yok. Şifreyle giriş için önce email eklemelisiniz.
                   </p>
                 )}
               </div>
             </div>
-            <div className="px-6 py-4 flex gap-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
               <button onClick={() => setPasswordModalWaiter(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#64748B' }}>
+                className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 İptal
               </button>
               <button onClick={handleSetPassword}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#2563EB' }}>
+                className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
                 Şifreyi Güncelle
               </button>
             </div>
@@ -511,44 +504,42 @@ export function WaitersPage() {
       )}
 
       {tokenModalWaiter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg">
                 QR Üret — {tokenModalWaiter.name}
               </h2>
-              <button onClick={() => setTokenModalWaiter(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+              <button onClick={() => setTokenModalWaiter(null)} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-white/70">
                   Geçerlilik Süresi (saat)
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {DURATION_OPTIONS.map(h => (
                     <button key={h} onClick={() => setSelectedHours(h)}
-                      className="py-2.5 rounded-xl text-sm font-semibold"
-                      style={{
-                        background: selectedHours === h ? '#0D9488' : '#F1F5F9',
-                        color: selectedHours === h ? 'white' : '#64748B'
-                      }}>
+                      className={`py-2.5 rounded-2xl text-sm font-semibold spring-btn ${selectedHours === h ? 'btn-accent font-bold' : 'glass-pill text-white/80'}`}>
                       {h} saat
                     </button>
                   ))}
                 </div>
-                <p className="text-xs mt-3" style={{ color: '#94A3B8' }}>
+                <p className="text-xs mt-3 text-white/55">
                   Yeni QR üretildiğinde eski QR'lar iptal olur.
                 </p>
               </div>
             </div>
-            <div className="px-6 py-4 flex gap-3" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
               <button onClick={() => setTokenModalWaiter(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#F1F5F9', color: '#64748B' }}>
+                className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 İptal
               </button>
               <button onClick={handleGenerateToken}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#0D9488' }}>
+                className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
                 QR Üret
               </button>
             </div>
@@ -557,42 +548,41 @@ export function WaitersPage() {
       )}
 
       {qrResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.6)' }}>
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #E2E8F0' }}>
-              <h2 className="font-bold text-base" style={{ color: '#0F172A', fontFamily: 'Georgia, serif' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
+          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+              <h2 className="font-serif font-bold text-lg">
                 ✅ {qrResult.waiter_name} için QR hazır
               </h2>
-              <button onClick={() => setQrResult(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#F1F5F9', color: '#64748B' }}>✕</button>
+              <button onClick={() => setQrResult(null)} aria-label="Kapat"
+                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                <i className="fa-solid fa-xmark" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="bg-white rounded-xl p-4 flex items-center justify-center"
-                style={{ border: '2px solid #E2E8F0' }}>
+              <div className="bg-white rounded-2xl p-4 flex items-center justify-center shadow-lg">
                 <img src={qrImageUrl(qrResult.token)} alt="QR kod" style={{ maxWidth: '100%', height: 'auto' }} />
               </div>
 
-              <div className="p-3 rounded-xl" style={{ background: '#FEF3C7', border: '1px solid #FDE68A' }}>
-                <p className="text-xs" style={{ color: '#78350F' }}>
+              <div className="p-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning)' }}>
+                <p className="text-xs" style={{ color: 'var(--warning)' }}>
                   ⚠️ Bu QR sadece <b>{new Date(qrResult.expires_at).toLocaleString('tr-TR')}</b> tarihine kadar geçerli.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#64748B' }}>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
                   Giriş Linki
                 </label>
                 <div className="flex gap-2">
                   <input readOnly value={waiterLoginUrl(qrResult.token)}
-                    className="flex-1 px-3 py-2 rounded-xl text-xs outline-none font-mono"
-                    style={{ border: '1.5px solid #E2E8F0', background: '#F8FAFC' }} />
+                    className="glass-input flex-1 min-w-0 px-3 py-2 rounded-2xl text-xs font-mono" />
                   <button onClick={() => {
                     navigator.clipboard.writeText(waiterLoginUrl(qrResult.token));
                     showToast('Link kopyalandı.', 'success');
                   }}
-                    className="px-3 py-2 rounded-xl text-xs font-semibold"
-                    style={{ background: '#0D9488', color: 'white' }}>
-                    Kopyala
+                    className="btn-accent px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn">
+                    <i className="fa-regular fa-copy" /> Kopyala
                   </button>
                 </div>
               </div>
@@ -602,15 +592,15 @@ export function WaitersPage() {
                   href={whatsappLink(qrResult.waiter_phone, waiterLoginUrl(qrResult.token), qrResult.waiter_name, 'AtlasQR')}
                   target="_blank"
                   rel="noreferrer"
-                  className="block w-full py-3 rounded-xl text-sm font-semibold text-white text-center"
-                  style={{ background: '#25D366', textDecoration: 'none' }}>
-                  💬 WhatsApp'tan Gönder ({qrResult.waiter_phone})
+                  className="w-full py-3 rounded-2xl text-sm font-bold text-white text-center flex items-center justify-center gap-2 spring-btn border border-white/40"
+                  style={{ background: 'rgba(37,211,102,0.85)', textDecoration: 'none' }}>
+                  <i className="fa-brands fa-whatsapp text-base" /> WhatsApp'tan Gönder ({qrResult.waiter_phone})
                 </a>
               )}
             </div>
-            <div className="px-6 py-4" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <div className="px-6 py-4 border-t border-white/15">
               <button onClick={() => setQrResult(null)}
-                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: '#0F172A' }}>
+                className="glass-pill w-full py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 Kapat
               </button>
             </div>
