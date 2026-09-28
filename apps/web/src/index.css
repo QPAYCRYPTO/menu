@@ -35,9 +35,14 @@
   --accent-gradient: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-deep) 100%);
   --accent-glow: 0 8px 20px color-mix(in srgb, var(--accent-deep) 45%, transparent), inset 0 1px 1px rgba(255, 255, 255, 0.8);
 
-  --glass-bg: rgba(15, 15, 15, 0.65);
+  /* Buzlu cam: arkadaki fotoğraf güçlü bulanıklaşır ve hafif kararır (detay kaybolur → yazı göz yormaz),
+     cam dışında kalan fotoğraf net kalır. */
+  --glass-frost: blur(32px) saturate(160%) brightness(0.8);
+  --glass-frost-strong: blur(36px) saturate(160%) brightness(0.8);
+  --glass-frost-soft: blur(24px) saturate(150%) brightness(0.85);
+  --glass-bg: rgba(255, 255, 255, 0.12);
   --glass-bg-strong: rgba(255, 255, 255, 0.26);
-  --glass-bg-hover: rgba(15, 15, 15, 0.75);
+  --glass-bg-hover: rgba(255, 255, 255, 0.18);
   --glass-sidebar-bg: rgba(0, 0, 0, 0.70);
   --glass-border: rgba(255, 255, 255, 0.42);
   --glass-border-soft: rgba(255, 255, 255, 0.22);
@@ -80,14 +85,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Sabit sıcak kafe arka planı (tüm uygulama) */
+/* Sabit sıcak kafe arka planı (tüm uygulama).
+   Fotoğraf net görünür; sadece içerik alanları (glass-*) kendi arkasını buzlar.
+   Çok hafif karartma: cam dışında kalan beyaz yazılar okunur kalsın diye. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(to bottom, rgba(15, 10, 8, 0.5), rgba(10, 7, 5, 0.72)),
+    linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12)),
     var(--cafe-photo);
   background-size: cover;
   background-position: center;
@@ -111,18 +118,18 @@ select option { color: #14110F; background: #fff; }
   .glass-panel {
     background: var(--glass-bg);
     color: var(--glass-text);
-    backdrop-filter: blur(28px) saturate(210%);
-    -webkit-backdrop-filter: blur(28px) saturate(210%);
+    -webkit-backdrop-filter: var(--glass-frost-strong);
+    backdrop-filter: var(--glass-frost-strong);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
   }
 
-  /* Liste/grid kartları — bulanıklık hafif tutuldu (uzun listelerde performans) */
+  /* Liste/grid kartları */
   .glass-card {
-    background: rgba(15, 15, 15, 0.60);
+    background: rgba(255, 255, 255, 0.10);
     color: var(--glass-text);
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: var(--glass-frost);
+    backdrop-filter: var(--glass-frost);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow-sm);
     transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
@@ -136,8 +143,8 @@ select option { color: #14110F; background: #fff; }
   /* Okunabilirlik gereken yoğun içerik (tablolar, formlar, modal gövdesi) */
   .glass-dark {
     background: var(--glass-dark);
-    backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid var(--glass-border-soft);
     box-shadow: var(--glass-shadow);
   }
@@ -148,20 +155,25 @@ select option { color: #14110F; background: #fff; }
   }
 
   .glass-pill {
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.14);
+    -webkit-backdrop-filter: var(--glass-frost-soft);
+    backdrop-filter: var(--glass-frost-soft);
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: #fff;
   }
 
   .glass-input {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: var(--glass-frost-soft);
+    backdrop-filter: var(--glass-frost-soft);
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: #fff;
     outline: none;
     transition: background 0.2s ease, border-color 0.2s ease;
   }
+  /* backdrop-filter input'u ayrı katman yapar ve önceki kardeş ikonları örter →
+     input'un yanındaki absolute ikon/butonlar (arama büyüteci, şifre göster vb.) üstte kalsın */
+  *:has(> .glass-input) > .absolute { z-index: 1; }
   .glass-input::placeholder { color: rgba(255, 255, 255, 0.6); }
   .glass-input:focus {
     background: rgba(255, 255, 255, 0.28);
