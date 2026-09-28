@@ -308,7 +308,7 @@ export type DeleteWaiterResult =
 /**
  * Garsonu siler (soft delete): kayıt kalır, deleted_at dolar, listeden düşer.
  * Geçmiş siparişlerdeki waiter_id ve aktivite logları bozulmaz.
- * Garsonun bekleyen/hazırlanan siparişi varsa silinmez.
+ * Garsonun teslim edilmemiş (bekleyen/hazırlanan/hazır) siparişi varsa silinmez.
  */
 export async function deleteWaiter(
   businessId: string,
@@ -332,7 +332,7 @@ export async function deleteWaiter(
     const pendingResult = await client.query(
       `SELECT COUNT(*)::int AS cnt FROM orders
        WHERE business_id = $1 AND waiter_id = $2
-         AND status IN ('pending', 'preparing')`,
+         AND status IN ('pending', 'preparing', 'ready')`,
       [businessId, waiterId]
     );
     const pendingCount: number = pendingResult.rows[0].cnt;

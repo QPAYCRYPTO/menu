@@ -267,7 +267,8 @@ publicRoutes.post('/call/:slug', publicCallRateLimit, async (req, res) => {
   const finalCallType = call_type ?? 'waiter';
   const finalNote = note?.trim() || null;
 
-  // Aynı masada bekleyen (pending) çağrı varsa yenisini oluşturma — garsona tekrar tekrar bildirim düşmesin.
+  // Aynı masada AYNI TÜRDE bekleyen (pending) çağrı varsa yenisini oluşturma — garsona tekrar tekrar bildirim düşmesin.
+  // Farklı tür (örn. "Su" beklerken "Hesap") yeni çağrı olarak açılır. Eski kayıtlarda call_type boş → 'waiter' sayılır.
   // Masa satırı kilitlenir: aynı anda gelen çağrılar sıraya girer, tek kayıt oluşur.
   const client = await pool.connect();
   let callId: string;
@@ -279,8 +280,9 @@ publicRoutes.post('/call/:slug', publicCallRateLimit, async (req, res) => {
     const pendingCall = await client.query(
       `SELECT id FROM orders
        WHERE business_id = $1 AND table_id = $2 AND type = 'call' AND status = 'pending'
+         AND COALESCE(call_type, 'waiter') = $3
        LIMIT 1`,
-      [businessId, table.id]
+      [businessId, table.id, finalCallType]
     );
     if (pendingCall.rowCount === 1) {
       await client.query('ROLLBACK');
