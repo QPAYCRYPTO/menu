@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { sanitizeText } from '../utils/sanitize.js';
 
 const createTableSchema = z.object({
@@ -23,6 +23,7 @@ const updateTableSchema = z.object({
 
 export const tableRoutes = Router();
 tableRoutes.use(requireAuth);
+tableRoutes.use(requireAdmin);
 
 // Tüm masaları listele
 tableRoutes.get('/', async (req, res) => {

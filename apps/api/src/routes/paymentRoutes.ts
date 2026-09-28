@@ -7,7 +7,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import { publishOrder } from '../db/redisPubSub.js';
 import {
@@ -19,6 +19,7 @@ import {
 
 export const paymentRoutes = Router();
 paymentRoutes.use(requireAuth);
+paymentRoutes.use(requireAdmin);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/payment/session/:session_id

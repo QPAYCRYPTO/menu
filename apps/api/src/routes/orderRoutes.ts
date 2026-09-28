@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { subscriber, ORDER_CHANNEL, publishOrder, subscribeChannel, unsubscribeChannel } from '../db/redisPubSub.js';
 import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
 
@@ -33,6 +33,7 @@ const cancelOrderSchema = z.object({
 
 export const orderRoutes = Router();
 orderRoutes.use(requireAuth);
+orderRoutes.use(requireAdmin);
 
 // SSE
 orderRoutes.get('/stream', (req, res) => {

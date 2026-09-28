@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/postgres.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdminOrOwnerRead } from '../middleware/auth.js';
 import { invalidateBusinessMenuCache } from '../services/menuService.js';
 import { processImage, processLogo, validateUpload } from '../services/uploadService.js';
 import { sanitizeText } from '../utils/sanitize.js';
@@ -135,6 +135,8 @@ async function assertCategoryBelongsBusiness(categoryId: string, businessId: str
 
 export const adminRoutes = Router();
 adminRoutes.use(requireAuth);
+// Owner yalnızca işletme ayarlarını okuyabilir; diğer her şey admin
+adminRoutes.use(requireAdminOrOwnerRead(['/business']));
 
 adminRoutes.get('/business', async (req, res) => {
   const businessId = req.ctx!.businessId!;

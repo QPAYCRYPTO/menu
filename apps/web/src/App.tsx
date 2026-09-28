@@ -48,6 +48,13 @@ function RequireOwner({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Admin paneli sadece admin/superadmin içindir; owner kendi paneline (/owner) yönlenir
+function RedirectOwnerToOwnerPanel({ children }: { children: React.ReactNode }) {
+  const { role } = useAuth();
+  if (role === 'owner') return <Navigate to="/owner" replace />;
+  return <>{children}</>;
+}
+
 export function App() {
   return (
     <AuthProvider>
@@ -85,9 +92,11 @@ export function App() {
                 path="/admin"
                 element={
                   <RequireAuth>
-                    <OrderProvider>
-                      <AdminLayout />
-                    </OrderProvider>
+                    <RedirectOwnerToOwnerPanel>
+                      <OrderProvider>
+                        <AdminLayout />
+                      </OrderProvider>
+                    </RedirectOwnerToOwnerPanel>
                   </RequireAuth>
                 }
               >

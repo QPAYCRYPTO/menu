@@ -10,12 +10,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { getSessionWithOrders } from '../services/sessionService.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 
 export const sessionRoutes = Router();
 sessionRoutes.use(requireAuth);
+sessionRoutes.use(requireAdmin);
 
 // GET /api/admin/sessions
 // Tüm açık masaları listeler

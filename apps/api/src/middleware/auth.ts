@@ -101,6 +101,22 @@ export const requireOwner = requireRole('owner', 'superadmin');
 export const requireAdmin = requireRole('admin', 'superadmin');
 export const requireSuperAdmin = requireRole('superadmin');
 
+/**
+ * Admin yazma/okuma işlemleri admin (ve superadmin) içindir.
+ * Owner (patron) sadece verilen yollarda GET yapabilir (ör. işletme ayarlarını okumak);
+ * raporlar ayrıca /api/owner altında. Owner'ın ürün/sipariş/garson/masa yazması engellenir.
+ */
+export function requireAdminOrOwnerRead(ownerReadablePaths: string[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const role = (req.ctx as any)?.role || (req.user as any)?.role;
+    if (role === 'owner' && req.method === 'GET' && ownerReadablePaths.includes(req.path)) {
+      next();
+      return;
+    }
+    requireAdmin(req, res, next);
+  };
+}
+
 // ─────────────────────────────────────────────────────────────
 // OPSİYONEL AUTH — Token varsa decode, yoksa anonim devam
 // ─────────────────────────────────────────────────────────────

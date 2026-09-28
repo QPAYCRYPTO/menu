@@ -13,7 +13,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { requireWaiterAuth } from '../middleware/waiterAuth.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import {
@@ -78,6 +78,7 @@ const transferOrdersSchema = z.object({
 // ─────────────────────────────────────────────────────────────────────────────
 export const adminTableOperationsRoutes = Router();
 adminTableOperationsRoutes.use(requireAuth);
+adminTableOperationsRoutes.use(requireAdmin);
 
 // POST /api/admin/table-operations/move
 adminTableOperationsRoutes.post('/move', async (req, res) => {
