@@ -192,7 +192,7 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen flex text-white md:p-3 md:gap-3" onClick={unlockAudio}>
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col glass-panel rounded-3xl overflow-hidden sticky top-3"
+      <div className="hidden md:flex flex-col glass-panel glass-sidebar rounded-3xl overflow-hidden sticky top-3"
         style={{ width: 232, height: 'calc(100vh - 24px)', flexShrink: 0 }}>
         <SidebarContent />
       </div>
@@ -201,7 +201,7 @@ export function AdminLayout() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-md fade-enter" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 flex flex-col glass-dark rounded-r-3xl overflow-hidden"
+          <div className="absolute left-0 top-0 bottom-0 flex flex-col glass-dark glass-sidebar rounded-r-3xl overflow-hidden"
             style={{ width: 260 }}>
             <SidebarContent />
           </div>

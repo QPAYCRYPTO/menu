@@ -35,9 +35,10 @@
   --accent-gradient: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-deep) 100%);
   --accent-glow: 0 8px 20px color-mix(in srgb, var(--accent-deep) 45%, transparent), inset 0 1px 1px rgba(255, 255, 255, 0.8);
 
-  --glass-bg: rgba(255, 255, 255, 0.18);
+  --glass-bg: rgba(15, 15, 15, 0.65);
   --glass-bg-strong: rgba(255, 255, 255, 0.26);
-  --glass-bg-hover: rgba(255, 255, 255, 0.32);
+  --glass-bg-hover: rgba(15, 15, 15, 0.75);
+  --glass-sidebar-bg: rgba(0, 0, 0, 0.70);
   --glass-border: rgba(255, 255, 255, 0.42);
   --glass-border-soft: rgba(255, 255, 255, 0.22);
   --glass-inset: inset 0 1px 1.5px rgba(255, 255, 255, 0.75);
@@ -50,6 +51,7 @@
   --overlay: rgba(10, 7, 5, 0.6);
 
   --text: #FFFFFF;
+  --glass-text: #F8FAFC;
   --text-muted: rgba(255, 255, 255, 0.72);
   --text-faint: rgba(255, 255, 255, 0.5);
 
@@ -108,6 +110,7 @@ select option { color: #14110F; background: #fff; }
   /* Başlık/sidebar/modal gibi büyük yüzeyler */
   .glass-panel {
     background: var(--glass-bg);
+    color: var(--glass-text);
     backdrop-filter: blur(28px) saturate(210%);
     -webkit-backdrop-filter: blur(28px) saturate(210%);
     border: 1px solid var(--glass-border);
@@ -116,7 +119,8 @@ select option { color: #14110F; background: #fff; }
 
   /* Liste/grid kartları — bulanıklık hafif tutuldu (uzun listelerde performans) */
   .glass-card {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(15, 15, 15, 0.60);
+    color: var(--glass-text);
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
     border: 1px solid var(--glass-border);
@@ -136,6 +140,11 @@ select option { color: #14110F; background: #fff; }
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid var(--glass-border-soft);
     box-shadow: var(--glass-shadow);
+  }
+
+  /* Sol menü (admin sidebar + mobil çekmece): daha koyu. glass-panel/glass-dark'tan sonra tanımlı ki onları ezsin */
+  .glass-sidebar {
+    background: var(--glass-sidebar-bg);
   }
 
   .glass-pill {
