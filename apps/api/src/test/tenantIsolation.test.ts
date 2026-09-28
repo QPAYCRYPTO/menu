@@ -16,16 +16,22 @@ const products = [
   }
 ];
 
-vi.mock('../middleware/auth.js', () => ({
-  requireAuth: (req: any, _res: any, next: any) => {
-    req.ctx = {
-      requestId: 'req-test',
-      userId: 'user-test',
-      businessId: req.headers['x-business-id'] || 'biz-a'
-    };
-    next();
-  }
-}));
+// Sadece requireAuth sahte; rol kontrolleri (requireAdmin vb.) gerçek modülden gelir
+vi.mock('../middleware/auth.js', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../middleware/auth.js');
+  return {
+    ...actual,
+    requireAuth: (req: any, _res: any, next: any) => {
+      req.ctx = {
+        requestId: 'req-test',
+        userId: 'user-test',
+        businessId: req.headers['x-business-id'] || 'biz-a',
+        role: 'admin'
+      };
+      next();
+    }
+  };
+});
 
 vi.mock('../services/uploadService.js', () => ({
   validateUpload: vi.fn(),

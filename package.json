@@ -7,6 +7,7 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm --filter @menu/api --filter @menu/web build",
     "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
     "start": "pnpm -C apps/api start"
   },

@@ -70,7 +70,11 @@ authRoutes.post('/reset-password', async (req, res) => {
     throw new AppError('Geçersiz şifre sıfırlama verisi.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
 
-  await resetPassword(parsed.data.token, parsed.data.new_password);
+  const ok = await resetPassword(parsed.data.token, parsed.data.new_password);
+  if (!ok) {
+    // Token geçersiz, kullanılmış veya süresi dolmuş — kullanıcıya başarı gösterilmesin
+    throw new AppError('Şifre sıfırlama bağlantısı geçersiz veya süresi dolmuş.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
 
   res.status(200).json({ message: 'İşlem tamamlandı.' });
 });

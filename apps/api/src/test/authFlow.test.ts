@@ -3,19 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const validEmail = 'demo@example.com';
 const validPassword = 'Demo1234!';
-const refreshToken = 'refresh-token-demo';
+// Token'lar doğrulama kuralına uygun (en az 20 karakter)
+const refreshToken = 'refresh-token-demo-0123456789';
 
 vi.mock('../services/mailService.js', () => ({
   sendPasswordResetMail: vi.fn()
 }));
 
+// Tüm rate limiter'lar geçirgen — yeni limiter eklenince mock kırılmasın diye gerçek export listesinden üretilir
 vi.mock('../middleware/rateLimit.js', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../middleware/rateLimit.js');
   const pass = (_req: any, _res: any, next: any) => next();
-  return {
-    loginRateLimit: pass,
-    requestResetRateLimit: pass,
-    publicMenuRateLimit: pass
-  };
+  return Object.fromEntries(Object.keys(actual).map((name) => [name, pass]));
 });
 
 vi.mock('../services/authService.js', () => {
@@ -23,9 +22,9 @@ vi.mock('../services/authService.js', () => {
   return {
     login: vi.fn(async (email: string, password: string) => {
       if (email === validEmail && password === validPassword) {
-        return { access_token: 'access-token', refresh_token: refreshToken };
+        return { ok: true, tokens: { access_token: 'access-token', refresh_token: refreshToken } };
       }
-      return null;
+      return { ok: false, reason: 'invalid_credentials' };
     }),
     refresh: vi.fn(async (token: string) => {
       if (token === refreshToken) return 'new-access-token';
@@ -33,7 +32,7 @@ vi.mock('../services/authService.js', () => {
     }),
     createPasswordResetToken: vi.fn(async (email: string) => {
       if (email !== validEmail) return null;
-      const token = 'reset-token-1';
+      const token = 'reset-token-0123456789-abc';
       resetStore.set(token, { used: false });
       return token;
     }),
@@ -77,12 +76,12 @@ describe('Auth + Reset flow', () => {
 
     const resetOk = await request(app)
       .post('/api/auth/reset-password')
-      .send({ token: 'reset-token-1', new_password: 'YeniSifre123!' });
+      .send({ token: 'reset-token-0123456789-abc', new_password: 'YeniSifre123!' });
     expect(resetOk.status).toBe(200);
 
     const resetFail = await request(app)
       .post('/api/auth/reset-password')
-      .send({ token: 'reset-token-1', new_password: 'YeniSifre123!' });
+      .send({ token: 'reset-token-0123456789-abc', new_password: 'YeniSifre123!' });
     expect([400, 401, 404]).toContain(resetFail.status);
   });
 });

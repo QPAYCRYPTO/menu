@@ -8,6 +8,7 @@
     "build": "echo 'no build needed'",
     "start": "tsx src/server.ts",
     "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
     "migrate:up": "node-pg-migrate up -m migrations --migration-file-language sql",
     "migrate:down": "node-pg-migrate down -m migrations --migration-file-language sql",
     "migrate:create": "node-pg-migrate create -m migrations --migration-file-language sql",
