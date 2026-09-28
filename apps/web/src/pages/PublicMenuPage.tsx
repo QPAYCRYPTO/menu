@@ -4,7 +4,8 @@
 // - Menüde arama (tüm kategorilerde), ürün kartında hızlı "+" ile sepete ekleme
 // - "Garson Çağır" butonu artık modal açıyor (12 çağrı türü)
 // - "Diğer" seçilirse serbest text alanı çıkıyor (zorunlu min 3 karakter)
-// - Çağrı gönderildikten sonra modal kapanır, toast gösterir
+// - Çağrı ikonları (lucide) + türe özel renk; gönderince "Garsonunuz haberdar edildi" ekranı
+//   (localStorage'da saklanır, sayfa yenilense de kalır; Tamam'a basınca veya 15 dk sonra kapanır)
 
 import type { PublicMenuCategory, PublicMenuResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
@@ -13,6 +14,10 @@ import { apiRequest } from '../api/client';
 import { getCustomerToken } from '../utils/customerToken';
 import { MyOrdersTab } from '../components/MyOrdersTab';
 import { OrderNoteTemplates } from '../components/OrderNoteTemplates';
+import {
+  Baby, Bell, Check, CheckCircle2, Cigarette, CircleX, Clock, Droplet, Ellipsis, Flame,
+  Package, Receipt, Sparkle, Sparkles, UserCheck, X, Zap, type LucideIcon
+} from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const BRAND_NAME = 'AtlasQR';
@@ -33,20 +38,53 @@ type CallTypeCode =
   | 'ashtray' | 'lighter' | 'cigarette' | 'water'
   | 'missing_service' | 'clean_table' | 'other';
 
-const CALL_TYPES: { code: CallTypeCode; emoji: string; label: string }[] = [
-  { code: 'waiter',          emoji: '👤', label: 'Garson' },
-  { code: 'water',           emoji: '💧', label: 'Su' },
-  { code: 'bill',            emoji: '🧾', label: 'Hesap' },
-  { code: 'package',         emoji: '📦', label: 'Paket' },
-  { code: 'baby_chair',      emoji: '🪑', label: 'Mama Sandalyesi' },
-  { code: 'charger',         emoji: '🔌', label: 'Şarj' },
-  { code: 'ashtray',         emoji: '🚬', label: 'Küllük' },
-  { code: 'lighter',         emoji: '🔥', label: 'Çakmak' },
-  { code: 'cigarette',       emoji: '🚬', label: 'Sigara' },
-  { code: 'clean_table',     emoji: '🧽', label: 'Masa Silinsin' },
-  { code: 'missing_service', emoji: '❌', label: 'Servis Eksik' },
-  { code: 'other',           emoji: '✏️', label: 'Diğer' }
+// Her çağrı türünün kendi sabit rengi var (işletmenin vurgu renginden bağımsız)
+const CALL_TYPES: { code: CallTypeCode; icon: LucideIcon; label: string; color: string }[] = [
+  { code: 'waiter',          icon: UserCheck, label: 'Garson',          color: '#A855F7' },
+  { code: 'water',           icon: Droplet,   label: 'Su',              color: '#0EA5E9' },
+  { code: 'bill',            icon: Receipt,   label: 'Hesap',           color: '#10B981' },
+  { code: 'package',         icon: Package,   label: 'Paket',           color: '#F59E0B' },
+  { code: 'baby_chair',      icon: Baby,      label: 'Mama Sandalyesi', color: '#F43F5E' },
+  { code: 'charger',         icon: Zap,       label: 'Şarj',            color: '#3B82F6' },
+  { code: 'ashtray',         icon: Sparkles,  label: 'Küllük',          color: '#A1A1AA' },
+  { code: 'lighter',         icon: Flame,     label: 'Çakmak',          color: '#F97316' },
+  { code: 'cigarette',       icon: Cigarette, label: 'Sigara',          color: '#D97706' },
+  { code: 'clean_table',     icon: Sparkle,   label: 'Masa Silinsin',   color: '#14B8A6' },
+  { code: 'missing_service', icon: CircleX,   label: 'Servis Eksik',    color: '#EF4444' },
+  { code: 'other',           icon: Ellipsis,  label: 'Diğer',           color: '#6366F1' }
 ];
+
+// #RRGGBB → rgba(r,g,b,a)
+function withAlpha(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+// Son çağrı durumu — masa bazında localStorage'da (sayfa yenilenince "haberdar edildi" ekranı kalsın)
+type StoredCall = { code: CallTypeCode; already: boolean; at: number; dismissed: boolean };
+const CALL_MEMORY_MS = 15 * 60 * 1000;
+const callStorageKey = (slug: string, tableId: string) => `atlasqr:call:${slug}:${tableId}`;
+
+function readStoredCall(slug: string, tableId: string): StoredCall | null {
+  try {
+    const raw = localStorage.getItem(callStorageKey(slug, tableId));
+    if (!raw) return null;
+    const call = JSON.parse(raw) as StoredCall;
+    if (!call?.code || Date.now() - call.at > CALL_MEMORY_MS) return null;
+    return call;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredCall(slug: string, tableId: string, call: StoredCall): void {
+  try { localStorage.setItem(callStorageKey(slug, tableId), JSON.stringify(call)); } catch { /* yut */ }
+}
+
+function minutesAgoLabel(at: number): string {
+  const mins = Math.floor((Date.now() - at) / 60000);
+  return mins < 1 ? 'az önce' : `${mins} dk önce`;
+}
 
 function formatPrice(priceInt: number): string {
   return `${(priceInt / 100).toFixed(2)} TL`;
@@ -90,8 +128,9 @@ export function PublicMenuPage() {
   const [selectedCallType, setSelectedCallType] = useState<CallTypeCode | null>(null);
   const [callNote, setCallNote] = useState('');
   const [callLoading, setCallLoading] = useState(false);
-  const [callSent, setCallSent] = useState(false);
-  const [callAlready, setCallAlready] = useState(false);
+  // Gönderilmiş son çağrı: kapatılmamışsa sheet'te "Garsonunuz haberdar edildi" ekranı görünür
+  const [lastCall, setLastCall] = useState<StoredCall | null>(null);
+  const [, setClockTick] = useState(0);
 
   const [customerToken] = useState<string>(() => getCustomerToken());
 
@@ -221,12 +260,47 @@ export function PublicMenuPage() {
     }
   }
 
+  // Sayfa açılınca: 15 dk içinde gönderilmiş ve kapatılmamış çağrı varsa ekranı geri getir
+  useEffect(() => {
+    if (!slug || !tableId) return;
+    const stored = readStoredCall(slug, tableId);
+    setLastCall(stored);
+    if (stored && !stored.dismissed) setCallModalOpen(true);
+  }, [slug, tableId]);
+
+  // "x dk önce" yazısı güncel kalsın
+  useEffect(() => {
+    if (!callModalOpen || !lastCall) return;
+    const id = setInterval(() => setClockTick(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, [callModalOpen, lastCall]);
+
+  const showCallSuccess = callModalOpen && lastCall !== null && !lastCall.dismissed;
+
   // Çağrı butonu → modal aç
   function openCallModal() {
     if (!tableId) return;
     setSelectedCallType(null);
     setCallNote('');
     setCallModalOpen(true);
+  }
+
+  // Başarı ekranını kapat (Tamam / dışarı tıklama / Başka bir istek): bir daha otomatik açılmasın
+  function dismissCallSuccess(closeSheet: boolean) {
+    if (lastCall && tableId) {
+      const dismissed = { ...lastCall, dismissed: true };
+      writeStoredCall(slug, tableId, dismissed);
+      setLastCall(dismissed);
+    }
+    setSelectedCallType(null);
+    setCallNote('');
+    if (closeSheet) setCallModalOpen(false);
+  }
+
+  function closeCallSheet() {
+    if (callLoading) return;
+    if (showCallSuccess) dismissCallSuccess(true);
+    else setCallModalOpen(false);
   }
 
   // Modal'dan çağrıyı gönder
@@ -257,15 +331,18 @@ export function PublicMenuPage() {
         return;
       }
 
-      // Bekleyen çağrı zaten varsa backend yeni kayıt açmaz
+      // Aynı türde bekleyen çağrı zaten varsa backend yeni kayıt açmaz (alreadyCalled)
       const data = await res.json().catch(() => ({}));
-      setCallAlready(data.alreadyCalled === true);
-
-      setCallModalOpen(false);
+      const call: StoredCall = {
+        code: selectedCallType,
+        already: data.alreadyCalled === true,
+        at: Date.now(),
+        dismissed: false
+      };
+      writeStoredCall(slug, tableId, call);
+      setLastCall(call);
       setSelectedCallType(null);
       setCallNote('');
-      setCallSent(true);
-      setTimeout(() => setCallSent(false), 4000);
     } catch {
       alert('Bağlantı hatası. Tekrar deneyin.');
     } finally {
@@ -307,14 +384,6 @@ export function PublicMenuPage() {
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter"
             style={{ background: 'var(--accent-gradient)' }}>
             ✅ Siparişiniz alındı!
-          </div>
-        )}
-        {callSent && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter"
-            style={{ background: 'rgba(217,119,6,0.85)' }}>
-            {callAlready
-              ? '🔔 Garsonunuz zaten haberdar edildi.'
-              : '🔔 Çağrı gönderildi! Garson en kısa sürede gelecek.'}
           </div>
         )}
 
@@ -666,78 +735,164 @@ export function PublicMenuPage() {
         </div>
       )}
 
-      {/* Garson çağır sheet — 12 tür grid */}
-      {callModalOpen && (
+      {/* Garson çağır sheet — 12 tür ikon grid / gönderim sonrası "haberdar edildi" ekranı */}
+      {callModalOpen && (() => {
+        const selected = CALL_TYPES.find(ct => ct.code === selectedCallType) ?? null;
+        const sentType = lastCall ? CALL_TYPES.find(ct => ct.code === lastCall.code) ?? null : null;
+        const recentCode = lastCall && Date.now() - lastCall.at <= CALL_MEMORY_MS ? lastCall.code : null;
+        return (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
-          onClick={() => !callLoading && setCallModalOpen(false)}>
+          onClick={closeCallSheet}>
           <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] flex flex-col border-t border-white/60"
             style={{ maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
 
-            <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-white/20">
-              <div>
-                <h3 className="font-serif font-bold text-lg flex items-center gap-2">
-                  <i className="fa-regular fa-bell text-amber-300" /> Garson Çağır
-                </h3>
-                <p className="text-xs text-white/65 mt-0.5">Ne istediğinizi seçin</p>
+            <div className="px-5 pt-3 pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center border"
+                  style={{ background: 'var(--accent-soft)', borderColor: 'color-mix(in srgb, var(--accent) 35%, transparent)', color: 'var(--accent)' }}>
+                  <Bell size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight tracking-tight">Garson Çağır</h3>
+                  <p className="text-xs text-white/60 font-medium">
+                    {showCallSuccess ? (tableName || 'Masanız') : 'Ne istediğinizi seçin'}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => !callLoading && setCallModalOpen(false)}
+              <button onClick={closeCallSheet}
                 disabled={callLoading} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn disabled:opacity-50">
-                <i className="fa-solid fa-xmark" />
+                className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 spring-btn disabled:opacity-50">
+                <X size={16} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="grid grid-cols-3 gap-2.5">
-                {CALL_TYPES.map(ct => {
-                  const isSelected = selectedCallType === ct.code;
-                  return (
-                    <button key={ct.code}
-                      onClick={() => setSelectedCallType(ct.code)}
-                      className={`rounded-2xl py-4 px-2 flex flex-col items-center gap-1.5 min-h-[90px] spring-btn ${isSelected ? 'btn-accent' : 'glass-card'}`}>
-                      <span className="text-[28px] leading-none">{ct.emoji}</span>
-                      <span className={`text-[11px] text-center leading-tight ${isSelected ? 'font-extrabold' : 'font-semibold'}`}>
-                        {ct.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            {showCallSuccess && sentType && lastCall ? (
+              /* Gönderim sonrası: Garsonunuz haberdar edildi */
+              <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6 flex flex-col items-center text-center fade-enter">
+                <div className="relative flex items-center justify-center my-4">
+                  <div className="absolute w-24 h-24 rounded-full animate-ping"
+                    style={{ background: withAlpha(sentType.color, 0.18), animationDuration: '2.4s' }} />
+                  <div className="relative w-20 h-20 rounded-full flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${sentType.color}, ${withAlpha(sentType.color, 0.7)})`, boxShadow: `0 10px 30px ${withAlpha(sentType.color, 0.45)}` }}>
+                    <CheckCircle2 size={40} color="#fff" />
+                  </div>
+                </div>
+                <h4 className="text-2xl font-bold tracking-tight">Garsonunuz haberdar edildi</h4>
+                <p className="text-sm font-semibold mt-1.5" style={{ color: sentType.color }}>
+                  “{sentType.label}” {lastCall.already ? 'talebiniz zaten iletilmişti' : 'talebiniz iletildi'}
+                </p>
+                <p className="text-xs text-white/55 mt-1 flex items-center gap-1.5">
+                  <Clock size={12} /> {minutesAgoLabel(lastCall.at)}{tableName ? ` • ${tableName}` : ''}
+                </p>
 
-              {/* "Diğer" seçilince serbest text */}
-              {selectedCallType === 'other' && (
-                <div className="mt-4">
-                  <label className="text-[11px] font-bold text-white/70 block mb-1.5 uppercase tracking-wider">
-                    Açıklama (zorunlu, en az 3 karakter)
-                  </label>
-                  <textarea value={callNote}
-                    onChange={e => setCallNote(e.target.value)}
-                    placeholder="Ne istediğinizi yazın..."
-                    rows={3}
-                    autoFocus
-                    className={`glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none ${callNote.trim().length < 3 && callNote.length > 0 ? 'border-rose-300' : ''}`} />
-                  {callNote.trim().length < 3 && callNote.length > 0 && (
-                    <div className="text-[11px] text-rose-300 mt-1">En az 3 karakter yazın</div>
+                <div className="w-full mt-7 space-y-2">
+                  <button onClick={() => dismissCallSuccess(true)}
+                    className="btn-accent w-full py-3.5 rounded-full text-sm font-bold spring-btn">
+                    Tamam
+                  </button>
+                  <button onClick={() => dismissCallSuccess(false)}
+                    className="w-full py-3 rounded-full text-sm font-semibold text-white/80 bg-white/10 border border-white/10 spring-btn">
+                    Başka bir istek
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto px-4 pb-4">
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {CALL_TYPES.map(ct => {
+                      const isSelected = selectedCallType === ct.code;
+                      const Icon = ct.icon;
+                      return (
+                        <button key={ct.code}
+                          onClick={() => setSelectedCallType(ct.code)}
+                          aria-pressed={isSelected}
+                          className="relative rounded-[22px] p-3 min-h-[98px] flex flex-col items-center justify-center gap-2 spring-btn border"
+                          style={isSelected ? {
+                            background: withAlpha(ct.color, 0.18),
+                            borderColor: withAlpha(ct.color, 0.7),
+                            boxShadow: `0 0 22px ${withAlpha(ct.color, 0.35)}, inset 0 1px 1px rgba(255,255,255,0.35)`
+                          } : {
+                            background: 'rgba(255,255,255,0.05)',
+                            borderColor: 'rgba(255,255,255,0.09)'
+                          }}>
+                          <span className="w-11 h-11 rounded-2xl flex items-center justify-center border transition-all"
+                            style={isSelected ? {
+                              background: `linear-gradient(135deg, ${ct.color}, ${withAlpha(ct.color, 0.75)})`,
+                              borderColor: 'rgba(255,255,255,0.35)',
+                              color: '#fff',
+                              boxShadow: `0 4px 14px ${withAlpha(ct.color, 0.5)}`
+                            } : {
+                              background: withAlpha(ct.color, 0.15),
+                              borderColor: withAlpha(ct.color, 0.25),
+                              color: ct.color
+                            }}>
+                            <Icon size={20} />
+                          </span>
+                          <span className={`text-[12px] text-center leading-tight tracking-tight ${isSelected ? 'font-bold text-white' : 'font-semibold text-white/80'}`}>
+                            {ct.label}
+                          </span>
+                          {recentCode === ct.code && (
+                            <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                              title="Az önce iletildi"
+                              style={{ background: withAlpha(ct.color, 0.9) }}>
+                              <Check size={12} color="#fff" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* "Diğer" seçilince serbest text */}
+                  {selectedCallType === 'other' && (
+                    <div className="mt-4">
+                      <label className="text-[11px] font-bold text-white/70 block mb-1.5 uppercase tracking-wider">
+                        Açıklama (zorunlu, en az 3 karakter)
+                      </label>
+                      <textarea value={callNote}
+                        onChange={e => setCallNote(e.target.value)}
+                        placeholder="Ne istediğinizi yazın..."
+                        rows={3}
+                        autoFocus
+                        className={`glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none ${callNote.trim().length < 3 && callNote.length > 0 ? 'border-rose-300' : ''}`} />
+                      {callNote.trim().length < 3 && callNote.length > 0 && (
+                        <div className="text-[11px] text-rose-300 mt-1">En az 3 karakter yazın</div>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            <div className="px-5 pt-3 pb-6 border-t border-white/20">
-              <button onClick={sendCall}
-                disabled={!canSendCall || callLoading}
-                className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
-                {callLoading ? 'Gönderiliyor...' : (<><i className="fa-regular fa-bell" /> Çağrıyı Gönder</>)}
-              </button>
-              {!selectedCallType && (
-                <p className="text-[11px] text-white/55 text-center mt-2">Önce bir seçenek seçin</p>
-              )}
-            </div>
+                <div className="px-5 pt-3 pb-6 border-t border-white/10">
+                  <button onClick={sendCall}
+                    disabled={!canSendCall || callLoading}
+                    className="w-full py-3.5 rounded-[22px] text-sm font-bold flex items-center justify-center gap-2 spring-btn border disabled:cursor-not-allowed"
+                    style={selected && canSendCall && !callLoading ? {
+                      background: `linear-gradient(135deg, ${selected.color}, ${withAlpha(selected.color, 0.8)})`,
+                      borderColor: 'rgba(255,255,255,0.35)',
+                      color: '#fff',
+                      boxShadow: `0 8px 24px -4px ${withAlpha(selected.color, 0.55)}`
+                    } : {
+                      background: 'rgba(255,255,255,0.06)',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.45)'
+                    }}>
+                    <Bell size={16} />
+                    {callLoading ? 'Gönderiliyor...' : selected ? `“${selected.label}” Çağrısını Gönder` : 'Çağrıyı Gönder'}
+                  </button>
+                  <p className="text-[11px] text-center mt-2 font-semibold"
+                    style={{ color: selected ? selected.color : 'rgba(255,255,255,0.5)' }}>
+                    {selected ? `Seçilen: ${selected.label}` : 'Önce bir seçenek seçin'}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
