@@ -267,16 +267,46 @@ publicRoutes.post('/call/:slug', publicCallRateLimit, async (req, res) => {
   const finalCallType = call_type ?? 'waiter';
   const finalNote = note?.trim() || null;
 
-  // Çağrı insert
-  const callResult = await pool.query(
-    `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, call_type, created_at, updated_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, 'call', $5, NOW(), NOW())
-     RETURNING id, created_at`,
-    [businessId, table.id, table.name, finalNote, finalCallType]
-  );
+  // Aynı masada bekleyen (pending) çağrı varsa yenisini oluşturma — garsona tekrar tekrar bildirim düşmesin.
+  // Masa satırı kilitlenir: aynı anda gelen çağrılar sıraya girer, tek kayıt oluşur.
+  const client = await pool.connect();
+  let callId: string;
+  let callCreatedAt: string;
+  try {
+    await client.query('BEGIN');
+    await client.query(`SELECT id FROM tables WHERE id = $1 AND business_id = $2 FOR UPDATE`, [table.id, businessId]);
 
-  const callId = callResult.rows[0].id;
-  const callCreatedAt = callResult.rows[0].created_at;
+    const pendingCall = await client.query(
+      `SELECT id FROM orders
+       WHERE business_id = $1 AND table_id = $2 AND type = 'call' AND status = 'pending'
+       LIMIT 1`,
+      [businessId, table.id]
+    );
+    if (pendingCall.rowCount === 1) {
+      await client.query('ROLLBACK');
+      res.status(200).json({
+        alreadyCalled: true,
+        message: 'Garsonunuz zaten haberdar edildi.'
+      });
+      return;
+    }
+
+    const callResult = await client.query(
+      `INSERT INTO orders (id, business_id, table_id, table_name, status, note, type, call_type, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'pending', $4, 'call', $5, NOW(), NOW())
+       RETURNING id, created_at`,
+      [businessId, table.id, table.name, finalNote, finalCallType]
+    );
+    await client.query('COMMIT');
+
+    callId = callResult.rows[0].id;
+    callCreatedAt = callResult.rows[0].created_at;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 
   // ───────────────────────────────────────────────
   // LOGLAMA — Patron sonradan rapor görsün

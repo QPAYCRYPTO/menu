@@ -91,6 +91,7 @@ export function PublicMenuPage() {
   const [callNote, setCallNote] = useState('');
   const [callLoading, setCallLoading] = useState(false);
   const [callSent, setCallSent] = useState(false);
+  const [callAlready, setCallAlready] = useState(false);
 
   const [customerToken] = useState<string>(() => getCustomerToken());
 
@@ -256,6 +257,10 @@ export function PublicMenuPage() {
         return;
       }
 
+      // Bekleyen çağrı zaten varsa backend yeni kayıt açmaz
+      const data = await res.json().catch(() => ({}));
+      setCallAlready(data.alreadyCalled === true);
+
       setCallModalOpen(false);
       setSelectedCallType(null);
       setCallNote('');
@@ -307,7 +312,9 @@ export function PublicMenuPage() {
         {callSent && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter"
             style={{ background: 'rgba(217,119,6,0.85)' }}>
-            🔔 Çağrı gönderildi! Garson en kısa sürede gelecek.
+            {callAlready
+              ? '🔔 Garsonunuz zaten haberdar edildi.'
+              : '🔔 Çağrı gönderildi! Garson en kısa sürede gelecek.'}
           </div>
         )}
 
