@@ -22,6 +22,9 @@ import {
   revokeWaiterSession
 } from '../api/waiterAdminApi';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import {
+  Ban, Check, Clock, KeyRound, Mail, Pencil, Phone, QrCode, Trash2, UserPlus, Users, type LucideIcon
+} from 'lucide-react';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
@@ -40,6 +43,38 @@ function whatsappLink(phone: string, loginUrl: string, waiterName: string, busin
   const message = `Merhaba ${waiterName}, ${businessName} sistem girişin için link:\n${loginUrl}`;
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
+// ── Garson satırı görsel yardımcıları (lucide ikon rozetleri) ──
+const ACTION_BTN = 'h-11 rounded-2xl flex items-center border spring-btn transition-colors bg-white/[0.06] border-white/10 hover:bg-white/[0.1] hover:border-white/20';
+
+const WAITER_STATUS: Record<WaiterStatus, { label: string; color: string; icon: LucideIcon }> = {
+  active:   { label: 'Aktif',  color: '#34D399', icon: Check },
+  on_leave: { label: 'İzinli', color: '#FBBF24', icon: Clock },
+  inactive: { label: 'Pasif',  color: '#FB7185', icon: Ban }
+};
+
+// Baş harf avatarı: isimden sabit renk (her render'da aynı)
+const AVATAR_COLORS = ['#FB923C', '#FBBF24', '#C084FC', '#38BDF8', '#34D399', '#F472B6', '#818CF8'];
+function avatarColorFor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+// #RRGGBB → rgba(r,g,b,a)
+function withAlpha(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+function IconBadge({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
+  return (
+    <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+      style={{ background: withAlpha(color, 0.15), color }}>
+      <Icon size={16} />
+    </span>
+  );
 }
 
 export function WaitersPage() {
@@ -244,14 +279,11 @@ export function WaitersPage() {
   }
 
   function statusBadge(status: WaiterStatus) {
-    const config = {
-      active: { label: '● Aktif', bg: 'var(--success-bg)', color: 'var(--success)' },
-      on_leave: { label: '● İzinli', bg: 'var(--warning-bg)', color: 'var(--warning)' },
-      inactive: { label: '● Pasif', bg: 'var(--danger-bg)', color: 'var(--danger)' }
-    }[status];
+    const config = WAITER_STATUS[status];
     return (
-      <span className="text-xs font-semibold" style={{ color: config.color }}>
-        {config.label}
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+        style={{ background: withAlpha(config.color, 0.12), color: config.color, borderColor: withAlpha(config.color, 0.25) }}>
+        ● {config.label}
       </span>
     );
   }
@@ -263,25 +295,32 @@ export function WaitersPage() {
       <Toast state={toast} />
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="font-serif font-bold text-2xl">
-            👥 Garsonlar
-          </h1>
-          <p className="text-sm mt-1 text-white/70">
-            {waiters.length} garson kayıtlı · {activeCount} aktif
-          </p>
+      {/* Başlık kartı */}
+      <div className="glass-dark rounded-[28px] p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center border"
+            style={{ background: 'var(--accent-soft)', borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)', color: 'var(--accent)' }}>
+            <Users size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Garsonlar</h1>
+            <p className="text-xs text-white/60 font-medium">
+              {waiters.length} garson kayıtlı • {activeCount} aktif
+            </p>
+          </div>
         </div>
         <button onClick={openCreateForm}
-          className="btn-accent px-4 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 spring-btn">
-          <i className="fa-solid fa-user-plus" /> Yeni Garson
+          className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-semibold flex items-center gap-2 spring-btn">
+          <UserPlus size={16} /> Yeni Garson
         </button>
       </div>
 
-      <div className="glass-dark rounded-3xl overflow-hidden">
+      <div className="glass-dark rounded-[32px] p-3 md:p-5 space-y-3">
         {waiters.length === 0 && (
           <div className="text-center py-16">
-            <div className="text-4xl mb-3">👥</div>
+            <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-white/5 border border-white/10 text-white/60">
+              <Users size={26} />
+            </div>
             <p className="text-sm text-white/70">Henüz garson eklenmedi</p>
             <button onClick={openCreateForm}
               className="btn-accent mt-4 px-4 py-2 rounded-2xl text-sm font-bold spring-btn">
@@ -290,69 +329,89 @@ export function WaitersPage() {
           </div>
         )}
 
-        {waiters.map(w => (
-          <div key={w.id} className="px-4 py-3 border-b border-white/10 last:border-b-0"
-            style={{ background: w.status === 'active' ? 'transparent' : 'rgba(0,0,0,0.18)' }}>
+        {waiters.map(w => {
+          const avatarColor = avatarColorFor(w.name);
+          const status = WAITER_STATUS[w.status];
+          const StatusIcon = status.icon;
+          return (
+            <div key={w.id}
+              className="rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border transition-colors"
+              style={{
+                background: w.status === 'active' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.22)',
+                borderColor: 'rgba(255,255,255,0.07)'
+              }}>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-extrabold flex-shrink-0 border border-white/40"
-                style={{ background: w.status === 'active' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.15)' }}>
-                {w.name.charAt(0).toUpperCase()}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{w.name}</div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                  {statusBadge(w.status)}
-                  {w.phone && <span className="text-xs text-white/65">📱 {w.phone}</span>}
-                  {w.email && <span className="text-xs truncate text-white/65">✉️ {w.email}</span>}
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0 border"
+                  style={{
+                    background: `linear-gradient(135deg, ${withAlpha(avatarColor, 0.22)}, ${withAlpha(avatarColor, 0.08)})`,
+                    borderColor: withAlpha(avatarColor, 0.35),
+                    color: avatarColor,
+                    opacity: w.status === 'active' ? 1 : 0.6
+                  }}>
+                  {w.name.charAt(0).toLocaleUpperCase('tr')}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold truncate">{w.name}</h3>
+                    {statusBadge(w.status)}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-white/60">
+                    {w.phone && <span className="flex items-center gap-1"><Phone size={12} className="text-white/40" /> {w.phone}</span>}
+                    {w.phone && w.email && <span className="text-white/30">•</span>}
+                    {w.email && <span className="flex items-center gap-1 truncate"><Mail size={12} className="text-white/40" /> {w.email}</span>}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-2 flex-shrink-0 flex-wrap">
+              {/* Aksiyon rozetleri */}
+              <div className="flex items-center gap-2 flex-wrap">
                 {w.status === 'active' && (
                   <>
                     <button onClick={() => setTokenModalWaiter(w)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
-                      style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)' }}>
-                      📱 QR
+                      title="QR giriş kodu" aria-label="QR giriş kodu"
+                      className={`${ACTION_BTN} px-3.5 gap-2`}>
+                      <IconBadge icon={QrCode} color="#34D399" />
+                      <span className="text-xs font-bold" style={{ color: '#34D399' }}>QR</span>
                     </button>
                     <button onClick={() => askRevokeActiveSessions(w)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
-                      style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)' }}
-                      title="Aktif QR'ları iptal et">
-                      🚫
+                      title="Aktif QR'ları iptal et" aria-label="Aktif QR'ları iptal et"
+                      className={`${ACTION_BTN} w-11 justify-center`}>
+                      <IconBadge icon={Ban} color="#FBBF24" />
                     </button>
                   </>
                 )}
                 <button onClick={() => openEditForm(w)}
-                  className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn">
-                  ✏️
+                  title="Düzenle" aria-label="Düzenle"
+                  className={`${ACTION_BTN} w-11 justify-center`}>
+                  <IconBadge icon={Pencil} color="#FB923C" />
                 </button>
                 <button onClick={() => { setPasswordModalWaiter(w); setNewPasswordValue(''); }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
-                  style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info)' }}
-                  title="Şifre belirle/sıfırla">
-                  🔑
+                  title="Şifre belirle/sıfırla" aria-label="Şifre belirle/sıfırla"
+                  className={`${ACTION_BTN} w-11 justify-center`}>
+                  <IconBadge icon={KeyRound} color="#38BDF8" />
                 </button>
-                <select
-                  value={w.status}
-                  onChange={(e) => handleStatusChange(w, e.target.value as WaiterStatus)}
-                  className="glass-input px-2 py-1.5 rounded-xl text-xs font-semibold">
-                  <option value="active">🟢 Aktif</option>
-                  <option value="on_leave">🟡 İzinli</option>
-                  <option value="inactive">🔴 Pasif</option>
-                </select>
+                <label className={`${ACTION_BTN} px-3 gap-2 cursor-pointer`} title="Durum">
+                  <IconBadge icon={StatusIcon} color={status.color} />
+                  <select
+                    value={w.status}
+                    onChange={(e) => handleStatusChange(w, e.target.value as WaiterStatus)}
+                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer pr-1"
+                    style={{ color: status.color }}>
+                    <option value="active">Aktif</option>
+                    <option value="on_leave">İzinli</option>
+                    <option value="inactive">Pasif</option>
+                  </select>
+                </label>
                 <button onClick={() => askDeleteWaiter(w)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
-                  style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}
-                  title="Kalıcı sil">
-                  🗑️
+                  title="Sil" aria-label="Sil"
+                  className={`${ACTION_BTN} w-11 justify-center`}>
+                  <IconBadge icon={Trash2} color="#FB7185" />
                 </button>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* YENİ/DÜZENLE FORM MODAL */}
