@@ -14,10 +14,9 @@ import { apiRequest } from '../api/client';
 import { getCustomerToken } from '../utils/customerToken';
 import { MyOrdersTab } from '../components/MyOrdersTab';
 import { OrderNoteTemplates } from '../components/OrderNoteTemplates';
-import {
-  Baby, Bell, Check, CheckCircle2, Cigarette, CircleX, Clock, Droplet, Ellipsis, Flame,
-  Package, Receipt, Sparkle, Sparkles, UserCheck, X, Zap, type LucideIcon
-} from 'lucide-react';
+import { Bell, Check, CheckCircle2, Clock, X } from 'lucide-react';
+import { CALL_TYPES, type CallTypeCode } from '../lib/callTypes';
+import { withAlpha } from '../lib/color';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const BRAND_NAME = 'AtlasQR';
@@ -31,34 +30,6 @@ type CartItem = {
 };
 
 type MainTab = 'menu' | 'orders';
-
-// Çağrı türleri — backend ile aynı 12 madde
-type CallTypeCode =
-  | 'waiter' | 'baby_chair' | 'charger' | 'bill' | 'package'
-  | 'ashtray' | 'lighter' | 'cigarette' | 'water'
-  | 'missing_service' | 'clean_table' | 'other';
-
-// Her çağrı türünün kendi sabit rengi var (işletmenin vurgu renginden bağımsız)
-const CALL_TYPES: { code: CallTypeCode; icon: LucideIcon; label: string; color: string }[] = [
-  { code: 'waiter',          icon: UserCheck, label: 'Garson',          color: '#A855F7' },
-  { code: 'water',           icon: Droplet,   label: 'Su',              color: '#0EA5E9' },
-  { code: 'bill',            icon: Receipt,   label: 'Hesap',           color: '#10B981' },
-  { code: 'package',         icon: Package,   label: 'Paket',           color: '#F59E0B' },
-  { code: 'baby_chair',      icon: Baby,      label: 'Mama Sandalyesi', color: '#F43F5E' },
-  { code: 'charger',         icon: Zap,       label: 'Şarj',            color: '#3B82F6' },
-  { code: 'ashtray',         icon: Sparkles,  label: 'Küllük',          color: '#A1A1AA' },
-  { code: 'lighter',         icon: Flame,     label: 'Çakmak',          color: '#F97316' },
-  { code: 'cigarette',       icon: Cigarette, label: 'Sigara',          color: '#D97706' },
-  { code: 'clean_table',     icon: Sparkle,   label: 'Masa Silinsin',   color: '#14B8A6' },
-  { code: 'missing_service', icon: CircleX,   label: 'Servis Eksik',    color: '#EF4444' },
-  { code: 'other',           icon: Ellipsis,  label: 'Diğer',           color: '#6366F1' }
-];
-
-// #RRGGBB → rgba(r,g,b,a)
-function withAlpha(hex: string, alpha: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
 
 // Son çağrı durumu — masa bazında localStorage'da (sayfa yenilenince "haberdar edildi" ekranı kalsın)
 type StoredCall = { code: CallTypeCode; already: boolean; at: number; dismissed: boolean };

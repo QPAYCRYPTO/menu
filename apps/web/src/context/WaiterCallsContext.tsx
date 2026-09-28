@@ -173,23 +173,4 @@ export function useWaiterCalls() {
   return ctx;
 }
 
-// Helper: çağrı türü etiketleri
-export const CALL_TYPE_INFO: Record<string, { emoji: string; label: string; critical: boolean }> = {
-  waiter:          { emoji: '👤', label: 'Garson',           critical: false },
-  water:           { emoji: '💧', label: 'Su',               critical: false },
-  bill:            { emoji: '🧾', label: 'Hesap',            critical: false },
-  package:         { emoji: '📦', label: 'Paket',            critical: false },
-  baby_chair:      { emoji: '🪑', label: 'Mama Sandalyesi',  critical: false },
-  charger:         { emoji: '🔌', label: 'Şarj',             critical: false },
-  ashtray:         { emoji: '🚬', label: 'Küllük',           critical: false },
-  lighter:         { emoji: '🔥', label: 'Çakmak',           critical: false },
-  cigarette:       { emoji: '🚬', label: 'Sigara',           critical: false },
-  clean_table:     { emoji: '🧽', label: 'Masa Silinsin',    critical: true  },
-  missing_service: { emoji: '❌', label: 'Servis Eksik',     critical: true  },
-  other:           { emoji: '✏️', label: 'Diğer',            critical: false }
-};
-
-export function getCallInfo(call_type: string | null | undefined) {
-  if (!call_type) return { emoji: '🔔', label: 'Garson Çağrısı', critical: false };
-  return CALL_TYPE_INFO[call_type] || { emoji: '🔔', label: call_type, critical: false };
-}
+// Çağrı türü ikon/etiket/renk bilgisi: lib/callTypes.ts (getCallType) — tek kaynak

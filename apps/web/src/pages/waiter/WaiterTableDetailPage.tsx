@@ -1,6 +1,6 @@
 // apps/web/src/pages/waiter/WaiterTableDetailPage.tsx
 // CHANGELOG v6:
-// - Çağrı kartı artık call_type kullanıyor (büyük emoji + label)
+// - Çağrı kartı artık call_type kullanıyor (tür ikonu + label, lib/callTypes)
 // - Kritik türler kırmızı kart
 // - "Diğer" türü için müşteri açıklaması gösteriliyor
 // - Birden fazla çağrı varsa hepsi ayrı kart
@@ -8,7 +8,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
-import { getCallInfo } from '../../context/WaiterCallsContext';
+import { getCallType } from '../../lib/callTypes';
+import { CallTypeBadge } from '../../components/CallTypeBadge';
 import {
   WaiterTableDetail,
   CANCEL_REASON_OPTIONS,
@@ -184,7 +185,7 @@ export function WaiterTableDetailPage() {
       {data.active_calls.length > 0 && (
         <div className="space-y-2 mb-3">
           {data.active_calls.map(call => {
-            const info = getCallInfo(call.call_type);
+            const info = getCallType(call.call_type);
             const edgeColor = info.critical ? '#FB7185' : '#FBBF24';
             const accentColor = info.critical ? 'var(--danger)' : 'var(--warning)';
 
@@ -201,10 +202,7 @@ export function WaiterTableDetailPage() {
                   alignItems: 'center',
                   gap: 12
                 }}>
-                  <div className="glass-pill w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{ fontSize: 28, lineHeight: 1 }}>
-                    {info.emoji}
-                  </div>
+                  <CallTypeBadge callType={call.call_type} size={48} filled />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontSize: 10, fontWeight: 800,

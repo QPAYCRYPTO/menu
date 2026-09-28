@@ -6,7 +6,9 @@
 // - Header rozeti: kaç çağrı + kaç acil
 
 import { useEffect, useState } from 'react';
-import { useWaiterCalls, getCallInfo } from '../../context/WaiterCallsContext';
+import { useWaiterCalls } from '../../context/WaiterCallsContext';
+import { getCallType } from '../../lib/callTypes';
+import { CallTypeBadge } from '../../components/CallTypeBadge';
 import type { WaiterActiveCall } from '../../api/waiterPublicApi';
 
 function formatDate(dateStr: string): string {
@@ -67,7 +69,7 @@ function CallCard({ call, onTake }: {
   call: WaiterActiveCall;
   onTake: (callId: string) => Promise<void>;
 }) {
-  const info = getCallInfo(call.call_type);
+  const info = getCallType(call.call_type);
   const [taking, setTaking] = useState(false);
 
   const accentColor = info.critical ? 'var(--danger)' : 'var(--warning)';
@@ -99,7 +101,7 @@ function CallCard({ call, onTake }: {
         }
       `}</style>
 
-      {/* Üst — büyük emoji + label + sayaç */}
+      {/* Üst — çağrı türü ikonu + label + sayaç */}
       <div style={{
         padding: '14px 16px',
         background: info.critical ? 'var(--danger-bg)' : 'var(--warning-bg)',
@@ -108,10 +110,7 @@ function CallCard({ call, onTake }: {
         alignItems: 'center',
         gap: 14
       }}>
-        <div className="glass-pill w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-          style={{ fontSize: 32, lineHeight: 1 }}>
-          {info.emoji}
-        </div>
+        <CallTypeBadge callType={call.call_type} size={56} filled />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
@@ -207,7 +206,7 @@ export function WaiterCallsPage() {
     }
   }
 
-  const criticalCount = calls.filter(c => getCallInfo(c.call_type).critical).length;
+  const criticalCount = calls.filter(c => getCallType(c.call_type).critical).length;
 
   return (
     <div className="text-white">

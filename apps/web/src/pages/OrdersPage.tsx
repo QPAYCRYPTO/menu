@@ -2,6 +2,8 @@
 // CHANGELOG v7: Ortak Toast komponentine geçti
 
 import { useEffect, useState } from 'react';
+import { getCallType } from '../lib/callTypes';
+import { CallTypeBadge } from '../components/CallTypeBadge';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 
@@ -19,25 +21,7 @@ const CANCEL_REASONS: { code: CancelReasonCode; label: string; hint?: string }[]
   { code: 'other', label: 'Diğer', hint: 'Açıklama zorunludur' }
 ];
 
-const CALL_TYPE_LABELS: Record<string, { emoji: string; label: string; critical: boolean }> = {
-  waiter:          { emoji: '👤', label: 'Garson',           critical: false },
-  water:           { emoji: '💧', label: 'Su',               critical: false },
-  bill:            { emoji: '🧾', label: 'Hesap',            critical: false },
-  package:         { emoji: '📦', label: 'Paket',            critical: false },
-  baby_chair:      { emoji: '🪑', label: 'Mama Sandalyesi',  critical: false },
-  charger:         { emoji: '🔌', label: 'Şarj',             critical: false },
-  ashtray:         { emoji: '🚬', label: 'Küllük',           critical: false },
-  lighter:         { emoji: '🔥', label: 'Çakmak',           critical: false },
-  cigarette:       { emoji: '🚬', label: 'Sigara',           critical: false },
-  clean_table:     { emoji: '🧽', label: 'Masa Silinsin',    critical: true  },
-  missing_service: { emoji: '❌', label: 'Servis Eksik',     critical: true  },
-  other:           { emoji: '✏️', label: 'Diğer',            critical: false }
-};
-
-function getCallTypeInfo(call_type: string | null | undefined) {
-  if (!call_type) return { emoji: '🔔', label: 'Garson Çağrısı', critical: false };
-  return CALL_TYPE_LABELS[call_type] || { emoji: '🔔', label: call_type, critical: false };
-}
+// Çağrı türü ikon/etiket/renk: lib/callTypes.ts (tek kaynak)
 
 function parseReasonLabel(reasonString: string | null | undefined): { code: string; label: string; text: string } {
   if (!reasonString) return { code: '', label: 'İptal edildi', text: '' };
@@ -479,7 +463,7 @@ type CallCardProps = {
 };
 
 function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
-  const callInfo = getCallTypeInfo(order.call_type);
+  const callInfo = getCallType(order.call_type);
 
   const cardBg = callInfo.critical ? 'rgba(244,63,94,0.16)' : 'rgba(245,158,11,0.14)';
   const cardBorder = callInfo.critical ? 'rgba(251,113,133,0.6)' : 'rgba(252,211,77,0.55)';
@@ -492,7 +476,7 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
       <div style={{ padding: '16px',
         background: callInfo.critical ? 'linear-gradient(135deg, rgba(244,63,94,0.32), rgba(244,63,94,0.14))' : 'linear-gradient(135deg, rgba(245,158,11,0.32), rgba(245,158,11,0.12))',
         borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0 }}>{callInfo.emoji}</div>
+        <CallTypeBadge callType={order.call_type} size={56} filled />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
             color: accentColor, marginBottom: 2 }}>
@@ -628,7 +612,7 @@ export function OrdersPage() {
   const updateCount = pendingUpdates.size;
 
   const criticalCallCount = callOrders.filter(o => {
-    const info = getCallTypeInfo(o.call_type);
+    const info = getCallType(o.call_type);
     return info.critical;
   }).length;
 
