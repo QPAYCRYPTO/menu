@@ -211,20 +211,20 @@ export function WaitersPage() {
   // YENİ: Eski deleteConfirmWaiter modal'ı kaldırıldı, ConfirmModal'a geçti
   function askDeleteWaiter(waiter: Waiter) {
     setConfirm({
-      title: 'Garsonu Kalıcı Sil?',
+      title: 'Garsonu Sil?',
       message: (
         <>
-          <strong>{waiter.name}</strong> kalıcı olarak silinecek.<br/>
-          Bu işlem geri alınamaz. İpucu: silmek yerine "Pasif" veya "İzinli" durumuna alabilirsiniz.
+          <strong>{waiter.name}</strong> silinecek ve listeden kaldırılacak. Açık oturumları kapanır.<br/>
+          Geçmiş siparişlerdeki kayıtları korunur. İpucu: geçici ayrılıklar için "Pasif" veya "İzinli" durumunu kullanabilirsiniz.
         </>
       ),
-      confirmText: 'Evet, Kalıcı Sil',
+      confirmText: 'Evet, Sil',
       tone: 'danger',
       onConfirm: async () => {
         if (!accessToken) return;
         try {
           await apiDeleteWaiter(accessToken, waiter.id);
-          showToast('Garson kalıcı olarak silindi.', 'success');
+          showToast('Garson silindi.', 'success');
           await loadWaiters();
         } catch (e) {
           showToast(e instanceof Error ? e.message : 'Hata.', 'error');

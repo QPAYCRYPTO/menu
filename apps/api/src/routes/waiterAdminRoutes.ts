@@ -233,7 +233,7 @@ waiterAdminRoutes.put('/:id/status', async (req, res) => {
 });
 
 // DELETE /api/admin/waiters/:id
-// Kalıcı sil
+// Soft delete: kayıt kalır (deleted_at), listeden düşer. Bekleyen siparişi varsa silinmez.
 waiterAdminRoutes.delete('/:id', async (req, res) => {
   const businessId = (req.ctx as any)?.businessId;
   if (!businessId) {
@@ -245,8 +245,13 @@ waiterAdminRoutes.delete('/:id', async (req, res) => {
     throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
 
-  const ok = await deleteWaiter(businessId, parsed.data.id);
-  if (!ok) {
+  const result = await deleteWaiter(businessId, parsed.data.id);
+  if (!result.ok) {
+    if (result.reason === 'has_pending_orders') {
+      const message = 'Bu garsonun bekleyen siparişleri var. Siparişler teslim edildikten sonra tekrar dene.';
+      res.status(400).json({ error: message, message, pending_count: result.pending_count });
+      return;
+    }
     res.status(404).json({ message: 'Garson bulunamadı.' });
     return;
   }

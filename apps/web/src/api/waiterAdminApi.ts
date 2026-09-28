@@ -65,7 +65,7 @@ function headers(token: string) {
 async function handleResponse<T>(res: Response): Promise<T> {
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.message ?? 'Bir hata oluştu.');
+    throw new Error(data.message ?? data.error ?? 'Bir hata oluştu.');
   }
   return data as T;
 }

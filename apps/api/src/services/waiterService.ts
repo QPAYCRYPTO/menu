@@ -123,7 +123,7 @@ export async function createWaiter(
 
   if (hasEmail) {
     const existing = await pool.query(
-      `SELECT id FROM waiters WHERE business_id = $1 AND LOWER(email) = LOWER($2)`,
+      `SELECT id FROM waiters WHERE business_id = $1 AND LOWER(email) = LOWER($2) AND deleted_at IS NULL`,
       [businessId, input.email!.trim()]
     );
     if ((existing.rowCount ?? 0) > 0) {
@@ -163,6 +163,7 @@ export async function listWaiters(
   const result = await pool.query(
     `SELECT * FROM waiters
      WHERE business_id = $1
+       AND deleted_at IS NULL
      ${whereActive}
      ORDER BY
        CASE status
@@ -182,7 +183,7 @@ export async function getWaiterById(
   waiterId: string
 ): Promise<Waiter | null> {
   const result = await pool.query(
-    `SELECT * FROM waiters WHERE id = $1 AND business_id = $2`,
+    `SELECT * FROM waiters WHERE id = $1 AND business_id = $2 AND deleted_at IS NULL`,
     [waiterId, businessId]
   );
   return result.rowCount === 1 ? rowToWaiter(result.rows[0]) : null;
@@ -203,7 +204,7 @@ export async function updateWaiterDetails(
 
   if (input.email && input.email.trim().toLowerCase() !== current.email) {
     const existing = await pool.query(
-      `SELECT id FROM waiters WHERE business_id = $1 AND LOWER(email) = LOWER($2) AND id != $3`,
+      `SELECT id FROM waiters WHERE business_id = $1 AND LOWER(email) = LOWER($2) AND id != $3 AND deleted_at IS NULL`,
       [businessId, input.email.trim(), waiterId]
     );
     if ((existing.rowCount ?? 0) > 0) {
@@ -223,7 +224,7 @@ export async function updateWaiterDetails(
        email = $3,
        permissions = $4::jsonb,
        updated_at = NOW()
-     WHERE id = $5 AND business_id = $6
+     WHERE id = $5 AND business_id = $6 AND deleted_at IS NULL
      RETURNING *`,
     [
       input.name?.trim() ?? null,
@@ -248,7 +249,7 @@ export async function setWaiterPassword(
   const result = await pool.query(
     `UPDATE waiters
      SET password_hash = $1, updated_at = NOW()
-     WHERE id = $2 AND business_id = $3
+     WHERE id = $2 AND business_id = $3 AND deleted_at IS NULL
      RETURNING id`,
     [passwordHash, waiterId, businessId]
   );
@@ -270,7 +271,7 @@ export async function setWaiterStatus(
     const updateResult = await client.query(
       `UPDATE waiters
        SET status = $1, is_active = $2, updated_at = NOW()
-       WHERE id = $3 AND business_id = $4
+       WHERE id = $3 AND business_id = $4 AND deleted_at IS NULL
        RETURNING id`,
       [newStatus, isActive, waiterId, businessId]
     );
@@ -299,15 +300,70 @@ export async function setWaiterStatus(
   }
 }
 
+export type DeleteWaiterResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_found' }
+  | { ok: false; reason: 'has_pending_orders'; pending_count: number };
+
+/**
+ * Garsonu siler (soft delete): kayıt kalır, deleted_at dolar, listeden düşer.
+ * Geçmiş siparişlerdeki waiter_id ve aktivite logları bozulmaz.
+ * Garsonun bekleyen/hazırlanan siparişi varsa silinmez.
+ */
 export async function deleteWaiter(
   businessId: string,
   waiterId: string
-): Promise<boolean> {
-  const result = await pool.query(
-    `DELETE FROM waiters WHERE id = $1 AND business_id = $2 RETURNING id`,
-    [waiterId, businessId]
-  );
-  return result.rowCount === 1;
+): Promise<DeleteWaiterResult> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const waiterResult = await client.query(
+      `SELECT id FROM waiters
+       WHERE id = $1 AND business_id = $2 AND deleted_at IS NULL
+       FOR UPDATE`,
+      [waiterId, businessId]
+    );
+    if (waiterResult.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      return { ok: false, reason: 'not_found' };
+    }
+
+    const pendingResult = await client.query(
+      `SELECT COUNT(*)::int AS cnt FROM orders
+       WHERE business_id = $1 AND waiter_id = $2
+         AND status IN ('pending', 'preparing')`,
+      [businessId, waiterId]
+    );
+    const pendingCount: number = pendingResult.rows[0].cnt;
+    if (pendingCount > 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, reason: 'has_pending_orders', pending_count: pendingCount };
+    }
+
+    await client.query(
+      `UPDATE waiters
+       SET deleted_at = NOW(), status = 'inactive', is_active = FALSE, updated_at = NOW()
+       WHERE id = $1 AND business_id = $2`,
+      [waiterId, businessId]
+    );
+
+    // Açık QR/oturumları kapat — silinen garson giriş yapamasın
+    await client.query(
+      `UPDATE waiter_sessions
+       SET revoked_at = NOW()
+       WHERE waiter_id = $1 AND revoked_at IS NULL`,
+      [waiterId]
+    );
+
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function generateWaiterToken(
@@ -325,7 +381,7 @@ export async function generateWaiterToken(
 
     const waiterResult = await client.query(
       `SELECT * FROM waiters
-       WHERE id = $1 AND business_id = $2 AND status = 'active'`,
+       WHERE id = $1 AND business_id = $2 AND status = 'active' AND deleted_at IS NULL`,
       [waiterId, businessId]
     );
 
@@ -461,7 +517,7 @@ export async function authenticateWaiterByEmail(
        b.waiter_module_enabled
      FROM waiters w
      INNER JOIN businesses b ON b.id = w.business_id
-     WHERE LOWER(w.email) = LOWER($1)`,
+     WHERE LOWER(w.email) = LOWER($1) AND w.deleted_at IS NULL`,
     [email.trim()]
   );
 
