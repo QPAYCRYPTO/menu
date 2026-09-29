@@ -1,13 +1,17 @@
 // apps/web/src/pages/owner/OwnerLayout.tsx
 // Owner (patron) paneli için sade layout
 // Admin'den farklı: operasyonel menu yok, sadece rapor sekmeler
+// Atölye tasarımı: gece/gündüz temasına uyar, başlıkta güneş/ay düğmesi
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
+import { useThemedPage } from '../../lib/theme';
 import { LayoutDashboard, LogOut, BriefcaseBusiness } from 'lucide-react';
 
 export function OwnerLayout() {
   const { logout, email, businessName } = useAuth();
   const navigate = useNavigate();
+  useThemedPage();
 
   const navItems = [
     { to: '/owner', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -21,22 +25,21 @@ export function OwnerLayout() {
   const avatarLetter = (businessName || 'İ').charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen bg-page text-ink">
       {/* Header */}
-      <div className="sticky top-0 z-10 px-3 sm:px-6 pt-3">
-        <div className="glass-panel max-w-7xl mx-auto rounded-3xl">
+      <div className="sticky top-0 z-10 px-3 sm:px-6 pt-3 bg-page">
+        <div className="ui-card max-w-7xl mx-auto rounded-3xl">
           <div className="px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
             {/* Sol: İşletme bilgisi */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-lg font-bold font-serif flex-shrink-0 border border-white/60"
-                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-brand text-on-brand text-lg font-bold font-serif flex-shrink-0">
                 {avatarLetter}
               </div>
               <div style={{ minWidth: 0 }}>
-                <h1 className="font-serif font-bold text-base truncate text-white">
+                <h1 className="font-serif font-bold text-xl truncate text-ink">
                   {businessName || 'Yönetim Paneli'}
                 </h1>
-                <p className="text-xs text-white/70">Raporlar & Analiz</p>
+                <p className="ui-eyebrow">Patron · Raporlar & Analiz</p>
               </div>
             </div>
 
@@ -44,18 +47,18 @@ export function OwnerLayout() {
             <div className="flex items-center gap-3 flex-shrink-0">
               {email && (
                 <div className="text-right hidden sm:block">
-                  <div className="text-xs font-semibold text-white flex items-center justify-end gap-1">
+                  <div className="text-xs font-semibold text-ink flex items-center justify-end gap-1">
                     <BriefcaseBusiness size={12} />Patron
                   </div>
-                  <div className="text-xs truncate text-white/65" style={{ maxWidth: 220 }} title={email}>
+                  <div className="text-xs truncate text-ink-muted" style={{ maxWidth: 220 }} title={email}>
                     {email}
                   </div>
                 </div>
               )}
+              <ThemeToggle />
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold spring-btn flex items-center gap-2"
-                style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold spring-btn flex items-center gap-2 bg-state-danger-bg text-state-danger"
               >
                 <LogOut size={12} />
                 Çıkış
@@ -65,14 +68,14 @@ export function OwnerLayout() {
 
           {/* Üst Navigation Tabs */}
           <div className="px-4 sm:px-6 pb-3">
-            <nav className="flex gap-1 p-1 rounded-2xl bg-black/30 border border-white/20 w-fit max-w-full overflow-x-auto scrollbar-none">
+            <nav className="flex gap-1 p-1 rounded-2xl bg-surface-2 border border-line w-fit max-w-full overflow-x-auto scrollbar-none">
               {navItems.map(item => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 spring-btn whitespace-nowrap ${isActive ? 'btn-accent' : 'text-white/70 hover:text-white'}`
+                    `px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 spring-btn whitespace-nowrap ${isActive ? 'bg-brand text-on-brand' : 'text-ink-muted hover:text-ink'}`
                   }
                 >
                   <item.icon size={14} />
