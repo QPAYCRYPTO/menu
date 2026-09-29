@@ -10,6 +10,7 @@ import {
   AlertTriangle, Armchair, Banknote, Check, Clock, CreditCard, Link2, Lock, Receipt, RefreshCw, Ticket, Timer,
   NotebookPen, Wallet, X, type LucideIcon
 } from 'lucide-react';
+import { orderStatusStyle } from '../lib/orderStatus';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
@@ -824,7 +825,7 @@ export function TablesPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
                     {[
                       { label: 'Adisyon', value: formatPrice(detailData.session?.cached_total_int ?? 0), color: 'var(--ink)', bg: 'var(--surface-2)' },
-                      { label: 'Teslim', value: detailData.orders.filter(o => o.status === 'delivered').length, color: 'var(--state-ok)', bg: 'var(--state-ok-bg)' },
+                      { label: 'Teslim', value: detailData.orders.filter(o => o.status === 'delivered').length, color: 'var(--state-done)', bg: 'var(--state-done-bg)' },
                       { label: 'Bekliyor', value: detailData.orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)).length, color: 'var(--state-warn)', bg: 'var(--state-warn-bg)' },
                     ].map(s => (
                       <div key={s.label} style={{ padding: 10, background: s.bg, borderRadius: 14, textAlign: 'center' }}>
@@ -837,9 +838,9 @@ export function TablesPage() {
                     <p style={{ textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13, padding: 20 }}>Henüz sipariş yok.</p>
                   ) : detailData.orders.map((order, idx) => (
                     <div key={order.id} style={{ marginBottom: 10, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 16, overflow: 'hidden' }}>
-                      <div style={{ padding: '8px 12px', background: order.status === 'delivered' ? 'var(--state-ok-bg)' : 'var(--state-warn-bg)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'delivered' ? 'var(--state-ok)' : 'var(--state-warn)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          #{idx + 1} · {order.status === 'delivered' ? <>Teslim <Check size={12} strokeWidth={3} /></> : order.status === 'pending' ? 'Bekliyor' : order.status}
+                      <div style={{ padding: '8px 12px', background: orderStatusStyle(order.status).bg, display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: orderStatusStyle(order.status).fg, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          #{idx + 1} · {order.status === 'delivered' ? <>Teslim <Check size={12} strokeWidth={3} /></> : orderStatusStyle(order.status).label}
                         </span>
                         <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
                           {new Date(order.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
@@ -1032,7 +1033,7 @@ function TableCard({
             <div style={{ display: 'flex', gap: 6 }}>
               <div style={{ ...innerBox, flex: 1, padding: '5px 8px', borderRadius: 12, textAlign: 'center' }}>
                 <div style={{ fontSize: 9, color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Teslim</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--state-ok)' }}>{session.delivered_count}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--state-done)' }}>{session.delivered_count}</div>
               </div>
               <div style={{ ...innerBox, flex: 1, padding: '5px 8px', borderRadius: 12, textAlign: 'center' }}>
                 <div style={{ fontSize: 9, color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Bekliyor</div>

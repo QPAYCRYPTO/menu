@@ -10,7 +10,7 @@
 //   (localStorage'da saklanır, sayfa yenilense de kalır; Tamam'a basınca veya 15 dk sonra kapanır)
 
 import type { PublicMenuCategory, PublicMenuResponse } from '@menu/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { getCustomerToken } from '../utils/customerToken';
@@ -90,6 +90,34 @@ function instagramLink(raw: string): { url: string; handle: string } | null {
     .split(/[/?#]/)[0];
   if (!handle) return null;
   return { url: `https://instagram.com/${encodeURIComponent(handle)}`, handle };
+}
+
+/** İşletme açıklaması: başlıkta en fazla 2 satır; taşarsa dokununca tamamı açılır. */
+function BusinessDescription({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || open) return;
+    const check = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [text, open]);
+  const body = (
+    <p ref={ref} className={`text-xs md:text-sm font-semibold text-accent leading-snug mt-1 break-words ${open ? '' : 'line-clamp-2'}`}>
+      {text}
+    </p>
+  );
+  if (!clamped && !open) return body;
+  return (
+    <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="block text-left w-full">
+      {body}
+      <span className="text-[11px] font-bold text-ink-muted underline underline-offset-2">{open ? 'Daha az' : 'Devamını oku'}</span>
+    </button>
+  );
 }
 
 /** Menünün altındaki işletme bilgisi: Wi-Fi (şifre kopyalanır) + iletişim bağlantıları. Hiçbiri yoksa çizilmez. */
@@ -213,6 +241,28 @@ export function PublicMenuPage() {
       })
       .catch(() => { if (!mounted) return; setMenu(null); setLoading(false); });
     return () => { mounted = false; };
+  }, [slug]);
+
+  // Menü açık kalmışken yapılan değişiklikler (ayarlar, ürün, fiyat) sekmeye dönünce sessizce yenilenir.
+  // Seçili kategori ve sepet korunur; en fazla 15 sn'de bir sorulur.
+  useEffect(() => {
+    let last = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - last < 15_000) return;
+      last = Date.now();
+      apiRequest<PublicMenuResponse>(`/public/menu/${slug}`, { retryOn401: false })
+        .then(data => {
+          setMenu(data);
+          setActiveCategoryId(prev => (data.categories.some(c => c.id === prev) ? prev : data.categories[0]?.id ?? ''));
+        })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
   }, [slug]);
 
   useEffect(() => {
@@ -440,7 +490,7 @@ export function PublicMenuPage() {
   const canSendCall = selectedCallType !== null &&
     (selectedCallType !== 'other' || callNote.trim().length >= 3);
 
-  const description = (menu.business as any).description as string | undefined;
+  const description = menu.business.description ?? undefined;
 
   return (
     <div className="min-h-screen bg-page text-ink">
@@ -468,7 +518,7 @@ export function PublicMenuPage() {
             )}
             <div className="min-w-0">
               <h1 className="font-serif font-bold text-xl md:text-4xl leading-tight line-clamp-2 break-words">{menu.business.name}</h1>
-              {description && <p className="ui-eyebrow mt-1 truncate">{description}</p>}
+              {description && <BusinessDescription text={description} />}
             </div>
           </div>
 

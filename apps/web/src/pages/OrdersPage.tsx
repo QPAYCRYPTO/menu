@@ -6,6 +6,7 @@ import {
   AlertTriangle, Bell, CalendarDays, Check, ChevronDown, ChevronUp, ClipboardList, Clock, ConciergeBell,
   Flame, MapPin, NotebookPen, Plus, RefreshCw, Smartphone, Timer, User, UtensilsCrossed, X
 } from 'lucide-react';
+import { ORDER_STATUS, orderStatusStyle } from '../lib/orderStatus';
 import { getCallType } from '../lib/callTypes';
 import { CallTypeBadge } from '../components/CallTypeBadge';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
@@ -80,14 +81,11 @@ const STATUS_LABELS: Record<string, string> = {
   delivered: 'Teslim Edildi', cancelled: 'İptal Edildi'
 };
 
-// Durum renkleri tüm ekranlarda aynı: Bekliyor amber, Hazırlanıyor mavi, Hazır yeşil, Teslim nötr, İptal kırmızı
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending: { bg: 'var(--state-warn-bg)', color: 'var(--state-warn)' },
-  preparing: { bg: 'var(--state-info-bg)', color: 'var(--state-info)' },
-  ready: { bg: 'var(--state-ok-bg)', color: 'var(--state-ok)' },
-  delivered: { bg: 'var(--surface-2)', color: 'var(--ink-muted)' },
-  cancelled: { bg: 'var(--state-danger-bg)', color: 'var(--state-danger)' }
-};
+// Durum renkleri tüm ekranlarda aynı (lib/orderStatus.ts): Bekliyor amber, Hazırlanıyor mavi, Hazır yeşil,
+// Teslim mor, İptal kırmızı. Kartın solundaki şerit durumu, eylem düğmesi geçilecek durumun rengini taşır.
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = Object.fromEntries(
+  Object.entries(ORDER_STATUS).map(([k, s]) => [k, { bg: s.bg, color: s.fg }])
+);
 
 function priceIntToTl(value: number): string { return (value / 100).toFixed(2); }
 function orderTotal(items: OrderItem[]): number { return items.reduce((sum, item) => sum + item.price_int * item.quantity, 0); }
@@ -342,7 +340,8 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
 
   return (
     <div className="ui-card rounded-3xl overflow-hidden text-ink"
-      style={{ border: `${borderWidth} solid ${borderColor}`, opacity: isCancelled ? 0.8 : 1,
+      style={{ border: `${borderWidth} solid ${borderColor}`, borderLeft: `6px solid ${orderStatusStyle(order.status).fg}`,
+        opacity: isCancelled ? 0.8 : 1,
         animation: hasUpdate ? 'pulse-update 1.5s ease-in-out infinite' : undefined }}>
 
       <style>{`
@@ -353,7 +352,7 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
       `}</style>
 
       <div className="px-4 py-3"
-        style={{ background: isCancelled ? 'var(--state-danger-bg)' : order.status === 'pending' ? 'var(--state-warn-bg)' : 'var(--surface-2)',
+        style={{ background: isCancelled ? 'var(--state-danger-bg)' : 'var(--surface-2)',
           borderBottom: '1px solid var(--line)' }}>
         <div className="flex items-start justify-between gap-2">
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -421,21 +420,20 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
         <div className="px-4 pb-4 flex gap-2">
           {order.status === 'pending' && (
             <button onClick={() => onUpdate(order, 'preparing')}
-              className="btn-primary flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5">
+              className={`${ORDER_STATUS.preparing.solid} hover:opacity-90 flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5`}>
               <Flame size={12} /> Hazırlanıyor</button>
           )}
           {order.status === 'preparing' && (
             <button onClick={() => onUpdate(order, 'ready')}
-              className="btn-primary flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5">
+              className={`${ORDER_STATUS.ready.solid} hover:opacity-90 flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5`}>
               <ConciergeBell size={12} /> Hazır</button>
           )}
           {order.status === 'ready' && (
             <button onClick={() => onUpdate(order, 'delivered')}
-              className="btn-primary flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1">Teslim Edildi <Check size={12} strokeWidth={3} /></button>
+              className={`${ORDER_STATUS.delivered.solid} hover:opacity-90 flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1`}>Teslim Edildi <Check size={12} strokeWidth={3} /></button>
           )}
           {order.status === 'delivered' && (
-            <div className="flex-1 py-2.5 rounded-full text-xs font-bold text-center"
-              style={{ background: 'var(--state-ok-bg)', color: 'var(--state-ok)' }}>Tamamlandı</div>
+            <div className={`${ORDER_STATUS.delivered.badge} flex-1 py-2.5 rounded-full text-xs font-bold text-center`}>Tamamlandı</div>
           )}
 
           <button onClick={() => onCancel(order)}

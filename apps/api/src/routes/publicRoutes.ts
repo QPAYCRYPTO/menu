@@ -74,7 +74,9 @@ publicRoutes.get('/menu/:slug', publicMenuRateLimit, async (req, res) => {
   if (!menu) {
     throw new AppError('Menü bulunamadı.', 404, APP_ERROR_CODES.NOT_FOUND);
   }
-  res.setHeader('Cache-Control', 'public, max-age=60');
+  // Ayarlar/ürün değişiklikleri anında yansısın: tarayıcı her seferinde doğrular (değişmediyse ETag → 304).
+  // Sunucu tarafı önbellek (Redis) değişiklikte zaten temizleniyor.
+  res.setHeader('Cache-Control', 'no-cache');
   res.status(200).json(menu);
 });
 

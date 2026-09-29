@@ -53,7 +53,7 @@ const STATUS_META: Record<ItemStatus, { label: string; icon: LucideIcon; classNa
   pending:   { label: 'Bekliyor',     icon: Clock,      className: 'bg-state-warn-bg text-state-warn' },
   preparing: { label: 'Hazırlanıyor', icon: ChefHat,    className: 'bg-state-info-bg text-state-info' },
   ready:     { label: 'Hazır',        icon: Sparkles,   className: 'bg-state-ok-bg text-state-ok' },
-  delivered: { label: 'Teslim',       icon: CheckCheck, className: 'bg-surface-2 text-ink-muted' },
+  delivered: { label: 'Teslim',       icon: CheckCheck, className: 'bg-state-done-bg text-state-done' },
   cancelled: { label: 'İptal',        icon: Ban,        className: 'bg-state-danger-bg text-state-danger' }
 };
 

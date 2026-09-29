@@ -40,6 +40,8 @@
   --color-state-danger-bg: var(--state-danger-bg);
   --color-state-info: var(--state-info);
   --color-state-info-bg: var(--state-info-bg);
+  --color-state-done: var(--state-done);
+  --color-state-done-bg: var(--state-done-bg);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +85,9 @@
   --state-danger-bg: #fde9e6;
   --state-info: #456c9b;
   --state-info-bg: #eaf1fb;
+  /* Teslim edildi / tamamlandı: "Hazır" (yeşil) ile karışmasın diye ayrı ton */
+  --state-done: #6d4c9f;
+  --state-done-bg: #f1ebf9;
   /* Öne çıkması gereken notlar (mutfak): gündüz yumuşak sarı, gece daha doygun (koyu zeminde sönük kalmasın) */
   --note-bg: var(--state-warn-bg);
 
@@ -116,6 +121,8 @@ html[data-theme="dark"] {
   --state-danger-bg: rgba(236, 138, 130, 0.14);
   --state-info: #8fb3dd;
   --state-info-bg: rgba(143, 179, 221, 0.14);
+  --state-done: #b9a3e3;
+  --state-done-bg: rgba(185, 163, 227, 0.14);
   --note-bg: color-mix(in srgb, var(--state-warn) 32%, var(--surface));
 
   color-scheme: dark;

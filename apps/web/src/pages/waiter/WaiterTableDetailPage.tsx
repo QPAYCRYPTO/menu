@@ -13,6 +13,7 @@ import { useLiveRefresh } from '../../context/WaiterCallsContext';
 import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
 import { AlertTriangle, ArrowLeft, Armchair, Check, ChevronLeft, ClipboardList, Lightbulb, Minus, NotebookPen, Plus, RefreshCw, Smartphone, User, UtensilsCrossed, XCircle } from 'lucide-react';
+import { orderStatusStyle } from '../../lib/orderStatus';
 import {
   WaiterTableDetail,
   CANCEL_REASON_OPTIONS,
@@ -286,16 +287,10 @@ export function WaiterTableDetailPage() {
                       <div className="px-4 py-2.5 flex items-center justify-between"
                         style={{
                           borderBottom: '1px solid var(--line)',
-                          background: order.status === 'delivered' ? 'var(--state-ok-bg)' :
-                                      order.status === 'cancelled' ? 'var(--state-danger-bg)' :
-                                      order.status === 'ready' ? 'var(--state-ok-bg)' :
-                                      order.status === 'preparing' ? 'var(--state-info-bg)' : 'var(--state-warn-bg)'
+                          background: orderStatusStyle(order.status).bg
                         }}>
                         <span className="text-xs font-extrabold" style={{
-                          color: order.status === 'delivered' ? 'var(--state-ok)' :
-                                 order.status === 'cancelled' ? 'var(--state-danger)' :
-                                 order.status === 'ready' ? 'var(--state-ok)' :
-                                 order.status === 'preparing' ? 'var(--state-info)' : 'var(--state-warn)'
+                          color: orderStatusStyle(order.status).fg
                         }}>
                           {orderLabel} · {
                             order.status === 'pending' ? 'Bekliyor' :

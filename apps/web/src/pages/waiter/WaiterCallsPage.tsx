@@ -13,6 +13,7 @@ import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
 import type { WaiterActiveCall, WaiterReadyOrder } from '../../api/waiterPublicApi';
 import { AlertTriangle, BellOff, Bell, Calendar, Check, CheckCheck, ChefHat, Clock, MapPin, NotebookPen, RefreshCw, Timer } from 'lucide-react';
+import { ORDER_STATUS } from '../../lib/orderStatus';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('tr-TR', {
@@ -127,7 +128,7 @@ function ReadyOrderCard({ order, onDeliver }: {
 
       <div className="px-4 pt-2 pb-4 border-t border-line">
         <button onClick={handleDeliver} disabled={delivering}
-          className="btn-primary w-full py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-60 flex items-center justify-center gap-1.5">
+          className={`${ORDER_STATUS.delivered.solid} hover:opacity-90 w-full py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-60 flex items-center justify-center gap-1.5`}>
           {delivering ? 'İşleniyor...' : <><CheckCheck size={16} aria-hidden /> Teslim Edildi</>}
         </button>
       </div>

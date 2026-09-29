@@ -31,7 +31,6 @@ const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atl
 /** Sunucudaki doğrulamayla aynı */
 const PHONE = /^\+?[\d\s\-()]{7,20}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DESCRIPTION_VISIBLE_HINT = 60;
 
 type FormState = {
   name: string; description: string; logo_url: string;
@@ -320,7 +319,7 @@ export function SettingsPage() {
                 <input value={form.name} onChange={e => set('name', e.target.value)} maxLength={120}
                   className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" placeholder="İşletme adınız..." />
               </Field>
-              <Field label="Açıklama" hint={`Menü başlığında tek satır görünür (yaklaşık ilk ${DESCRIPTION_VISIBLE_HINT} karakter).`}
+              <Field label="Açıklama" hint='Menü başlığında 2 satır görünür; uzunsa müşteri "Devamını oku" ile tamamını açar.'
                 counter={`${form.description.length}/2000`}>
                 <textarea value={form.description} onChange={e => set('description', e.target.value)} maxLength={2000}
                   className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none" rows={2}
@@ -343,7 +342,16 @@ export function SettingsPage() {
             </Section>
 
             <Section icon={Link2} title="Menü Linki">
-              <p className="text-sm text-ink-muted -mt-1">Müşterilerin gördüğü menü adresi. Masa QR kodları bu adrese masa bilgisini ekler.</p>
+              <div className="text-sm text-ink-muted -mt-1 space-y-1.5">
+                <p>
+                  İşletmenizin <strong className="text-ink">masasız menü adresi</strong>. Instagram profilinize, Google Haritalar kaydınıza,
+                  web sitenize ya da WhatsApp'tan müşterilere gönderebilirsiniz.
+                </p>
+                <p>
+                  Bu linkten açılan menüde ürünler, fiyatlar ve iletişim bilgileri görünür; <strong className="text-ink">sipariş verilemez</strong>.
+                  Sipariş için masadaki QR kod okutulur (QR Kod sayfasındaki masa kodları bu adrese masa bilgisini ekler).
+                </p>
+              </div>
               <div className="rounded-2xl bg-surface-2 border border-line px-4 py-3 font-mono text-sm break-all">{menuUrl}</div>
               <div className="flex flex-wrap gap-2">
                 <button onClick={async () => {
@@ -524,7 +532,7 @@ function Preview({ form, logo }: { form: FormState; logo: string }) {
           )}
           <div className="min-w-0">
             <div className="font-serif font-bold text-xl">{form.name || 'İşletme Adı'}</div>
-            {form.description && <div className="ui-eyebrow mt-1 truncate" style={{ color: accent }}>{form.description}</div>}
+            {form.description && <div className="text-xs font-semibold leading-snug mt-1 line-clamp-2 break-words" style={{ color: accent }}>{form.description}</div>}
           </div>
         </div>
       </div>
