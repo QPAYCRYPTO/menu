@@ -1,5 +1,8 @@
 // apps/web/src/pages/SettingsPage.tsx
 // CHANGELOG v3: Ortak Toast komponentine geçti
+// - Atölye tasarımı: gece/gündüz uyumlu. Eski "Arkaplan Rengi" ve "Koyu Mod" alanları kaldırıldı
+//   (tema artık her ekranın sağ üstündeki güneş/ay düğmesiyle seçiliyor). bg_color / dark_mode
+//   değerleri API'ye olduğu gibi geri gönderilir, veritabanında değişmez.
 
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { useEffect, useState } from 'react';
@@ -7,9 +10,9 @@ import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { ThemeColorPicker } from '../components/ThemeColorPicker';
-import { isHexColor } from '../lib/color';
+import { isHexColor, normalizeHex, readableTextOn } from '../lib/color';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
-import { BookUser, Camera, Eye, MessageCircle, Moon, Palette, Phone, Save, Store } from 'lucide-react';
+import { BookUser, Camera, Eye, MessageCircle, Palette, Phone, Save, Store, SunMoon } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -94,59 +97,55 @@ export function SettingsPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin"></div>
+      <div className="w-8 h-8 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin"></div>
     </div>
   );
 
   return (
-    <div className="max-w-3xl text-white">
+    <div className="max-w-3xl text-ink">
       <Toast state={toast} />
 
       <div className="grid gap-6">
 
-        {/* Canlı Önizleme — işletmenin kendi menü renkleri (bg_color / theme_color / dark_mode) ile */}
-        <div className="glass-panel rounded-3xl p-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-3 px-3 pt-2 text-white/70 flex items-center gap-2">
-            <Eye size={11} className="text-amber-300" /> Canlı Önizleme
+        {/* Canlı Önizleme — müşteri menüsü başlığı (logo, ad, açıklama) + tema rengi */}
+        <div className="ui-card rounded-3xl p-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider mb-3 px-3 pt-2 text-ink-muted flex items-center gap-2">
+            <Eye size={11} className="text-accent" /> Canlı Önizleme
           </p>
-          <div className="rounded-2xl p-5" style={{ background: form.bg_color, border: `2px solid ${form.theme_color}40` }}>
+          <div className="rounded-2xl p-5 bg-page border border-line">
             <div className="flex items-center gap-4">
               {form.logo_url ? (
-                <img src={form.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover" style={{ border: `2px solid ${form.theme_color}` }} />
+                <img src={form.logo_url} alt="Logo" className="w-16 h-16 rounded-xl object-cover border border-line" />
               ) : (
-                <div className="w-16 h-16 rounded-xl flex items-center justify-center font-bold text-xl text-white" style={{ background: form.theme_color }}>
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center font-bold text-xl"
+                  style={{ background: form.theme_color, color: readableTextOn(isHexColor(form.theme_color) ? normalizeHex(form.theme_color) : '#073f46') }}>
                   {form.name?.charAt(0) || 'A'}
                 </div>
               )}
               <div className="min-w-0">
-                <div className="font-serif font-bold text-lg" style={{ color: form.dark_mode ? '#F8FAFC' : '#0F172A' }}>{form.name || 'İşletme Adı'}</div>
-                {form.description && <div className="text-sm mt-0.5" style={{ color: form.dark_mode ? '#94A3B8' : '#64748B' }}>{form.description}</div>}
-                <div className="flex gap-2 mt-2">
-                  <div className="w-4 h-4 rounded-full" style={{ background: form.theme_color }}></div>
-                  <div className="w-4 h-4 rounded-full" style={{ background: form.bg_color, border: '1px solid #E2E8F0' }}></div>
-                  <div className="w-4 h-4 rounded-full" style={{ background: form.dark_mode ? '#0F172A' : '#F1F5F9' }}></div>
-                </div>
+                <div className="font-serif font-bold text-xl">{form.name || 'İşletme Adı'}</div>
+                {form.description && <div className="ui-eyebrow mt-1 truncate" style={{ color: form.theme_color }}>{form.description}</div>}
               </div>
             </div>
           </div>
         </div>
 
         {/* Temel Bilgiler */}
-        <div className="glass-dark rounded-3xl p-6">
+        <div className="ui-card rounded-3xl p-6">
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
-            <Store size={16} className="text-amber-300" /> Temel Bilgiler
+            <Store size={16} className="text-accent" /> Temel Bilgiler
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">İşletme Adı</label>
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">İşletme Adı</label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} maxLength={120}
-                className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
+                className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
                 placeholder="İşletme adınız..." />
             </div>
             <div>
-              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Açıklama</label>
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">Açıklama</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none"
+                className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none"
                 rows={2} placeholder="Kısa açıklama..." />
             </div>
 
@@ -164,44 +163,30 @@ export function SettingsPage() {
         </div>
 
         {/* Tema */}
-        <div className="glass-dark rounded-3xl p-6">
+        <div className="ui-card rounded-3xl p-6">
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
-            <Palette size={16} className="text-amber-300" /> Tema & Görünüm
+            <Palette size={16} className="text-accent" /> Tema & Görünüm
           </h3>
           <div className="mb-5">
-            <label className="block text-[11px] font-bold mb-1 uppercase tracking-wider text-white/70">Tema Rengi</label>
-            <p className="text-xs text-white/60 mb-3">Müşteri menüsündeki butonlar ve vurgular bu renkte olur. Gündüz ve gece modunda okunurluk otomatik ayarlanır.</p>
+            <label className="block text-[11px] font-bold mb-1 uppercase tracking-wider text-ink-muted">Tema Rengi</label>
+            <p className="text-xs text-ink-muted mb-3">Müşteri menüsündeki butonlar ve vurgular bu renkte olur. Gündüz ve gece modunda okunurluk otomatik ayarlanır.</p>
             <ThemeColorPicker value={form.theme_color} onChange={hex => setForm(p => ({ ...p, theme_color: hex }))} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Arkaplan Rengi</label>
-              <div className="glass-input flex items-center gap-3 px-4 py-2 rounded-2xl">
-                <input type="color" value={form.bg_color} onChange={e => setForm(p => ({ ...p, bg_color: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent" />
-                <span className="text-sm font-mono text-white">{form.bg_color}</span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <div className="relative">
-                <input type="checkbox" checked={form.dark_mode} onChange={e => setForm(p => ({ ...p, dark_mode: e.target.checked }))} className="sr-only" />
-                <div className="w-10 h-6 rounded-full transition-all border border-white/30"
-                  style={{ background: form.dark_mode ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
-                  <div className="w-5 h-5 bg-white rounded-full shadow transition-all" style={{ marginTop: 1, marginLeft: form.dark_mode ? '17px' : '1px' }}></div>
-                </div>
-              </div>
-              <span className="text-sm font-medium text-white flex items-center gap-2">
-                <Moon size={12} className="text-white/70" /> Koyu Mod
-              </span>
-            </label>
+          <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-surface-2 border border-line">
+            <span className="w-9 h-9 rounded-xl bg-surface border border-line flex items-center justify-center shrink-0 text-accent">
+              <SunMoon size={16} />
+            </span>
+            <p className="text-sm text-ink-muted leading-relaxed">
+              <strong className="text-ink">Gece / gündüz modu</strong> — Tema ayarı tüm ekranların sağ üstündeki güneş/ay düğmesiyle değiştiriliyor.
+              Her cihaz kendi seçimini hatırlar; ilk açılışta cihazın sistem ayarı kullanılır.
+            </p>
           </div>
         </div>
 
         {/* İletişim */}
-        <div className="glass-dark rounded-3xl p-6">
+        <div className="ui-card rounded-3xl p-6">
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
-            <BookUser size={16} className="text-amber-300" /> İletişim Bilgileri
+            <BookUser size={16} className="text-accent" /> İletişim Bilgileri
           </h3>
           <div className="space-y-4">
             {[
@@ -210,11 +195,11 @@ export function SettingsPage() {
               { key: 'contact_instagram', label: 'Instagram', placeholder: '@kullanici_adi', icon: Camera },
             ].map(field => (
               <div key={field.key}>
-                <label className="flex items-center gap-1.5 text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70"><field.icon size={12} /> {field.label}</label>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted"><field.icon size={12} /> {field.label}</label>
                 <input
                   value={(form as any)[field.key]}
                   onChange={e => setForm(p => ({ ...p, [field.key]: e.target.value }))}
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   placeholder={field.placeholder}
                 />
               </div>
@@ -224,7 +209,7 @@ export function SettingsPage() {
 
         {/* Kaydet */}
         <button onClick={saveSettings}
-          className="btn-accent w-full py-3.5 rounded-full text-sm font-bold tracking-wide flex items-center justify-center gap-2 spring-btn">
+          className="btn-primary w-full py-3.5 rounded-full text-sm font-bold tracking-wide flex items-center justify-center gap-2 spring-btn">
           <Save size={14} /> Kaydet
         </button>
       </div>

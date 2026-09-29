@@ -74,16 +74,16 @@ export function KitchenPage() {
   const link = token ? kitchenLink(token.token) : '';
 
   return (
-    <div className="max-w-2xl text-white">
+    <div className="max-w-2xl text-ink">
       <Toast state={toast} />
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
-      <div className="glass-panel rounded-3xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/20">
+      <div className="ui-card rounded-3xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-line">
           <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-            <ChefHat size={16} className="text-amber-300" /> Mutfak Ekranı
+            <ChefHat size={16} className="text-accent" /> Mutfak Ekranı
           </h2>
-          <p className="text-xs mt-1 text-white/65">
+          <p className="text-xs mt-1 text-ink-muted">
             Mutfaktaki tablet veya ekranda bu linki açın. Bekleyen siparişler anında görünür, "Hazırlandı" deyince garsona bildirim gider.
           </p>
         </div>
@@ -91,44 +91,44 @@ export function KitchenPage() {
         <div className="p-6">
           {loading ? (
             <div className="flex justify-center py-6">
-              <div className="w-6 h-6 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin" />
+              <div className="w-6 h-6 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin" />
             </div>
           ) : error ? (
             <div className="px-4 py-3 rounded-xl text-sm font-medium"
-              style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' }}>
+              style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)' }}>
               {error}
             </div>
           ) : !token ? (
             <div className="text-center py-4">
-              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-white/15 border border-white/30">
-                <Link2 size={22} className="text-amber-300" />
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-surface-2 border border-line">
+                <Link2 size={22} className="text-accent" />
               </div>
-              <p className="text-sm text-white/75 mb-5">Henüz mutfak linki oluşturulmadı.</p>
+              <p className="text-sm text-ink-muted mb-5">Henüz mutfak linki oluşturulmadı.</p>
               <button onClick={generate} disabled={working}
-                className="btn-accent px-6 py-2.5 rounded-2xl text-sm font-bold inline-flex items-center gap-2 spring-btn disabled:opacity-60">
+                className="btn-primary px-6 py-2.5 rounded-2xl text-sm font-bold inline-flex items-center gap-2 spring-btn disabled:opacity-60">
                 <Link2 size={14} /> {working ? 'Oluşturuluyor…' : 'Mutfak Linki Oluştur'}
               </button>
             </div>
           ) : (
             <>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/75">Mutfak linki</label>
-              <div className="glass-input rounded-2xl px-4 py-3 text-sm font-mono break-all select-all text-amber-300">{link}</div>
-              <p className="text-xs mt-2 text-white/55">
+              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Mutfak linki</label>
+              <div className="ui-input rounded-2xl px-4 py-3 text-sm font-mono break-all select-all text-accent">{link}</div>
+              <p className="text-xs mt-2 text-ink-muted">
                 Oluşturulma: {new Date(token.created_at).toLocaleString('tr-TR')} · Bu linki yalnızca mutfakla paylaşın.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-5">
                 <button onClick={() => copy(link)}
-                  className="btn-accent py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 spring-btn">
+                  className="btn-primary py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 spring-btn">
                   <Copy size={14} /> Kopyala
                 </button>
                 <a href={link} target="_blank" rel="noreferrer"
-                  className="glass-pill py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn">
+                  className="ui-chip py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn">
                   <ExternalLink size={14} /> Aç
                 </a>
                 <button onClick={askReset} disabled={working}
-                  className="glass-pill py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn disabled:opacity-60"
-                  style={{ color: 'var(--warning)' }}>
+                  className="ui-chip py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn disabled:opacity-60"
+                  style={{ color: 'var(--state-warn)' }}>
                   <RefreshCw size={14} /> Linki Sıfırla
                 </button>
               </div>

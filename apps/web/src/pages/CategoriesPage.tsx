@@ -96,13 +96,13 @@ export function CategoriesPage() {
   }
 
   return (
-    <div className="max-w-2xl text-white">
+    <div className="max-w-2xl text-ink">
       <Toast state={toast} />
 
       {/* Ekle */}
-      <div className="glass-panel rounded-3xl p-6 mb-6">
-        <h2 className="text-[11px] font-bold mb-4 uppercase tracking-wider text-white/70 flex items-center gap-2">
-          <FolderPlus size={11} className="text-amber-300" /> Yeni Kategori
+      <div className="ui-card rounded-3xl p-6 mb-6">
+        <h2 className="text-[11px] font-bold mb-4 uppercase tracking-wider text-ink-muted flex items-center gap-2">
+          <FolderPlus size={11} className="text-accent" /> Yeni Kategori
         </h2>
         <div className="flex gap-3">
           <input
@@ -111,11 +111,11 @@ export function CategoriesPage() {
             onKeyDown={e => e.key === 'Enter' && addCategory()}
             placeholder="Kategori adı..."
             maxLength={120}
-            className="glass-input flex-1 min-w-0 px-4 py-2.5 rounded-2xl text-sm"
+            className="ui-input flex-1 min-w-0 px-4 py-2.5 rounded-2xl text-sm"
           />
           <button
             onClick={addCategory}
-            className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 spring-btn flex-shrink-0"
+            className="btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 spring-btn flex-shrink-0"
           >
             <Plus size={14} /> Ekle
           </button>
@@ -125,13 +125,13 @@ export function CategoriesPage() {
       {/* Liste */}
       <div className="space-y-3">
         {sortedItems.map((item, index) => (
-          <div key={item.id} className="glass-card rounded-3xl p-4 flex items-center gap-3"
-            style={{borderColor: item.is_active ? undefined : 'var(--danger)', opacity: item.is_active ? 1 : 0.75}}>
+          <div key={item.id} className="ui-card rounded-3xl p-4 flex items-center gap-3"
+            style={{borderColor: item.is_active ? undefined : 'var(--state-danger)', opacity: item.is_active ? 1 : 0.75}}>
 
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold flex-shrink-0"
               style={item.is_active
-                ? {background: 'var(--accent-soft)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)'}
-                : {background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>
+                ? {background: 'var(--accent-soft)', color: 'var(--ink)', border: '1px solid var(--line)'}
+                : {background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1px solid var(--state-danger)'}}>
               {item.sort_order}
             </div>
 
@@ -141,13 +141,13 @@ export function CategoriesPage() {
                   value={editingName}
                   onChange={e => setEditingName(e.target.value)}
                   autoFocus
-                  className="glass-input w-full px-3 py-1.5 rounded-xl text-sm"
+                  className="ui-input w-full px-3 py-1.5 rounded-xl text-sm"
                   style={{borderColor: 'var(--accent)'}}
                 />
               ) : (
                 <div className="truncate">
                   <span className="font-serif font-bold text-sm">{item.name}</span>
-                  {!item.is_active && <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold" style={{background: 'var(--danger-bg)', color: 'var(--danger)'}}>Pasif</span>}
+                  {!item.is_active && <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold" style={{background: 'var(--state-danger-bg)', color: 'var(--state-danger)'}}>Pasif</span>}
                 </div>
               )}
             </div>
@@ -155,20 +155,20 @@ export function CategoriesPage() {
             <div className="flex items-center gap-2 flex-shrink-0">
               {editingId === item.id ? (
                 <>
-                  <button onClick={() => saveCategory(item)} className="btn-accent px-3 py-1.5 rounded-xl text-xs font-bold spring-btn">Kaydet</button>
-                  <button onClick={() => { setEditingId(null); setEditingName(''); }} className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn">İptal</button>
+                  <button onClick={() => saveCategory(item)} className="btn-primary px-3 py-1.5 rounded-xl text-xs font-bold spring-btn">Kaydet</button>
+                  <button onClick={() => { setEditingId(null); setEditingName(''); }} className="ui-chip px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn">İptal</button>
                 </>
               ) : (
                 <>
                   <button onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
-                    className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn">
+                    className="ui-chip px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn">
                     <Pencil size={10} /> Düzenle
                   </button>
                   <button onClick={() => toggleActive(item)}
                     className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
                     style={item.is_active
-                      ? {background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}
-                      : {background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)'}}>
+                      ? {background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1px solid var(--state-danger)'}
+                      : {background: 'var(--state-ok-bg)', color: 'var(--state-ok)', border: '1px solid var(--state-ok)'}}>
                     {item.is_active ? 'Pasif' : 'Aktif'}
                   </button>
                 </>
@@ -176,10 +176,10 @@ export function CategoriesPage() {
 
               <div className="flex flex-col gap-1">
                 <button disabled={index === 0} onClick={() => moveCategory(index, 'up')}
-                  className="glass-pill w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
+                  className="ui-chip w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
                   aria-label="Yukarı taşı"><ChevronUp size={10} /></button>
                 <button disabled={index === sortedItems.length - 1} onClick={() => moveCategory(index, 'down')}
-                  className="glass-pill w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
+                  className="ui-chip w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
                   aria-label="Aşağı taşı"><ChevronDown size={10} /></button>
               </div>
             </div>
@@ -187,10 +187,10 @@ export function CategoriesPage() {
         ))}
 
         {sortedItems.length === 0 && (
-          <div className="glass-card text-center py-16 rounded-3xl border-dashed">
-            <div className="mb-3 flex justify-center text-white/60"><FolderOpen size={36} /></div>
-            <p className="text-sm text-white/75">Henüz kategori yok</p>
-            <p className="text-xs mt-1 text-white/50">Yukarıdan yeni kategori ekleyin</p>
+          <div className="ui-card text-center py-16 rounded-3xl border-dashed">
+            <div className="mb-3 flex justify-center text-ink-muted"><FolderOpen size={36} /></div>
+            <p className="text-sm text-ink-muted">Henüz kategori yok</p>
+            <p className="text-xs mt-1 text-ink-muted">Yukarıdan yeni kategori ekleyin</p>
           </div>
         )}
       </div>

@@ -150,17 +150,17 @@ export function ProductsPage() {
   }
 
   return (
-    <div className="text-white">
+    <div className="text-ink">
       <Toast state={toast} />
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="relative">
-          <Layers size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
+          <Layers size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
           <select
             value={selectedCategoryId}
             onChange={e => onCategoryFilterChange(e.target.value)}
-            className="glass-input pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium"
+            className="ui-input pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium"
             style={{minWidth: 180}}
           >
             <option value="">Tüm Kategoriler</option>
@@ -168,38 +168,38 @@ export function ProductsPage() {
           </select>
         </div>
         <button onClick={openCreateModal}
-          className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold ml-auto flex items-center gap-2 spring-btn">
+          className="btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold ml-auto flex items-center gap-2 spring-btn">
           <Plus size={14} /> Yeni Ürün
         </button>
       </div>
 
       <div className="grid gap-4" style={{gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))'}}>
         {items.map(item => (
-          <div key={item.id} className="glass-card glass-card-hover rounded-3xl overflow-hidden flex flex-col">
-            <div className="relative bg-white/10" style={{aspectRatio: '1'}}>
+          <div key={item.id} className="ui-card rounded-3xl overflow-hidden flex flex-col">
+            <div className="relative bg-surface-2" style={{aspectRatio: '1'}}>
               {item.image_url ? (
                 <img src={item.thumb_url || item.image_url} alt={item.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/60"><UtensilsCrossed size={36} /></div>
+                <div className="w-full h-full flex items-center justify-center text-ink-muted"><UtensilsCrossed size={36} /></div>
               )}
               {!item.is_active && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-surface-2">
                   <span className="text-xs font-bold px-3 py-1 rounded-full"
-                    style={{background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>Pasif</span>
+                    style={{background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1px solid var(--state-danger)'}}>Pasif</span>
                 </div>
               )}
             </div>
             <div className="p-3 flex-1 flex flex-col">
               <div className="font-serif font-bold text-sm mb-1 leading-snug">{item.name}</div>
-              <div className="font-extrabold text-sm mb-3 text-amber-300 tracking-tight">{priceIntToTl(item.price_int)} TL</div>
+              <div className="font-extrabold text-sm mb-3 text-accent tracking-tight">{priceIntToTl(item.price_int)} TL</div>
               <div className="flex gap-2 mt-auto">
                 <button onClick={() => openEditModal(item)}
-                  className="glass-pill flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 spring-btn">
+                  className="ui-chip flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 spring-btn">
                   <Pencil size={10} /> Düzenle
                 </button>
                 <button onClick={() => askDeleteProduct(item)}
                   className="py-1.5 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn"
-                  style={{background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>
+                  style={{background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1px solid var(--state-danger)'}}>
                   <Trash2 size={10} /> Sil
                 </button>
               </div>
@@ -208,34 +208,34 @@ export function ProductsPage() {
         ))}
 
         {items.length === 0 && (
-          <div className="glass-card col-span-full text-center py-16 rounded-3xl border-dashed">
-            <div className="mb-3 flex justify-center text-white/60"><ShoppingCart size={36} /></div>
-            <p className="text-sm text-white/70">Henüz ürün yok</p>
+          <div className="ui-card col-span-full text-center py-16 rounded-3xl border-dashed">
+            <div className="mb-3 flex justify-center text-ink-muted"><ShoppingCart size={36} /></div>
+            <p className="text-sm text-ink-muted">Henüz ürün yok</p>
           </div>
         )}
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden">
 
-            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
-              <h2 className="font-serif font-bold text-lg text-white">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-line">
+              <h2 className="font-serif font-bold text-lg text-ink">
                 {editingItem ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
               </h2>
               <button onClick={closeModal} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
                 <X size={12} />
               </button>
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto" style={{maxHeight: '70vh'}}>
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Kategori</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">Kategori</label>
                 <select
                   value={form.category_id}
                   onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
                 >
                   <option value="">Kategori seçin</option>
                   {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -243,23 +243,23 @@ export function ProductsPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Ürün Adı</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">Ürün Adı</label>
                 <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   placeholder="Ürün adı..." />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Fiyat (TL)</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">Fiyat (TL)</label>
                 <input value={form.priceTl} onChange={e => setForm(p => ({ ...p, priceTl: e.target.value }))}
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   placeholder="Örn: 145,50" />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Açıklama</label>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">Açıklama</label>
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm resize-none"
                   rows={2} placeholder="Açıklama..." />
               </div>
 
@@ -269,25 +269,25 @@ export function ProductsPage() {
                 onRemove={handleImageRemove}
                 label="Ürün Fotoğrafı"
                 hint="JPG, PNG, WebP, GIF · max 5MB · kare öneri"
-                themeColor="#FF7A29"
+                themeColor="var(--accent)"
                 previewSize={80}
               />
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <div className="relative">
                   <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="sr-only" />
-                  <div className="w-10 h-6 rounded-full transition-all border border-white/30"
-                    style={{background: form.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)'}}>
+                  <div className="w-10 h-6 rounded-full transition-all border border-line"
+                    style={{background: form.is_active ? 'var(--brand)' : 'var(--surface-2)'}}>
                     <div className="w-5 h-5 bg-white rounded-full shadow transition-all" style={{marginTop: 1, marginLeft: form.is_active ? '17px' : '1px'}}></div>
                   </div>
                 </div>
-                <span className="text-sm font-medium text-white">Aktif ürün</span>
+                <span className="text-sm font-medium text-ink">Aktif ürün</span>
               </label>
             </div>
 
-            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
-              <button onClick={closeModal} className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">İptal</button>
-              <button onClick={saveProduct} className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">Kaydet</button>
+            <div className="px-6 py-4 flex gap-3 border-t border-line">
+              <button onClick={closeModal} className="ui-chip flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">İptal</button>
+              <button onClick={saveProduct} className="btn-primary flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">Kaydet</button>
             </div>
           </div>
         </div>
