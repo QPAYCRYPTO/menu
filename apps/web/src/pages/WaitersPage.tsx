@@ -25,7 +25,6 @@ import { Toast, showToast as showToastHelper, type ToastState } from '../compone
 import {
   Ban, Check, CircleCheck, Clock, Copy, KeyRound, Mail, MessageCircle, Pencil, Phone, QrCode, Trash2, TriangleAlert, UserPlus, Users, X, type LucideIcon
 } from 'lucide-react';
-import { withAlpha } from '../lib/color';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
@@ -47,16 +46,20 @@ function whatsappLink(phone: string, loginUrl: string, waiterName: string, busin
 }
 
 // ── Garson satırı görsel yardımcıları (lucide ikon rozetleri) ──
-const ACTION_BTN = 'h-11 rounded-2xl flex items-center border spring-btn transition-colors bg-white/[0.06] border-white/10 hover:bg-white/[0.1] hover:border-white/20';
+const ACTION_BTN = 'h-11 rounded-2xl flex items-center border spring-btn transition-colors bg-surface border-line hover:bg-surface-2';
 
+// Durum renkleri tema değişkenlerinden (gece/gündüz okunur)
 const WAITER_STATUS: Record<WaiterStatus, { label: string; color: string; icon: LucideIcon }> = {
-  active:   { label: 'Aktif',  color: '#34D399', icon: Check },
-  on_leave: { label: 'İzinli', color: '#FBBF24', icon: Clock },
-  inactive: { label: 'Pasif',  color: '#FB7185', icon: Ban }
+  active:   { label: 'Aktif',  color: 'var(--state-ok)', icon: Check },
+  on_leave: { label: 'İzinli', color: 'var(--state-warn)', icon: Clock },
+  inactive: { label: 'Pasif',  color: 'var(--state-danger)', icon: Ban }
 };
 
-// Baş harf avatarı: isimden sabit renk (her render'da aynı)
-const AVATAR_COLORS = ['#FB923C', '#FBBF24', '#C084FC', '#38BDF8', '#34D399', '#F472B6', '#818CF8'];
+// Baş harf avatarı: isimden sabit renk (her render'da aynı) — iki temada okunur orta tonlar
+const AVATAR_COLORS = ['#c05621', '#b7791f', '#8b5cf6', '#2b6cb0', '#2f855a', '#b83280', '#4c51bf'];
+
+/** Rengin saydam tonu — hex ve var(--…) ile çalışır */
+const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 function avatarColorFor(name: string): string {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -66,7 +69,7 @@ function avatarColorFor(name: string): string {
 function IconBadge({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
   return (
     <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ background: withAlpha(color, 0.15), color }}>
+      style={{ background: tint(color, 15), color }}>
       <Icon size={16} />
     </span>
   );
@@ -277,7 +280,7 @@ export function WaitersPage() {
     const config = WAITER_STATUS[status];
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
-        style={{ background: withAlpha(config.color, 0.12), color: config.color, borderColor: withAlpha(config.color, 0.25) }}>
+        style={{ background: tint(config.color, 12), color: config.color, borderColor: tint(config.color, 30) }}>
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.color }} aria-hidden="true" />{config.label}
       </span>
     );
@@ -286,12 +289,12 @@ export function WaitersPage() {
   const activeCount = waiters.filter(w => w.status === 'active').length;
 
   return (
-    <div className="text-white">
+    <div className="text-ink">
       <Toast state={toast} />
       <ConfirmModal state={confirm} onClose={() => setConfirm(null)} />
 
       {/* Başlık kartı */}
-      <div className="glass-dark rounded-[28px] p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="ui-card rounded-[28px] p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center border"
             style={{ background: 'var(--accent-soft)', borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)', color: 'var(--accent)' }}>
@@ -299,26 +302,26 @@ export function WaitersPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight">Garsonlar</h1>
-            <p className="text-xs text-white/60 font-medium">
+            <p className="text-xs text-ink-muted font-medium">
               {waiters.length} garson kayıtlı • {activeCount} aktif
             </p>
           </div>
         </div>
         <button onClick={openCreateForm}
-          className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-semibold flex items-center gap-2 spring-btn">
+          className="btn-primary px-5 py-2.5 rounded-2xl text-sm font-semibold flex items-center gap-2 spring-btn">
           <UserPlus size={16} /> Yeni Garson
         </button>
       </div>
 
-      <div className="glass-dark rounded-[32px] p-3 md:p-5 space-y-3">
+      <div className="ui-card rounded-[32px] p-3 md:p-5 space-y-3">
         {waiters.length === 0 && (
           <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-white/5 border border-white/10 text-white/60">
+            <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-surface-2 border border-line text-ink-muted">
               <Users size={26} />
             </div>
-            <p className="text-sm text-white/70">Henüz garson eklenmedi</p>
+            <p className="text-sm text-ink-muted">Henüz garson eklenmedi</p>
             <button onClick={openCreateForm}
-              className="btn-accent mt-4 px-4 py-2 rounded-2xl text-sm font-bold spring-btn">
+              className="btn-primary mt-4 px-4 py-2 rounded-2xl text-sm font-bold spring-btn">
               İlk Garsonu Ekle
             </button>
           </div>
@@ -330,17 +333,14 @@ export function WaitersPage() {
           const StatusIcon = status.icon;
           return (
             <div key={w.id}
-              className="rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border transition-colors"
-              style={{
-                background: w.status === 'active' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.22)',
-                borderColor: 'rgba(255,255,255,0.07)'
-              }}>
+              className={`rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border border-line transition-colors ${
+                w.status === 'active' ? 'bg-surface hover:bg-surface-2' : 'bg-surface-2'}`}>
 
               <div className="flex items-center gap-3.5 min-w-0">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0 border"
                   style={{
-                    background: `linear-gradient(135deg, ${withAlpha(avatarColor, 0.22)}, ${withAlpha(avatarColor, 0.08)})`,
-                    borderColor: withAlpha(avatarColor, 0.35),
+                    background: tint(avatarColor, 14),
+                    borderColor: tint(avatarColor, 35),
                     color: avatarColor,
                     opacity: w.status === 'active' ? 1 : 0.6
                   }}>
@@ -351,10 +351,10 @@ export function WaitersPage() {
                     <h3 className="text-base font-bold truncate">{w.name}</h3>
                     {statusBadge(w.status)}
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-white/60">
-                    {w.phone && <span className="flex items-center gap-1"><Phone size={12} className="text-white/40" /> {w.phone}</span>}
-                    {w.phone && w.email && <span className="text-white/30">•</span>}
-                    {w.email && <span className="flex items-center gap-1 truncate"><Mail size={12} className="text-white/40" /> {w.email}</span>}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-ink-muted">
+                    {w.phone && <span className="flex items-center gap-1"><Phone size={12} className="text-ink-muted" /> {w.phone}</span>}
+                    {w.phone && w.email && <span className="text-ink-muted">•</span>}
+                    {w.email && <span className="flex items-center gap-1 truncate"><Mail size={12} className="text-ink-muted" /> {w.email}</span>}
                   </div>
                 </div>
               </div>
@@ -366,25 +366,25 @@ export function WaitersPage() {
                     <button onClick={() => setTokenModalWaiter(w)}
                       title="QR giriş kodu" aria-label="QR giriş kodu"
                       className={`${ACTION_BTN} px-3.5 gap-2`}>
-                      <IconBadge icon={QrCode} color="#34D399" />
-                      <span className="text-xs font-bold" style={{ color: '#34D399' }}>QR</span>
+                      <IconBadge icon={QrCode} color="var(--state-ok)" />
+                      <span className="text-xs font-bold text-state-ok">QR</span>
                     </button>
                     <button onClick={() => askRevokeActiveSessions(w)}
                       title="Aktif QR'ları iptal et" aria-label="Aktif QR'ları iptal et"
                       className={`${ACTION_BTN} w-11 justify-center`}>
-                      <IconBadge icon={Ban} color="#FBBF24" />
+                      <IconBadge icon={Ban} color="var(--state-warn)" />
                     </button>
                   </>
                 )}
                 <button onClick={() => openEditForm(w)}
                   title="Düzenle" aria-label="Düzenle"
                   className={`${ACTION_BTN} w-11 justify-center`}>
-                  <IconBadge icon={Pencil} color="#FB923C" />
+                  <IconBadge icon={Pencil} color="var(--accent)" />
                 </button>
                 <button onClick={() => { setPasswordModalWaiter(w); setNewPasswordValue(''); }}
                   title="Şifre belirle/sıfırla" aria-label="Şifre belirle/sıfırla"
                   className={`${ACTION_BTN} w-11 justify-center`}>
-                  <IconBadge icon={KeyRound} color="#38BDF8" />
+                  <IconBadge icon={KeyRound} color="var(--state-info)" />
                 </button>
                 <label className={`${ACTION_BTN} px-3 gap-2 cursor-pointer`} title="Durum">
                   <IconBadge icon={StatusIcon} color={status.color} />
@@ -401,7 +401,7 @@ export function WaitersPage() {
                 <button onClick={() => askDeleteWaiter(w)}
                   title="Sil" aria-label="Sil"
                   className={`${ACTION_BTN} w-11 justify-center`}>
-                  <IconBadge icon={Trash2} color="#FB7185" />
+                  <IconBadge icon={Trash2} color="var(--state-danger)" />
                 </button>
               </div>
             </div>
@@ -411,74 +411,74 @@ export function WaitersPage() {
 
       {/* YENİ/DÜZENLE FORM MODAL */}
       {formMode !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden my-8">
-            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden my-8">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-line">
               <h2 className="font-serif font-bold text-lg">
                 {formMode === 'create' ? 'Yeni Garson Ekle' : `${editingWaiter?.name} — Düzenle`}
               </h2>
               <button onClick={closeForm} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
                 <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh' }}>
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
-                  Ad Soyad <span style={{ color: 'var(--danger)' }}>*</span>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
+                  Ad Soyad <span style={{ color: 'var(--state-danger)' }}>*</span>
                 </label>
                 <input value={formData.name}
                   onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                   placeholder="Örn: Ahmet Yılmaz"
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
                   Telefon (WhatsApp için)
                 </label>
                 <input value={formData.phone}
                   onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))}
                   placeholder="0532 123 45 67"
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
-                <p className="text-xs mt-1 text-white/55">
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                <p className="text-xs mt-1 text-ink-muted">
                   QR linkini WhatsApp'tan göndermek için
                 </p>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
                   Email (opsiyonel)
                 </label>
                 <input type="email" value={formData.email}
                   onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
                   placeholder="ahmet@kafe.com"
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
-                <p className="text-xs mt-1 text-white/55">
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                <p className="text-xs mt-1 text-ink-muted">
                   Email verirseniz garson email+şifre ile de girebilir
                 </p>
               </div>
 
               {formMode === 'create' && (
                 <div>
-                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
                     Şifre (email verdiyseniz zorunlu)
                   </label>
                   <input type="password" value={formData.password}
                     onChange={(e) => setFormData(p => ({ ...p, password: e.target.value }))}
                     placeholder="Min 8 karakter"
-                    className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                    className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
                 </div>
               )}
 
               <div>
-                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-ink-muted">
                   Yetkiler
                 </label>
                 <div className="space-y-2">
                   {(Object.keys(PERMISSION_LABELS) as (keyof WaiterPermissions)[]).map(key => (
                     <label key={key}
-                      className="glass-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer">
+                      className="ui-card flex items-start gap-3 p-3 rounded-2xl cursor-pointer">
                       <input type="checkbox"
                         checked={formData.permissions[key]}
                         onChange={(e) => setFormData(p => ({
@@ -488,10 +488,10 @@ export function WaitersPage() {
                         className="mt-0.5"
                         style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--accent)' }} />
                       <div className="flex-1">
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-sm font-semibold text-ink">
                           {PERMISSION_LABELS[key].label}
                         </div>
-                        <div className="text-xs mt-0.5 text-white/65">
+                        <div className="text-xs mt-0.5 text-ink-muted">
                           {PERMISSION_LABELS[key].desc}
                         </div>
                       </div>
@@ -500,13 +500,13 @@ export function WaitersPage() {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
+            <div className="px-6 py-4 flex gap-3 border-t border-line">
               <button onClick={closeForm}
-                className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
+                className="ui-chip flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 İptal
               </button>
               <button onClick={handleSave} disabled={loading}
-                className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
+                className="btn-primary flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
                 {loading ? 'Kaydediliyor...' : (formMode === 'create' ? 'Ekle' : 'Kaydet')}
               </button>
             </div>
@@ -515,41 +515,41 @@ export function WaitersPage() {
       )}
 
       {passwordModalWaiter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-line">
               <h2 className="font-serif font-bold text-lg flex items-center gap-2">
                 <KeyRound size={18} className="flex-shrink-0" /> Şifre Belirle — {passwordModalWaiter.name}
               </h2>
               <button onClick={() => setPasswordModalWaiter(null)} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
                 <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
                   Yeni Şifre
                 </label>
                 <input type="password" value={newPasswordValue}
                   onChange={(e) => setNewPasswordValue(e.target.value)}
                   placeholder="Min 8 karakter"
-                  className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   autoFocus />
                 {!passwordModalWaiter.email && (
-                  <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--warning)' }}>
+                  <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--state-warn)' }}>
                     <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" /> <span>Bu garsonun email'i yok. Şifreyle giriş için önce email eklemelisiniz.</span>
                   </p>
                 )}
               </div>
             </div>
-            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
+            <div className="px-6 py-4 flex gap-3 border-t border-line">
               <button onClick={() => setPasswordModalWaiter(null)}
-                className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
+                className="ui-chip flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 İptal
               </button>
               <button onClick={handleSetPassword}
-                className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
+                className="btn-primary flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
                 Şifreyi Güncelle
               </button>
             </div>
@@ -558,42 +558,42 @@ export function WaitersPage() {
       )}
 
       {tokenModalWaiter && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-line">
               <h2 className="font-serif font-bold text-lg">
                 QR Üret — {tokenModalWaiter.name}
               </h2>
               <button onClick={() => setTokenModalWaiter(null)} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
                 <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-ink-muted">
                   Geçerlilik Süresi (saat)
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {DURATION_OPTIONS.map(h => (
                     <button key={h} onClick={() => setSelectedHours(h)}
-                      className={`py-2.5 rounded-2xl text-sm font-semibold spring-btn ${selectedHours === h ? 'btn-accent font-bold' : 'glass-pill text-white/80'}`}>
+                      className={`py-2.5 rounded-2xl text-sm font-semibold spring-btn ${selectedHours === h ? 'btn-primary font-bold' : 'ui-chip text-ink-muted'}`}>
                       {h} saat
                     </button>
                   ))}
                 </div>
-                <p className="text-xs mt-3 text-white/55">
+                <p className="text-xs mt-3 text-ink-muted">
                   Yeni QR üretildiğinde eski QR'lar iptal olur.
                 </p>
               </div>
             </div>
-            <div className="px-6 py-4 flex gap-3 border-t border-white/15">
+            <div className="px-6 py-4 flex gap-3 border-t border-line">
               <button onClick={() => setTokenModalWaiter(null)}
-                className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
+                className="ui-chip flex-1 py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 İptal
               </button>
               <button onClick={handleGenerateToken}
-                className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
+                className="btn-primary flex-1 py-2.5 rounded-2xl text-sm font-bold spring-btn">
                 QR Üret
               </button>
             </div>
@@ -602,14 +602,14 @@ export function WaitersPage() {
       )}
 
       {qrResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-line">
               <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-                <CircleCheck size={18} className="flex-shrink-0" style={{ color: 'var(--success)' }} /> {qrResult.waiter_name} için QR hazır
+                <CircleCheck size={18} className="flex-shrink-0" style={{ color: 'var(--state-ok)' }} /> {qrResult.waiter_name} için QR hazır
               </h2>
               <button onClick={() => setQrResult(null)} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
                 <X size={12} />
               </button>
             </div>
@@ -618,24 +618,24 @@ export function WaitersPage() {
                 <img src={qrImageUrl(qrResult.token)} alt="QR kod" style={{ maxWidth: '100%', height: 'auto' }} />
               </div>
 
-              <div className="p-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning)' }}>
-                <p className="text-xs flex items-start gap-1.5" style={{ color: 'var(--warning)' }}>
+              <div className="p-3 rounded-2xl" style={{ background: 'var(--state-warn-bg)', border: '1px solid var(--state-warn)' }}>
+                <p className="text-xs flex items-start gap-1.5" style={{ color: 'var(--state-warn)' }}>
                   <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" /> <span>Bu QR sadece <b>{new Date(qrResult.expires_at).toLocaleString('tr-TR')}</b> tarihine kadar geçerli.</span>
                 </p>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
                   Giriş Linki
                 </label>
                 <div className="flex gap-2">
                   <input readOnly value={waiterLoginUrl(qrResult.token)}
-                    className="glass-input flex-1 min-w-0 px-3 py-2 rounded-2xl text-xs font-mono" />
+                    className="ui-input flex-1 min-w-0 px-3 py-2 rounded-2xl text-xs font-mono" />
                   <button onClick={() => {
                     navigator.clipboard.writeText(waiterLoginUrl(qrResult.token));
                     showToast('Link kopyalandı.', 'success');
                   }}
-                    className="btn-accent px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn">
+                    className="btn-primary px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn">
                     <Copy size={12} /> Kopyala
                   </button>
                 </div>
@@ -646,15 +646,15 @@ export function WaitersPage() {
                   href={whatsappLink(qrResult.waiter_phone, waiterLoginUrl(qrResult.token), qrResult.waiter_name, 'AtlasQR')}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-3 rounded-2xl text-sm font-bold text-white text-center flex items-center justify-center gap-2 spring-btn border border-white/40"
-                  style={{ background: 'rgba(37,211,102,0.85)', textDecoration: 'none' }}>
+                  className="w-full py-3 rounded-2xl text-sm font-bold text-center flex items-center justify-center gap-2 spring-btn no-underline"
+                  style={{ background: '#25D366', color: '#073f46' }}>
                   <MessageCircle size={16} /> WhatsApp'tan Gönder ({qrResult.waiter_phone})
                 </a>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-white/15">
+            <div className="px-6 py-4 border-t border-line">
               <button onClick={() => setQrResult(null)}
-                className="glass-pill w-full py-2.5 rounded-2xl text-sm font-semibold spring-btn">
+                className="ui-chip w-full py-2.5 rounded-2xl text-sm font-semibold spring-btn">
                 Kapat
               </button>
             </div>

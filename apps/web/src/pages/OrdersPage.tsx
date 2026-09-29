@@ -80,12 +80,13 @@ const STATUS_LABELS: Record<string, string> = {
   delivered: 'Teslim Edildi', cancelled: 'İptal Edildi'
 };
 
+// Durum renkleri tüm ekranlarda aynı: Bekliyor amber, Hazırlanıyor mavi, Hazır yeşil, Teslim nötr, İptal kırmızı
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending: { bg: 'var(--accent-soft)', color: '#FDBA74' },
-  preparing: { bg: 'var(--warning-bg)', color: 'var(--warning)' },
-  ready: { bg: 'var(--info-bg)', color: 'var(--info)' },
-  delivered: { bg: 'var(--success-bg)', color: 'var(--success)' },
-  cancelled: { bg: 'var(--danger-bg)', color: 'var(--danger)' }
+  pending: { bg: 'var(--state-warn-bg)', color: 'var(--state-warn)' },
+  preparing: { bg: 'var(--state-info-bg)', color: 'var(--state-info)' },
+  ready: { bg: 'var(--state-ok-bg)', color: 'var(--state-ok)' },
+  delivered: { bg: 'var(--surface-2)', color: 'var(--ink-muted)' },
+  cancelled: { bg: 'var(--state-danger-bg)', color: 'var(--state-danger)' }
 };
 
 function priceIntToTl(value: number): string { return (value / 100).toFixed(2); }
@@ -95,15 +96,15 @@ function OrderSourceBadge({ order }: { order: Order }) {
   if (order.waiter_name) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
-        style={{ background: 'var(--accent-soft)', color: '#FDBA74', border: '1px solid rgba(255,154,90,0.5)' }}
+        style={{ background: 'var(--accent-soft)', color: 'var(--ink)' }}
         title={`Garson: ${order.waiter_name}`}>
         <User size={12} /> {order.waiter_name}
       </span>
     );
   }
   return (
-    <span className="glass-pill inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
-      style={{ color: 'var(--text-muted)' }}
+    <span className="ui-chip inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
+      style={{ color: 'var(--ink-muted)' }}
       title="Müşteri tarafından QR ile verilen sipariş">
       <Smartphone size={12} /> Müşteri
     </span>
@@ -112,11 +113,11 @@ function OrderSourceBadge({ order }: { order: Order }) {
 
 function OrderTimeRow({ order }: { order: Order }) {
   return (
-    <div className="flex items-center gap-1.5 mt-1 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
+    <div className="flex items-center gap-1.5 mt-1 flex-wrap text-xs" style={{ color: 'var(--ink-muted)' }}>
       <span className="font-mono inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(order.created_at)}</span>
-      <span style={{ color: 'var(--text-faint)' }}>·</span>
+      <span style={{ color: 'var(--ink-muted)' }}>·</span>
       <span className="font-mono inline-flex items-center gap-1"><Clock size={12} /> {formatTime(order.created_at)}</span>
-      <span style={{ color: 'var(--text-faint)' }}>·</span>
+      <span style={{ color: 'var(--ink-muted)' }}>·</span>
       <span>{timeAgo(order.created_at)}</span>
     </div>
   );
@@ -125,8 +126,7 @@ function OrderTimeRow({ order }: { order: Order }) {
 function LiveTimerBadge({ dateStr }: { dateStr: string }) {
   const elapsed = useLiveElapsed(dateStr);
   return (
-    <span className="glass-pill inline-flex items-center gap-1 font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-      style={{ color: '#FCD34D' }}
+    <span className="inline-flex items-center gap-1 font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap bg-state-warn-bg text-state-warn"
       title="Sipariş verildikten beri geçen süre">
       <Timer size={12} /> {elapsed}
     </span>
@@ -136,7 +136,7 @@ function LiveTimerBadge({ dateStr }: { dateStr: string }) {
 function StaticTimerBadge({ duration, bg, color, title }: { duration: string; bg: string; color: string; title: string; }) {
   return (
     <span className="inline-flex items-center gap-1 font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-      style={{ background: bg, color, border: '1px solid rgba(255,255,255,0.28)' }} title={title}>
+      style={{ background: bg, color }} title={title}>
       <Timer size={12} /> {duration}
     </span>
   );
@@ -148,11 +148,11 @@ function OrderTimerBadge({ order }: { order: Order }) {
   }
   if (order.status === 'delivered' && order.delivered_at) {
     return <StaticTimerBadge duration={staticDuration(order.created_at, order.delivered_at)}
-      bg="var(--success-bg)" color="var(--success)" title="Hazırlama süresi (sipariş → teslim)" />;
+      bg="var(--state-ok-bg)" color="var(--state-ok)" title="Hazırlama süresi (sipariş → teslim)" />;
   }
   if (order.status === 'cancelled' && order.cancelled_at) {
     return <StaticTimerBadge duration={staticDuration(order.created_at, order.cancelled_at)}
-      bg="var(--danger-bg)" color="var(--danger)" title="İptal olana kadar geçen süre" />;
+      bg="var(--state-danger-bg)" color="var(--state-danger)" title="İptal olana kadar geçen süre" />;
   }
   return null;
 }
@@ -160,10 +160,10 @@ function OrderTimerBadge({ order }: { order: Order }) {
 function ChangeRow({ change }: { change: OrderChange }) {
   if (change.action === 'added') {
     return (
-      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
-        <span className="font-bold inline-flex items-center gap-1" style={{ color: 'var(--success)' }}><Plus size={12} strokeWidth={3} /> EKLENDI</span>
+      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--ink)' }}>
+        <span className="font-bold inline-flex items-center gap-1" style={{ color: 'var(--state-ok)' }}><Plus size={12} strokeWidth={3} /> EKLENDI</span>
         <span className="font-semibold">{change.product_name}</span>
-        <span style={{ color: 'var(--text-muted)' }}>×{change.quantity}</span>
+        <span style={{ color: 'var(--ink-muted)' }}>×{change.quantity}</span>
       </div>
     );
   }
@@ -171,12 +171,12 @@ function ChangeRow({ change }: { change: OrderChange }) {
     const oldQ = change.old_quantity ?? 0;
     const newQ = change.new_quantity ?? 0;
     const DirectionIcon = newQ > oldQ ? ChevronUp : ChevronDown;
-    const dirColor = newQ > oldQ ? 'var(--success)' : 'var(--danger)';
+    const dirColor = newQ > oldQ ? 'var(--state-ok)' : 'var(--state-danger)';
     return (
-      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
+      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--ink)' }}>
         <span className="font-bold inline-flex items-center gap-1" style={{ color: dirColor }}><DirectionIcon size={12} strokeWidth={3} /> ADET</span>
         <span className="font-semibold">{change.product_name}</span>
-        <span className="font-mono" style={{ color: 'var(--text-muted)' }}>
+        <span className="font-mono" style={{ color: 'var(--ink-muted)' }}>
           {oldQ} → <strong style={{ color: dirColor }}>{newQ}</strong>
         </span>
       </div>
@@ -184,7 +184,7 @@ function ChangeRow({ change }: { change: OrderChange }) {
   }
   if (change.action === 'removed') {
     return (
-      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--danger)' }}>
+      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--state-danger)' }}>
         <span className="font-bold inline-flex items-center gap-1"><X size={12} strokeWidth={3} /> KALDIRILDI</span>
         <span className="font-semibold">{change.product_name}</span>
       </div>
@@ -196,19 +196,17 @@ function ChangeRow({ change }: { change: OrderChange }) {
 function UpdatePanel({ update, onAcknowledge }: { update: OrderUpdate; onAcknowledge: () => void; }) {
   return (
     <div className="px-3 py-2.5 mb-2"
-      style={{ background: 'linear-gradient(90deg, rgba(245,158,11,0.32), rgba(245,158,11,0.18))',
-        borderTop: '1px solid rgba(251,191,36,0.6)', borderBottom: '1px solid rgba(251,191,36,0.6)' }}>
+      style={{ background: 'var(--state-warn-bg)', borderTop: '1px solid var(--state-warn)', borderBottom: '1px solid var(--state-warn)' }}>
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-1.5">
-          <span className="text-base animate-pulse inline-flex" style={{ color: '#FCD34D' }}><Bell size={16} /></span>
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#FCD34D' }}>Güncelleme</span>
+          <span className="text-base animate-pulse inline-flex text-state-warn"><Bell size={16} /></span>
+          <span className="text-xs font-bold uppercase tracking-wider text-state-warn">Güncelleme</span>
           {update.waiter_name && (
-            <span className="text-xs font-semibold inline-flex items-center gap-1" style={{ color: '#FDE68A' }}>· <User size={12} /> {update.waiter_name}</span>
+            <span className="text-xs font-semibold inline-flex items-center gap-1 text-ink">· <User size={12} /> {update.waiter_name}</span>
           )}
         </div>
         <button onClick={onAcknowledge}
-          className="px-2.5 py-1 rounded-full text-xs font-bold text-white spring-btn inline-flex items-center gap-1"
-          style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.5)' }}
+          className="btn-primary px-2.5 py-1 rounded-full text-xs font-bold spring-btn inline-flex items-center gap-1"
           title="Bu uyarıyı kapat"><Check size={12} strokeWidth={3} /> Gördüm</button>
       </div>
       <div className="space-y-1 pl-5">
@@ -249,37 +247,37 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-md fade-enter"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 ui-scrim fade-enter"
       onClick={onClose}>
-      <div className="glass-dark sheet-enter text-white rounded-t-[32px] sm:rounded-3xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col border-t border-white/60"
+      <div className="bg-surface border border-line sheet-enter text-ink rounded-t-[32px] sm:rounded-3xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 sm:hidden" />
-        <div className="px-5 py-4 border-b border-white/20">
-          <h3 className="font-serif font-bold text-lg text-white">Siparişi İptal Et</h3>
-          <p className="text-xs mt-1 text-white/65">
+        <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 sm:hidden" />
+        <div className="px-5 py-4 border-b border-line">
+          <h3 className="font-serif font-bold text-lg text-ink">Siparişi İptal Et</h3>
+          <p className="text-xs mt-1 text-ink-muted">
             {order.table_name} · {formatDate(order.created_at)} {formatTime(order.created_at)}
           </p>
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">İptal Sebebi</label>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">İptal Sebebi</label>
           <div className="mt-3 space-y-2">
             {CANCEL_REASONS.map(reason => {
               const selected = selectedCode === reason.code;
               return (
                 <button key={reason.code} type="button" onClick={() => setSelectedCode(reason.code)}
                   className="w-full text-left px-3 py-3 rounded-2xl transition-all spring-btn"
-                  style={{ background: selected ? 'var(--danger-bg)' : 'rgba(255,255,255,0.08)',
-                    border: `1px solid ${selected ? 'rgba(251,113,133,0.8)' : 'rgba(255,255,255,0.22)'}` }}>
+                  style={{ background: selected ? 'var(--state-danger-bg)' : 'var(--surface-2)',
+                    border: `1px solid ${selected ? 'var(--state-danger)' : 'var(--line)'}` }}>
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
-                      style={{ background: selected ? 'var(--danger)' : 'transparent',
-                        border: `2px solid ${selected ? 'var(--danger)' : 'rgba(255,255,255,0.45)'}` }}>
-                      {selected && <div className="w-2 h-2 rounded-full" style={{ background: 'white' }} />}
+                      style={{ background: selected ? 'var(--state-danger)' : 'transparent',
+                        border: `2px solid ${selected ? 'var(--state-danger)' : 'var(--ink-muted)'}` }}>
+                      {selected && <div className="w-2 h-2 rounded-full" style={{ background: 'var(--bg)' }} />}
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm text-white">{reason.label}</div>
-                      {reason.hint && <div className="text-xs mt-0.5 text-white/60">{reason.hint}</div>}
+                      <div className="font-semibold text-sm text-ink">{reason.label}</div>
+                      {reason.hint && <div className="text-xs mt-0.5 text-ink-muted">{reason.hint}</div>}
                     </div>
                   </div>
                 </button>
@@ -289,35 +287,34 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
 
           {selectedCode && (
             <div className="mt-4">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
                 {isOther ? 'Açıklama (zorunlu)' : 'Ek Açıklama (opsiyonel)'}
               </label>
               <textarea value={reasonText} onChange={e => setReasonText(e.target.value)}
                 rows={3} maxLength={500}
                 placeholder={isOther ? 'Lütfen iptal sebebini yazınız...' : 'İsteğe bağlı not...'}
-                className={`glass-input w-full mt-2 px-3.5 py-2.5 rounded-2xl text-sm resize-none ${needsReasonText ? 'border-rose-300' : ''}`} />
+                className={`ui-input w-full mt-2 px-3.5 py-2.5 rounded-2xl text-sm resize-none ${needsReasonText ? 'border-[var(--state-danger)]' : ''}`} />
               <div className="flex justify-between mt-1">
-                <span className="text-xs" style={{ color: needsReasonText ? 'var(--danger)' : 'var(--text-faint)' }}>
+                <span className="text-xs" style={{ color: needsReasonText ? 'var(--state-danger)' : 'var(--ink-muted)' }}>
                   {needsReasonText ? 'En az 3 karakter' : ''}
                 </span>
-                <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{reasonText.length}/500</span>
+                <span className="text-xs" style={{ color: 'var(--ink-muted)' }}>{reasonText.length}/500</span>
               </div>
             </div>
           )}
 
           {error && (
             <div className="mt-3 px-3 py-2 rounded-xl text-xs"
-              style={{ background: 'var(--danger-bg)', color: '#FECDD3', border: '1px solid rgba(251,113,133,0.45)' }}>{error}</div>
+              style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)' }}>{error}</div>
           )}
         </div>
 
-        <div className="px-5 pt-3 pb-6 sm:pb-4 flex gap-2 border-t border-white/20">
+        <div className="px-5 pt-3 pb-6 sm:pb-4 flex gap-2 border-t border-line">
           <button onClick={onClose} disabled={submitting}
-            className="glass-pill flex-1 py-3 rounded-full text-sm font-semibold spring-btn disabled:opacity-60">Vazgeç</button>
+            className="btn-outline flex-1 py-3 rounded-full text-sm font-semibold spring-btn disabled:opacity-60">Vazgeç</button>
           <button onClick={handleSubmit} disabled={!canSubmit}
-            className="flex-1 py-3 rounded-full text-sm font-bold text-white spring-btn disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', border: '1px solid rgba(255,255,255,0.5)',
-              boxShadow: '0 8px 20px rgba(225,29,72,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>
+            className="flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50"
+            style={{ background: 'var(--state-danger)', color: 'var(--bg)' }}>
             {submitting ? 'İptal ediliyor...' : 'İptal Et'}
           </button>
         </div>
@@ -339,34 +336,33 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
   const reasonInfo = isCancelled ? parseReasonLabel(order.cancel_reason) : null;
   const hasUpdate = !!pendingUpdate;
 
-  const baseBorder = isCancelled ? 'rgba(251,113,133,0.55)' : order.status === 'pending' ? 'rgba(255,154,90,0.75)' : 'rgba(255,255,255,0.42)';
-  const borderColor = hasUpdate ? '#FBBF24' : baseBorder;
+  const baseBorder = isCancelled ? 'var(--state-danger)' : order.status === 'pending' ? 'var(--state-warn)' : 'var(--line)';
+  const borderColor = hasUpdate ? 'var(--state-warn)' : baseBorder;
   const borderWidth = hasUpdate ? '2px' : '1px';
 
   return (
-    <div className="glass-card rounded-3xl overflow-hidden text-white"
+    <div className="ui-card rounded-3xl overflow-hidden text-ink"
       style={{ border: `${borderWidth} solid ${borderColor}`, opacity: isCancelled ? 0.8 : 1,
         animation: hasUpdate ? 'pulse-update 1.5s ease-in-out infinite' : undefined }}>
 
       <style>{`
         @keyframes pulse-update {
-          0%, 100% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.45), 0 12px 32px rgba(0,0,0,0.22); }
-          50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0.0), 0 12px 32px rgba(0,0,0,0.22); }
+          0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--state-warn) 40%, transparent); }
+          50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--state-warn) 0%, transparent); }
         }
       `}</style>
 
       <div className="px-4 py-3"
-        style={{ background: isCancelled ? 'var(--danger-bg)' : order.status === 'pending' ? 'var(--accent-soft)' : 'rgba(0,0,0,0.18)',
-          borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+        style={{ background: isCancelled ? 'var(--state-danger-bg)' : order.status === 'pending' ? 'var(--state-warn-bg)' : 'var(--surface-2)',
+          borderBottom: '1px solid var(--line)' }}>
         <div className="flex items-start justify-between gap-2">
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div className="font-serif font-bold text-base text-white">{order.table_name}</div>
+            <div className="font-serif font-bold text-base text-ink">{order.table_name}</div>
             <OrderTimeRow order={order} />
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             <span className="px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap"
-              style={{ background: STATUS_COLORS[order.status].bg, color: STATUS_COLORS[order.status].color,
-                border: '1px solid rgba(255,255,255,0.28)' }}>
+              style={{ background: STATUS_COLORS[order.status].bg, color: STATUS_COLORS[order.status].color }}>
               {STATUS_LABELS[order.status]}
             </span>
             <OrderSourceBadge order={order} />
@@ -379,28 +375,27 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
 
       <div className="px-4 py-3">
         {isCancelled && reasonInfo && (
-          <div className="mb-3 px-3 py-2 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.45)' }}>
-            <div className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--danger)' }}><X size={12} strokeWidth={3} /> {reasonInfo.label}</div>
-            {reasonInfo.text && <div className="text-xs mt-1" style={{ color: '#FECDD3' }}>{reasonInfo.text}</div>}
+          <div className="mb-3 px-3 py-2 rounded-xl" style={{ background: 'var(--state-danger-bg)' }}>
+            <div className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--state-danger)' }}><X size={12} strokeWidth={3} /> {reasonInfo.label}</div>
+            {reasonInfo.text && <div className="text-xs mt-1 text-ink">{reasonInfo.text}</div>}
           </div>
         )}
 
         {order.items.map(item => (
-          <div key={item.id} className="py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+          <div key={item.id} className="py-1.5" style={{ borderBottom: '1px solid var(--line)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-extrabold text-white flex-shrink-0 ${isCancelled ? 'bg-white/20' : 'btn-accent'}`}>{item.quantity}</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--text)',
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-extrabold flex-shrink-0 ${isCancelled ? 'bg-surface-2 text-ink-muted' : 'btn-primary'}`}>{item.quantity}</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--ink)',
                   textDecoration: isCancelled ? 'line-through' : 'none' }}>{item.product_name}</span>
               </div>
-              <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--ink-muted)' }}>
                 {priceIntToTl(item.price_int * item.quantity)} TL
               </span>
             </div>
 
             {item.note && item.note.trim() && (
-              <div className="mt-1 ml-8 px-2 py-1 rounded-lg text-xs"
-                style={{ background: 'rgba(245,158,11,0.2)', color: '#FEF3C7', border: '1px solid rgba(252,211,77,0.35)' }}>
+              <div className="mt-1 ml-8 px-2 py-1 rounded-lg text-xs bg-state-warn-bg text-state-warn font-semibold">
                 <NotebookPen size={12} className="inline-block align-[-2px]" /> {item.note}
               </div>
             )}
@@ -408,15 +403,14 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
         ))}
 
         {order.note && (
-          <div className="mt-2 px-3 py-2 rounded-xl text-xs"
-            style={{ background: 'rgba(245,158,11,0.2)', color: '#FEF3C7', border: '1px solid rgba(252,211,77,0.35)' }}>
+          <div className="mt-2 px-3 py-2 rounded-xl text-xs bg-state-warn-bg text-state-warn font-semibold">
             <ClipboardList size={12} className="inline-block align-[-2px]" /> <strong>Genel:</strong> {order.note}
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-          <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Toplam</span>
-          <span className="font-extrabold text-base" style={{ color: isCancelled ? 'var(--text-faint)' : '#FCD34D',
+        <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Toplam</span>
+          <span className="font-serif font-bold text-lg" style={{ color: isCancelled ? 'var(--ink-muted)' : 'var(--ink)',
             textDecoration: isCancelled ? 'line-through' : 'none' }}>
             {priceIntToTl(orderTotal(order.items))} TL
           </span>
@@ -427,32 +421,26 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
         <div className="px-4 pb-4 flex gap-2">
           {order.status === 'pending' && (
             <button onClick={() => onUpdate(order, 'preparing')}
-              className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1.5"
-              style={{ background: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)', border: '1px solid rgba(255,255,255,0.55)',
-                boxShadow: '0 8px 18px rgba(217,119,6,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>
+              className="btn-primary flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5">
               <Flame size={12} /> Hazırlanıyor</button>
           )}
           {order.status === 'preparing' && (
             <button onClick={() => onUpdate(order, 'ready')}
-              className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1.5"
-              style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)', border: '1px solid rgba(255,255,255,0.55)',
-                boxShadow: '0 8px 18px rgba(2,132,199,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>
+              className="btn-primary flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5">
               <ConciergeBell size={12} /> Hazır</button>
           )}
           {order.status === 'ready' && (
             <button onClick={() => onUpdate(order, 'delivered')}
-              className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1"
-              style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.55)',
-                boxShadow: '0 8px 18px rgba(5,150,105,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>Teslim Edildi <Check size={12} strokeWidth={3} /></button>
+              className="btn-primary flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1">Teslim Edildi <Check size={12} strokeWidth={3} /></button>
           )}
           {order.status === 'delivered' && (
             <div className="flex-1 py-2.5 rounded-full text-xs font-bold text-center"
-              style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.45)' }}>Tamamlandı</div>
+              style={{ background: 'var(--state-ok-bg)', color: 'var(--state-ok)' }}>Tamamlandı</div>
           )}
 
           <button onClick={() => onCancel(order)}
             className="px-3.5 py-2 rounded-full text-xs font-semibold spring-btn flex items-center justify-center"
-            style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.5)' }}
+            style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)' }}
             title="Siparişi iptal et" aria-label="Siparişi iptal et"><X size={14} strokeWidth={3} /></button>
         </div>
       )}
@@ -469,68 +457,64 @@ type CallCardProps = {
 function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
   const callInfo = getCallType(order.call_type);
 
-  const cardBg = callInfo.critical ? 'rgba(244,63,94,0.16)' : 'rgba(245,158,11,0.14)';
-  const cardBorder = callInfo.critical ? 'rgba(251,113,133,0.6)' : 'rgba(252,211,77,0.55)';
-  const accentColor = callInfo.critical ? 'var(--danger)' : 'var(--warning)';
-  const titleColor = callInfo.critical ? '#FECDD3' : '#FEF3C7';
+  // Gece/gündüz uyumlu: acil istek kırmızı, diğerleri amber (sol şerit + başlık zemini)
+  const accentColor = callInfo.critical ? 'var(--state-danger)' : 'var(--state-warn)';
+  const headBg = callInfo.critical ? 'var(--state-danger-bg)' : 'var(--state-warn-bg)';
 
   return (
-    <div className="glass-card rounded-3xl overflow-hidden text-white"
-      style={{ backgroundImage: `linear-gradient(${cardBg}, ${cardBg})`, border: `1px solid ${cardBorder}` }}>
-      <div style={{ padding: '16px',
-        background: callInfo.critical ? 'linear-gradient(135deg, rgba(244,63,94,0.32), rgba(244,63,94,0.14))' : 'linear-gradient(135deg, rgba(245,158,11,0.32), rgba(245,158,11,0.12))',
-        borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+    <div className="ui-card rounded-3xl overflow-hidden text-ink"
+      style={{ borderLeft: `5px solid ${accentColor}` }}>
+      <div style={{ padding: '16px', background: headBg,
+        borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14 }}>
         <CallTypeBadge callType={order.call_type} size={56} filled />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
             color: accentColor, marginBottom: 2 }}>
             {callInfo.critical ? <span className="inline-flex items-center gap-1"><AlertTriangle size={12} /> Acil İstek</span> : 'Çağrı'}
           </div>
-          <div className="font-serif" style={{ fontSize: 18, fontWeight: 800, color: titleColor, lineHeight: 1.2 }}>
+          <div className="font-serif" style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>
             {callInfo.label}
           </div>
-          <div className="font-bold text-sm mt-0.5 text-white flex items-center gap-1"><MapPin size={14} /> {order.table_name}</div>
+          <div className="font-bold text-sm mt-0.5 text-ink-muted flex items-center gap-1"><MapPin size={14} /> {order.table_name}</div>
         </div>
         <div style={{ flexShrink: 0 }}><OrderTimerBadge order={order} /></div>
       </div>
 
       {order.call_type === 'other' && order.note && (
-        <div style={{ padding: '10px 16px', background: 'rgba(0,0,0,0.22)', borderBottom: `1px solid ${cardBorder}` }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+        <div style={{ padding: '10px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)',
             textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
             <NotebookPen size={12} /> Müşteri Açıklaması
           </div>
-          <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.4 }}>{order.note}</div>
+          <div style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.4 }}>{order.note}</div>
         </div>
       )}
 
       {order.call_type !== 'other' && order.note && order.note.trim() && (
         <div style={{ padding: '8px 16px' }}>
-          <div className="text-xs px-2 py-1 rounded-lg"
-            style={{ background: 'rgba(0,0,0,0.22)', color: '#FEF3C7', border: '1px solid rgba(252,211,77,0.35)' }}>
+          <div className="text-xs px-2 py-1 rounded-lg bg-state-warn-bg text-state-warn font-semibold">
             <NotebookPen size={12} className="inline-block align-[-2px]" /> {order.note}
           </div>
         </div>
       )}
 
-      <div style={{ padding: '8px 16px', borderTop: `1px solid ${cardBorder}` }}>
-        <div className="flex items-center gap-1.5 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
+      <div style={{ padding: '8px 16px', borderTop: '1px solid var(--line)' }}>
+        <div className="flex items-center gap-1.5 flex-wrap text-xs" style={{ color: 'var(--ink-muted)' }}>
           <span className="font-mono inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(order.created_at)}</span>
-          <span style={{ color: 'var(--text-faint)' }}>·</span>
+          <span style={{ color: 'var(--ink-muted)' }}>·</span>
           <span className="font-mono inline-flex items-center gap-1"><Clock size={12} /> {formatTime(order.created_at)}</span>
-          <span style={{ color: 'var(--text-faint)' }}>·</span>
+          <span style={{ color: 'var(--ink-muted)' }}>·</span>
           <span>{timeAgo(order.created_at)}</span>
         </div>
       </div>
 
       <div style={{ padding: '8px 16px 16px', display: 'flex', gap: 8 }}>
         <button onClick={() => onUpdate(order, 'delivered')}
-          className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1"
-          style={{ background: callInfo.critical ? 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)' : 'linear-gradient(135deg, #34D399 0%, #059669 100%)',
-            border: '1px solid rgba(255,255,255,0.55)', boxShadow: '0 8px 18px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.6)' }}><Check size={12} strokeWidth={3} /> İlgilendim</button>
+          className={`flex-1 py-2.5 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1 ${callInfo.critical ? '' : 'btn-primary'}`}
+          style={callInfo.critical ? { background: 'var(--state-danger)', color: 'var(--bg)' } : undefined}><Check size={12} strokeWidth={3} /> İlgilendim</button>
         <button onClick={() => onCancel(order)}
           className="px-3.5 py-2.5 rounded-full text-xs font-semibold spring-btn flex items-center justify-center"
-          style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.5)' }}
+          style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)' }}
           title="Çağrıyı iptal et" aria-label="Çağrıyı iptal et"><X size={14} strokeWidth={3} /></button>
       </div>
     </div>
@@ -630,31 +614,31 @@ export function OrdersPage() {
           onConfirm={handleCancelConfirm} />
       )}
 
-      <div className="glass-panel rounded-3xl px-4 py-3 flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="ui-card rounded-3xl px-4 py-3 flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="font-serif font-bold text-xl text-white">Siparişler</h2>
+          <h2 className="font-serif font-bold text-xl text-ink">Siparişler</h2>
           {pendingCount > 0 && filter === 'active' && (
             <span className="px-2.5 py-1 rounded-full text-xs font-bold"
-              style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.5)' }}>
+              style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)' }}>
               {pendingCount} yeni
             </span>
           )}
           {updateCount > 0 && filter === 'active' && (
             <span className="px-2.5 py-1 rounded-full text-xs font-bold animate-pulse inline-flex items-center gap-1"
-              style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.5)' }}><Bell size={12} /> {updateCount} güncelleme</span>
+              style={{ background: 'var(--state-warn-bg)', color: 'var(--state-warn)' }}><Bell size={12} /> {updateCount} güncelleme</span>
           )}
         </div>
         <div className="flex gap-2">
           <button onClick={() => setFilter('active')}
-            className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'active' ? 'btn-accent' : 'glass-pill'}`}>
+            className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'active' ? 'ui-chip-active' : 'ui-chip'}`}>
             Aktif
           </button>
           <button onClick={() => setFilter('delivered')}
-            className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'delivered' ? 'btn-accent' : 'glass-pill'}`}>
+            className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'delivered' ? 'ui-chip-active' : 'ui-chip'}`}>
             Tamamlanan
           </button>
           <button onClick={handleRefresh} disabled={refreshing} aria-label="Yenile" title="Yenile"
-            className="glass-pill px-4 py-2 rounded-2xl text-sm font-semibold spring-btn disabled:opacity-60">
+            className="ui-chip px-4 py-2 rounded-2xl text-sm font-semibold spring-btn disabled:opacity-60">
             <span className={refreshing ? 'inline-block animate-spin' : 'inline-block'}><RefreshCw size={14} className="block" /></span>
           </button>
         </div>
@@ -662,11 +646,11 @@ export function OrdersPage() {
 
       {filter === 'active' && callOrders.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-bold mb-3 uppercase tracking-wider flex items-center gap-2 px-1" style={{ color: '#FDA4AF' }}>
+          <h3 className="text-sm font-bold mb-3 uppercase tracking-wider flex items-center gap-2 px-1 text-state-danger">
             <Bell size={14} /> Müşteri Çağrıları ({callOrders.length})
             {criticalCallCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white animate-pulse inline-flex items-center gap-1"
-                style={{ background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', border: '1px solid rgba(255,255,255,0.5)' }}><AlertTriangle size={12} /> {criticalCallCount} acil</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold animate-pulse inline-flex items-center gap-1"
+                style={{ background: 'var(--state-danger)', color: 'var(--bg)' }}><AlertTriangle size={12} /> {criticalCallCount} acil</span>
             )}
           </h3>
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
@@ -686,10 +670,10 @@ export function OrdersPage() {
         ))}
 
         {foodOrders.length === 0 && callOrders.length === 0 && !loadingDelivered && (
-          <div className="glass-card col-span-full text-center py-16 rounded-3xl"
+          <div className="ui-card col-span-full text-center py-16 rounded-3xl"
             style={{ borderStyle: 'dashed' }}>
-            <div className="mb-3 flex justify-center" style={{ color: 'var(--text-muted)' }}><UtensilsCrossed size={36} strokeWidth={1.5} /></div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <div className="mb-3 flex justify-center text-accent"><UtensilsCrossed size={36} strokeWidth={1.5} /></div>
+            <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>
               {filter === 'active' ? 'Aktif sipariş yok' : 'Tamamlanan sipariş yok'}
             </p>
           </div>
@@ -697,8 +681,8 @@ export function OrdersPage() {
 
         {loadingDelivered && (
           <div className="col-span-full text-center py-16">
-            <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Yükleniyor...</p>
+            <div className="w-10 h-10 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+            <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>Yükleniyor...</p>
           </div>
         )}
       </div>
