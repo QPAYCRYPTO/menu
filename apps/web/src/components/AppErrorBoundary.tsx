@@ -68,11 +68,12 @@ export class AppErrorBoundary extends Component<Props, State> {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '24px',
-          color: 'var(--text)'
+          background: 'var(--bg)',
+          color: 'var(--ink)'
         }}
       >
         <div
-          className="glass-dark rounded-3xl fade-enter"
+          className="ui-card rounded-3xl fade-enter"
           style={{
             maxWidth: '480px',
             width: '100%',
@@ -85,7 +86,7 @@ export class AppErrorBoundary extends Component<Props, State> {
               display: 'flex',
               justifyContent: 'center',
               marginBottom: '16px',
-              color: 'var(--warning)'
+              color: 'var(--state-warn)'
             }}
           >
             <TriangleAlert size={48} />
@@ -96,7 +97,7 @@ export class AppErrorBoundary extends Component<Props, State> {
             style={{
               fontSize: '22px',
               fontWeight: 700,
-              color: 'var(--text)',
+              color: 'var(--ink)',
               marginBottom: '12px'
             }}
           >
@@ -106,7 +107,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           <p
             style={{
               fontSize: '14px',
-              color: 'var(--text-muted)',
+              color: 'var(--ink-muted)',
               marginBottom: '24px',
               lineHeight: 1.5
             }}
@@ -118,13 +119,13 @@ export class AppErrorBoundary extends Component<Props, State> {
           {this.state.errorMessage && (
             <div
               style={{
-                background: 'var(--danger-bg)',
-                border: '1px solid rgba(251,113,133,0.45)',
+                background: 'var(--state-danger-bg)',
+                border: '1px solid var(--state-danger)',
                 borderRadius: '14px',
                 padding: '12px',
                 marginBottom: '20px',
                 fontSize: '12px',
-                color: '#FECDD3',
+                color: 'var(--state-danger)',
                 fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace',
                 wordBreak: 'break-word',
                 textAlign: 'left'
@@ -144,7 +145,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           >
             <button
               onClick={this.handleReload}
-              className="btn-accent spring-btn"
+              className="btn-primary spring-btn"
               style={{
                 padding: '10px 20px',
                 borderRadius: '999px',
@@ -157,7 +158,7 @@ export class AppErrorBoundary extends Component<Props, State> {
             </button>
             <button
               onClick={this.handleGoHome}
-              className="glass-pill spring-btn"
+              className="ui-chip spring-btn"
               style={{
                 padding: '10px 20px',
                 borderRadius: '999px',

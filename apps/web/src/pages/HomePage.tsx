@@ -39,7 +39,7 @@ export function HomePage() {
   }, [location]);
 
   return (
-    <div className="text-white" style={{ minHeight: '100vh' }}>
+    <div className="bg-page text-ink" style={{ minHeight: '100vh' }}>
       <PublicHeader />
 
       {/* ═══════ HERO ═══════ */}
@@ -47,17 +47,16 @@ export function HomePage() {
         {/* Warm glow overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 50% 30%, rgba(255, 122, 41, 0.18), transparent 60%)' }}
+          style={{ background: 'radial-gradient(circle at 50% 30%, var(--accent-soft), transparent 60%)' }}
         />
 
         <div className="max-w-5xl mx-auto relative z-10 fade-enter">
           <h1
-            className="font-serif text-center text-white font-bold mb-5"
+            className="font-serif text-center text-ink font-bold mb-5"
             style={{
               fontSize: 'clamp(36px, 5.5vw, 58px)',
               lineHeight: 1.1,
-              letterSpacing: '-1px',
-              textShadow: '0 4px 24px rgba(0,0,0,0.35)',
+              letterSpacing: '-1px'
             }}
           >
             Restoranın için <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>tek panel,</em>
@@ -66,14 +65,14 @@ export function HomePage() {
           </h1>
           <p
             className="text-center mx-auto mb-10"
-            style={{ color: 'var(--text-muted)', fontSize: 18, maxWidth: 640 }}
+            style={{ color: 'var(--ink-muted)', fontSize: 18, maxWidth: 640 }}
           >
             QR menü, adisyon takibi, sipariş yönetimi, anlık raporlar — bir günde kurulum, ömür boyu kullanım.
           </p>
 
           {/* Search box */}
           <form
-            className="glass-panel max-w-2xl mx-auto flex items-center gap-3 p-2 pl-6"
+            className="ui-card max-w-2xl mx-auto flex items-center gap-3 p-2 pl-6"
             style={{ borderRadius: 999 }}
             onSubmit={e => {
               e.preventDefault();
@@ -81,17 +80,17 @@ export function HomePage() {
               window.location.href = WA_LINK(input || 'AtlasQR hakkında bilgi almak istiyorum');
             }}
           >
-            <Search className="shrink-0" size={18} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+            <Search className="shrink-0" size={18} style={{ color: 'var(--ink-muted)' }} aria-hidden="true" />
             <input
               type="text"
               name="q"
               placeholder="Ne arıyorsun? (örn: QR menü, adisyon)"
-              className="flex-1 min-w-0 outline-none text-sm md:text-base py-3 placeholder:text-white/60"
-              style={{ color: '#fff', background: 'transparent', border: 'none' }}
+              className="flex-1 min-w-0 outline-none text-sm md:text-base py-3 placeholder:text-ink-muted"
+              style={{ color: 'var(--ink)', background: 'transparent', border: 'none' }}
             />
             <button
               type="submit"
-              className="btn-accent spring-btn px-5 md:px-7 py-3 rounded-full text-sm font-bold whitespace-nowrap"
+              className="btn-primary spring-btn px-5 md:px-7 py-3 rounded-full text-sm font-bold whitespace-nowrap"
             >
               Bilgi Al
             </button>
@@ -103,7 +102,7 @@ export function HomePage() {
       <section className="max-w-7xl mx-auto px-4 md:px-6 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
           {/* Promo card */}
-          <div className="glass-dark rounded-3xl p-8 text-white relative overflow-hidden">
+          <div className="ui-card rounded-3xl p-8 text-ink relative overflow-hidden">
             <div
               className="absolute pointer-events-none"
               style={{
@@ -111,7 +110,7 @@ export function HomePage() {
                 right: -40,
                 width: 220,
                 height: 220,
-                background: 'radial-gradient(circle, #FF7A29 0%, transparent 70%)',
+                background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)',
                 opacity: 0.35,
               }}
             />
@@ -119,12 +118,12 @@ export function HomePage() {
               <h2 className="font-serif font-bold mb-4" style={{ fontSize: 32, letterSpacing: '-0.5px' }}>
                 Hızlı Başla
               </h2>
-              <p className="mb-6" style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.7 }}>
+              <p className="mb-6" style={{ color: 'var(--ink-muted)', fontSize: 14, lineHeight: 1.7 }}>
                 Bir günde kurulum, sıfır teknik bilgi. Menünü WhatsApp'tan gönder, biz sisteme aktarıp QR kodlarını sana yollarız.
               </p>
               <a
                 href={WA_LINK('Merhaba, AtlasQR kurulumu için bilgi almak istiyorum')}
-                className="btn-accent spring-btn inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold"
+                className="btn-primary spring-btn inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold"
                 style={{ textDecoration: 'none' }}
               >
                 <MessageCircle size={18} aria-hidden="true" />
@@ -145,32 +144,22 @@ export function HomePage() {
               <a
                 key={i}
                 href="#ozellikler"
-                className="glass-card rounded-3xl p-5 flex items-center gap-4"
-                style={{ textDecoration: 'none', color: '#fff' }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 122, 41, 0.8)';
-                  e.currentTarget.style.transform = 'translateX(4px)';
-                  e.currentTarget.style.background = 'var(--glass-bg-hover)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '';
-                  e.currentTarget.style.transform = 'translateX(0)';
-                  e.currentTarget.style.background = '';
-                }}
+                className="ui-card rounded-3xl p-5 flex items-center gap-4 text-ink transition-all hover:bg-surface-2 hover:border-accent hover:translate-x-1"
+                style={{ textDecoration: 'none' }}
               >
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
+                  style={{ background: 'var(--accent-soft)', border: '1px solid transparent' }}
                 >
                   <ServiceIcon name={s.icon} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-base">{s.title}</div>
-                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  <div className="text-sm" style={{ color: 'var(--ink-muted)' }}>
                     {s.desc}
                   </div>
                 </div>
-                <ArrowRight size={16} style={{ color: 'var(--text-faint)' }} aria-hidden="true" />
+                <ArrowRight size={16} style={{ color: 'var(--ink-muted)' }} aria-hidden="true" />
               </a>
             ))}
           </div>
@@ -180,7 +169,7 @@ export function HomePage() {
       {/* ═══════ STATS ═══════ */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 mt-20">
         <div
-          className="glass-panel rounded-3xl p-6 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-6"
+          className="ui-card rounded-3xl p-6 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-6"
         >
           {[
             { num: '1 gün', label: 'Kurulum Süresi' },
@@ -192,7 +181,7 @@ export function HomePage() {
               key={i}
               className="text-center"
               style={{
-                borderRight: i < 3 ? '1px solid var(--glass-border-soft)' : 'none',
+                borderRight: i < 3 ? '1px solid var(--line)' : 'none',
                 paddingRight: 16,
               }}
             >
@@ -202,7 +191,7 @@ export function HomePage() {
               >
                 {s.num}
               </div>
-              <div className="text-xs uppercase font-semibold" style={{ color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+              <div className="text-xs uppercase font-semibold" style={{ color: 'var(--ink-muted)', letterSpacing: '0.5px' }}>
                 {s.label}
               </div>
             </div>
@@ -222,7 +211,7 @@ export function HomePage() {
           <h2 className="font-serif font-bold mb-4" style={{ fontSize: 'clamp(28px, 4vw, 44px)', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
             Restoranın için her şey, tek panelde.
           </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 17 }}>
+          <p style={{ color: 'var(--ink-muted)', fontSize: 17 }}>
             Garson defteri, manuel kasa, kağıt menü — hepsi tarihe karışıyor.
           </p>
         </div>
@@ -238,28 +227,18 @@ export function HomePage() {
           ].map((f, i) => (
             <div
               key={i}
-              className="glass-card rounded-3xl p-8"
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(255, 122, 41, 0.8)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.background = 'var(--glass-bg-hover)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.background = '';
-              }}
+              className="ui-card rounded-3xl p-8 transition-all hover:bg-surface-2 hover:border-accent hover:-translate-y-1"
             >
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-                style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
+                style={{ background: 'var(--accent-soft)', border: '1px solid transparent' }}
               >
                 <FeatureIcon name={f.icon} />
               </div>
               <h3 className="font-serif font-semibold mb-2" style={{ fontSize: 24, letterSpacing: '-0.3px' }}>
                 {f.title}
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.7 }}>{f.desc}</p>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 15, lineHeight: 1.7 }}>{f.desc}</p>
             </div>
           ))}
         </div>
@@ -277,7 +256,7 @@ export function HomePage() {
           <h2 className="font-serif font-bold mb-3" style={{ fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-0.5px' }}>
             Aklındaki sorulara cevaplar.
           </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 16 }}>
+          <p style={{ color: 'var(--ink-muted)', fontSize: 16 }}>
             Bulamadığını bulamadıysan,{' '}
             <a
               href={WA_LINK('Merhaba, AtlasQR hakkında bir sorum var')}
@@ -320,23 +299,23 @@ export function HomePage() {
       {/* ═══════ CTA BAND ═══════ */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 mt-24 mb-20">
         <div
-          className="glass-panel rounded-3xl p-10 md:p-16 text-white text-center relative overflow-hidden"
+          className="ui-card rounded-3xl p-10 md:p-16 text-ink text-center relative overflow-hidden"
         >
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(circle at 30% 50%, rgba(255, 122, 41, 0.25), transparent 55%)' }}
+            style={{ background: 'radial-gradient(circle at 30% 50%, var(--accent-soft), transparent 55%)' }}
           />
           <div className="relative z-10">
             <h2 className="font-serif font-bold mb-4" style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
               Bugün başla, yarın <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>fark</em> et.
             </h2>
-            <p className="mb-8 mx-auto" style={{ color: 'var(--text-muted)', fontSize: 17, maxWidth: 560 }}>
+            <p className="mb-8 mx-auto" style={{ color: 'var(--ink-muted)', fontSize: 17, maxWidth: 560 }}>
               Demo görmek, fiyat sormak veya sadece sohbet etmek için yaz. WhatsApp'tan dakikalar içinde dönüş yaparız.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
                 href={WA_LINK('Merhaba, AtlasQR hakkında bilgi almak istiyorum')}
-                className="btn-accent spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
+                className="btn-primary spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
                 style={{ textDecoration: 'none', fontSize: 16 }}
               >
                 <MessageCircle size={20} aria-hidden="true" />
@@ -344,7 +323,7 @@ export function HomePage() {
               </a>
               <Link
                 to="/fiyat"
-                className="glass-pill spring-btn inline-flex items-center px-8 py-4 rounded-full font-semibold"
+                className="ui-chip spring-btn inline-flex items-center px-8 py-4 rounded-full font-semibold"
                 style={{ textDecoration: 'none', fontSize: 16 }}
               >
                 Fiyatlandırmayı Gör
@@ -363,7 +342,7 @@ export function HomePage() {
 // ═══════ Helper Components ═══════
 
 function ServiceIcon({ name }: { name: string }) {
-  const props = { size: 24, color: '#FF8C38', strokeWidth: 1.8, 'aria-hidden': true };
+  const props = { size: 24, className: 'text-accent', strokeWidth: 1.8, 'aria-hidden': true };
   switch (name) {
     case 'qr':
       return <QrCode {...props} />;
@@ -381,7 +360,7 @@ function ServiceIcon({ name }: { name: string }) {
 }
 
 function FeatureIcon({ name }: { name: string }) {
-  const props = { size: 28, color: '#FF8C38', strokeWidth: 1.8, 'aria-hidden': true };
+  const props = { size: 28, className: 'text-accent', strokeWidth: 1.8, 'aria-hidden': true };
   switch (name) {
     case 'check':
       return <CircleCheckBig {...props} />;
@@ -407,13 +386,13 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
   return (
     <div
-      className="glass-card rounded-2xl overflow-hidden"
-      style={open ? { borderColor: 'rgba(255, 122, 41, 0.7)' } : undefined}
+      className="ui-card rounded-2xl overflow-hidden"
+      style={open ? { borderColor: 'var(--accent)' } : undefined}
     >
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-6 py-5 flex items-center justify-between font-semibold text-left"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 16 }}
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink)', fontSize: 16 }}
       >
         <span className="flex-1 pr-4">{question}</span>
         <span
@@ -424,7 +403,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
         </span>
       </button>
       {open && (
-        <div className="px-6 pb-5 fade-enter" style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.7 }}>
+        <div className="px-6 pb-5 fade-enter" style={{ color: 'var(--ink-muted)', fontSize: 15, lineHeight: 1.7 }}>
           {answer}
         </div>
       )}
@@ -435,24 +414,23 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 export function Footer() {
   return (
     <footer
-      className="glass-dark"
-      style={{ color: 'var(--text-muted)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', boxShadow: 'none' }}
+      className="ui-card"
+      style={{ color: 'var(--ink-muted)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', boxShadow: 'none' }}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-8">
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-4">
               <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-lg"
-                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)', border: '1px solid rgba(255,255,255,0.6)' }}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-brand text-on-brand text-lg"
               >
                 <Wheat size={18} aria-hidden="true" />
               </div>
               <div>
-                <div className="font-serif font-bold text-white text-lg">
+                <div className="font-serif font-bold text-ink text-lg">
                   Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
                 </div>
-                <div className="text-xs" style={{ color: 'var(--text-faint)', letterSpacing: '0.1em' }}>
+                <div className="text-xs" style={{ color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
                   RESTORAN YÖNETİM SİSTEMİ
                 </div>
               </div>
@@ -463,33 +441,33 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white text-sm font-semibold mb-4 uppercase" style={{ letterSpacing: '1px' }}>
+            <h4 className="text-ink text-sm font-semibold mb-4 uppercase" style={{ letterSpacing: '1px' }}>
               Ürün
             </h4>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/fiyat" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Fiyatlandırma</Link></li>
-              <li><Link to="/#ozellikler" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Özellikler</Link></li>
-              <li><Link to="/login" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Giriş Yap</Link></li>
+              <li><Link to="/fiyat" style={{ color: 'var(--ink-muted)', textDecoration: 'none' }}>Fiyatlandırma</Link></li>
+              <li><Link to="/#ozellikler" style={{ color: 'var(--ink-muted)', textDecoration: 'none' }}>Özellikler</Link></li>
+              <li><Link to="/login" style={{ color: 'var(--ink-muted)', textDecoration: 'none' }}>Giriş Yap</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white text-sm font-semibold mb-4 uppercase" style={{ letterSpacing: '1px' }}>
+            <h4 className="text-ink text-sm font-semibold mb-4 uppercase" style={{ letterSpacing: '1px' }}>
               İletişim
             </h4>
             <ul className="space-y-2 text-sm">
-              <li><a href={WA_LINK('Merhaba, bilgi almak istiyorum')} style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>WhatsApp Destek</a></li>
-              <li><a href="mailto:atlasqrmenu@gmail.com" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>atlasqrmenu@gmail.com</a></li>
-              <li><a href="https://www.atlasqrmenu.com" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>atlasqrmenu.com</a></li>
+              <li><a href={WA_LINK('Merhaba, bilgi almak istiyorum')} style={{ color: 'var(--ink-muted)', textDecoration: 'none' }}>WhatsApp Destek</a></li>
+              <li><a href="mailto:atlasqrmenu@gmail.com" style={{ color: 'var(--ink-muted)', textDecoration: 'none' }}>atlasqrmenu@gmail.com</a></li>
+              <li><a href="https://www.atlasqrmenu.com" style={{ color: 'var(--ink-muted)', textDecoration: 'none' }}>atlasqrmenu.com</a></li>
             </ul>
           </div>
         </div>
 
         <div
           className="pt-6 text-center text-xs"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}
+          style={{ borderTop: '1px solid var(--line)', color: 'var(--ink-muted)' }}
         >
-          © 2026 AtlasQR · Powered by <span style={{ color: '#F59E0B' }}>AtlasQR</span>
+          © 2026 AtlasQR · Powered by <span className="font-bold text-ink">AtlasQR</span>
         </div>
       </div>
     </footer>

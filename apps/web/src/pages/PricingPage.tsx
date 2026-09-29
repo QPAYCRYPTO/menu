@@ -23,29 +23,29 @@ export function PricingPage() {
   }, [location]);
 
   return (
-    <div className="text-white" style={{ minHeight: '100vh' }}>
+    <div className="bg-page text-ink" style={{ minHeight: '100vh' }}>
       <PublicHeader />
 
       {/* ═══════ HERO ═══════ */}
       <section className="relative overflow-hidden px-4 md:px-6 py-12 md:py-20">
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 50% 30%, rgba(255, 122, 41, 0.18), transparent 60%)' }}
+          style={{ background: 'radial-gradient(circle at 50% 30%, var(--accent-soft), transparent 60%)' }}
         />
         <div className="max-w-3xl mx-auto text-center relative z-10 fade-enter">
           <span
-            className="glass-pill inline-block px-4 py-1.5 rounded-full text-xs font-bold mb-5"
+            className="ui-chip inline-block px-4 py-1.5 rounded-full text-xs font-bold mb-5"
             style={{ letterSpacing: '1.5px' }}
           >
             FİYATLANDIRMA
           </span>
           <h1
-            className="font-serif text-white font-bold mb-4"
-            style={{ fontSize: 'clamp(32px, 5vw, 52px)', lineHeight: 1.1, letterSpacing: '-1px', textShadow: '0 4px 24px rgba(0,0,0,0.35)' }}
+            className="font-serif text-ink font-bold mb-4"
+            style={{ fontSize: 'clamp(32px, 5vw, 52px)', lineHeight: 1.1, letterSpacing: '-1px' }}
           >
             Restoranın için <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>basit, net</em> fiyatlandırma.
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 17 }}>
+          <p style={{ color: 'var(--ink-muted)', fontSize: 17 }}>
             Gizli ücret yok, üyelik tuzağı yok. İhtiyacın kadar öde, istediğin zaman büyüt.
           </p>
         </div>
@@ -142,7 +142,7 @@ export function PricingPage() {
 
       {/* ═══════ INCLUDED FEATURES ═══════ */}
       <section className="px-4 md:px-6">
-        <div className="glass-panel rounded-3xl max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
+        <div className="ui-card rounded-3xl max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-20">
           <div className="text-center mb-14">
             <span
               className="block text-xs font-semibold mb-3 uppercase"
@@ -153,7 +153,7 @@ export function PricingPage() {
             <h2 className="font-serif font-bold mb-3" style={{ fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-0.5px' }}>
               Kullanmaya başlamak için ihtiyacın olan her şey.
             </h2>
-            <p className="mx-auto" style={{ color: 'var(--text-muted)', fontSize: 16, maxWidth: 520 }}>
+            <p className="mx-auto" style={{ color: 'var(--ink-muted)', fontSize: 16, maxWidth: 520 }}>
               Ekstra modül, gizli ücret, beklenmedik faturalar yok.
             </p>
           </div>
@@ -170,14 +170,14 @@ export function PricingPage() {
               <div key={i} className="p-6">
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
+                  style={{ background: 'var(--accent-soft)', border: '1px solid transparent' }}
                 >
-                  <Check size={20} color="#FF8C38" strokeWidth={2.5} aria-hidden="true" />
+                  <Check size={20} className="text-accent" strokeWidth={2.5} aria-hidden="true" />
                 </div>
                 <h3 className="font-serif font-semibold mb-2" style={{ fontSize: 22, letterSpacing: '-0.3px' }}>
                   {f.title}
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 14.5, lineHeight: 1.6 }}>{f.desc}</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: 14.5, lineHeight: 1.6 }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -233,22 +233,22 @@ export function PricingPage() {
       </section>
 
       {/* ═══════ FINAL CTA ═══════ */}
-      <section className="px-4 md:px-6 pb-16 md:pb-20 text-white text-center">
-        <div className="glass-panel rounded-3xl max-w-5xl mx-auto px-6 py-14 md:py-16 relative overflow-hidden">
+      <section className="px-4 md:px-6 pb-16 md:pb-20 text-ink text-center">
+        <div className="ui-card rounded-3xl max-w-5xl mx-auto px-6 py-14 md:py-16 relative overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(circle at 30% 50%, rgba(255, 122, 41, 0.25), transparent 55%)' }}
+          style={{ background: 'radial-gradient(circle at 30% 50%, var(--accent-soft), transparent 55%)' }}
         />
         <div className="max-w-2xl mx-auto relative z-10">
           <h2 className="font-serif font-bold mb-4" style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-0.5px', lineHeight: 1.15 }}>
             Bugün başla, yarın <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>fark</em> et.
           </h2>
-          <p className="mb-8" style={{ color: 'var(--text-muted)', fontSize: 17 }}>
+          <p className="mb-8" style={{ color: 'var(--ink-muted)', fontSize: 17 }}>
             Demo görmek, fiyat sormak veya sadece konuşmak için yaz.
           </p>
           <a
             href={WA_LINK('Merhaba, AtlasQR hakkında bilgi almak istiyorum')}
-            className="btn-accent spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
+            className="btn-primary spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
             style={{ textDecoration: 'none', fontSize: 16 }}
           >
             <MessageCircle size={20} aria-hidden="true" />
@@ -284,21 +284,17 @@ type PlanCardProps = {
 function PlanCard({ name, tagline, price, period, extra, savings, original, features, ctaLabel, ctaLink, featured, badge, badgeColor }: PlanCardProps) {
   return (
     <article
-      className="glass-card rounded-3xl p-7 md:p-8 flex flex-col relative text-white"
+      className="ui-card rounded-3xl p-7 md:p-8 flex flex-col relative text-ink"
       style={{
-        background: featured ? 'rgba(255, 255, 255, 0.26)' : undefined,
         border: featured ? '2px solid var(--accent)' : undefined,
-        boxShadow: featured ? 'var(--accent-glow), 0 24px 48px rgba(0, 0, 0, 0.3)' : undefined,
       }}
     >
       {badge && (
         <span
           className="absolute -top-3 left-1/2 px-4 py-1.5 rounded-full text-xs font-bold uppercase whitespace-nowrap"
           style={{
-            background: badgeColor ? `linear-gradient(135deg, ${badgeColor} 0%, #D97706 100%)` : 'var(--accent-gradient)',
-            border: '1px solid rgba(255,255,255,0.6)',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
-            color: 'white',
+            background: badgeColor ?? 'var(--brand)',
+            color: badgeColor ? '#073f46' : 'var(--on-brand)',
             transform: 'translateX(-50%)',
             letterSpacing: '1px',
           }}
@@ -310,7 +306,7 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
       <h2 className="font-serif font-bold mb-2" style={{ fontSize: 28, letterSpacing: '-0.3px' }}>
         {name}
       </h2>
-      <p className="mb-7 text-sm" style={{ color: 'var(--text-muted)', minHeight: 42 }}>
+      <p className="mb-7 text-sm" style={{ color: 'var(--ink-muted)', minHeight: 42 }}>
         {tagline}
       </p>
 
@@ -321,13 +317,13 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
             fontSize: 44,
             letterSpacing: '-1px',
             lineHeight: 1,
-            color: featured ? 'var(--accent)' : '#fff',
+            color: 'var(--ink)',
           }}
         >
           {price}
         </span>
-        <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--text-muted)' }}>₺</span>
-        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{period}</span>
+        <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--ink-muted)' }}>₺</span>
+        <span style={{ fontSize: 14, color: 'var(--ink-muted)' }}>{period}</span>
       </div>
 
       {savings && (
@@ -335,8 +331,7 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
           className="inline-block px-3 py-1 rounded-full text-xs font-bold mt-3 mb-7"
           style={{
             background: 'var(--accent-soft)',
-            border: '1px solid rgba(255, 122, 41, 0.5)',
-            color: '#FFB27A',
+            color: 'var(--ink)',
             width: 'fit-content',
           }}
         >
@@ -344,12 +339,12 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
         </span>
       )}
       {original && (
-        <p className="mb-7 text-sm line-through" style={{ color: 'var(--text-faint)' }}>
+        <p className="mb-7 text-sm line-through" style={{ color: 'var(--ink-muted)' }}>
           {original}
         </p>
       )}
       {extra && (
-        <p className="mb-7 text-sm" style={{ color: 'var(--text-muted)' }}>
+        <p className="mb-7 text-sm" style={{ color: 'var(--ink-muted)' }}>
           {extra}
         </p>
       )}
@@ -360,14 +355,14 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
             key={i}
             className="flex items-start gap-3 py-2.5 text-sm"
             style={{
-              borderBottom: i < features.length - 1 ? '1px solid var(--glass-border-soft)' : 'none',
+              borderBottom: i < features.length - 1 ? '1px solid var(--line)' : 'none',
             }}
           >
             <span
               className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
               style={{
-                background: featured ? 'var(--accent-gradient)' : 'var(--accent-soft)',
-                color: featured ? '#fff' : '#FFB27A',
+                background: featured ? 'var(--brand)' : 'var(--accent-soft)',
+                color: featured ? 'var(--on-brand)' : 'var(--ink)',
               }}
             >
               <Check size={12} strokeWidth={3} aria-hidden="true" />
@@ -379,7 +374,7 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
 
       <a
         href={ctaLink}
-        className={`${featured ? 'btn-accent' : 'glass-pill'} spring-btn block text-center py-4 rounded-full font-bold`}
+        className={`${featured ? 'btn-primary' : 'ui-chip'} spring-btn block text-center py-4 rounded-full font-bold`}
         style={{
           textDecoration: 'none',
           fontSize: 15,
@@ -398,13 +393,13 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
   return (
     <div
-      className="glass-card rounded-2xl overflow-hidden"
-      style={open ? { borderColor: 'rgba(255, 122, 41, 0.7)' } : undefined}
+      className="ui-card rounded-2xl overflow-hidden"
+      style={open ? { borderColor: 'var(--accent)' } : undefined}
     >
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-6 py-5 flex items-center justify-between font-semibold text-left"
-        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 16 }}
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink)', fontSize: 16 }}
       >
         <span className="flex-1 pr-4">{question}</span>
         <span
@@ -415,7 +410,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
         </span>
       </button>
       {open && (
-        <div className="px-6 pb-5 fade-enter" style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.7 }}>
+        <div className="px-6 pb-5 fade-enter" style={{ color: 'var(--ink-muted)', fontSize: 15, lineHeight: 1.7 }}>
           {answer}
         </div>
       )}

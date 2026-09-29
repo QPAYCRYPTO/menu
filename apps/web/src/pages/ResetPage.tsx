@@ -3,8 +3,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { Lock, Check, ArrowLeft, Mail } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useThemedPage } from '../lib/theme';
 
 export function ResetPage() {
+  useThemedPage();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,58 +23,60 @@ export function ResetPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden text-white px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-page text-ink px-4 py-12">
+
+      {/* Gece/gündüz */}
+      <ThemeToggle className="absolute top-6 right-6 z-20" />
       <div className="w-full max-w-sm relative z-10 fade-enter">
         <div className="text-center mb-7">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-2xl text-white border border-white/60"
-            style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-2xl bg-brand text-on-brand">
             <Lock size={24} />
           </div>
-          <h1 className="font-serif text-3xl font-bold text-white tracking-wide">
+          <h1 className="font-serif text-3xl font-bold text-ink tracking-wide">
             Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
           </h1>
-          <p className="text-xs mt-1 tracking-widest text-white/60 font-semibold">ŞİFRE SIFIRLAMA</p>
+          <p className="text-xs mt-1 tracking-widest text-ink-muted font-semibold">ŞİFRE SIFIRLAMA</p>
         </div>
 
-        <div className="glass-panel rounded-3xl p-7 sm:p-8">
+        <div className="ui-card rounded-3xl p-7 sm:p-8">
           {sent ? (
             <div className="text-center py-4">
               <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"
-                style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.4)' }}>
+                style={{ background: 'var(--state-ok-bg)', color: 'var(--state-ok)' }}>
                 <Check size={24} />
               </div>
-              <h2 className="font-serif font-bold text-lg mb-2 text-white">Mail Gönderildi!</h2>
-              <p className="text-sm mb-6 text-white/75">
-                <strong className="text-white">{email}</strong> adresine şifre sıfırlama bağlantısı gönderildi. Lütfen mailinizi kontrol edin.
+              <h2 className="font-serif font-bold text-lg mb-2 text-ink">Mail Gönderildi!</h2>
+              <p className="text-sm mb-6 text-ink-muted">
+                <strong className="text-ink">{email}</strong> adresine şifre sıfırlama bağlantısı gönderildi. Lütfen mailinizi kontrol edin.
               </p>
-              <Link to="/login" className="text-sm font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">
+              <Link to="/login" className="text-sm font-semibold text-ink-muted hover:text-ink inline-flex items-center gap-1">
                 <ArrowLeft size={14} />Giriş sayfasına dön
               </Link>
             </div>
           ) : (
             <>
-              <h2 className="font-serif font-bold text-lg mb-2 text-white">Şifrenizi mi unuttunuz?</h2>
-              <p className="text-sm mb-6 text-white/70">E-posta adresinizi girin, size sıfırlama bağlantısı gönderelim.</p>
+              <h2 className="font-serif font-bold text-lg mb-2 text-ink">Şifrenizi mi unuttunuz?</h2>
+              <p className="text-sm mb-6 text-ink-muted">E-posta adresinizi girin, size sıfırlama bağlantısı gönderelim.</p>
 
               <form onSubmit={onSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase text-white/75">E-posta</label>
+                  <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase text-ink-muted">E-posta</label>
                   <div className="relative">
-                    <Mail size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
+                    <Mail size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                       placeholder="admin@kafe.com" required
-                      className="glass-input w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium" />
+                      className="ui-input focus:border-brand w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium" />
                   </div>
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="btn-accent w-full py-3 rounded-2xl text-sm font-bold spring-btn">
+                  className="btn-primary w-full py-3 rounded-2xl text-sm font-bold spring-btn">
                   {loading ? 'Gönderiliyor...' : 'Sıfırlama Bağlantısı Gönder'}
                 </button>
               </form>
 
               <div className="text-center mt-4">
-                <Link to="/login" className="text-xs font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1"><ArrowLeft size={12} />Giriş sayfasına dön</Link>
+                <Link to="/login" className="text-xs font-semibold text-ink-muted hover:text-ink inline-flex items-center gap-1"><ArrowLeft size={12} />Giriş sayfasına dön</Link>
               </div>
             </>
           )}
