@@ -22,6 +22,7 @@ import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
 import { errorLogIngestRoutes, superAdminErrorRoutes } from './routes/errorLogRoutes.js';
 import { adminTableOperationsRoutes, waiterTableOperationsRoutes } from './routes/tableOperationsRoutes.js';
 import { paymentRoutes } from './routes/paymentRoutes.js';
+import { kitchenRoutes } from './routes/kitchenRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -38,7 +39,7 @@ export function createApp() {
     origin: env.webOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Super-Admin-Secret', 'X-Tab-ID', 'X-Customer-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Super-Admin-Secret', 'X-Tab-ID', 'X-Customer-Token', 'X-Kitchen-Token'],
     maxAge: 86400
   }));
 
@@ -83,6 +84,9 @@ export function createApp() {
 
   // Owner (patron) route'ları — sadece owner + superadmin erişebilir
   app.use('/api/owner', ownerRoutes);
+
+  // Mutfak ekranı (admin: link token'ı; mutfak: ?t=<token>)
+  app.use('/api/kitchen', kitchenRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

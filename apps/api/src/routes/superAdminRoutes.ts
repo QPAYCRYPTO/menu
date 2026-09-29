@@ -52,7 +52,7 @@ superAdminRoutes.use(requireSuperAdmin);
 superAdminRoutes.get('/businesses', async (_req, res) => {
   const result = await pool.query(`
     SELECT 
-      b.id, b.name, b.slug, b.is_active, b.waiter_module_enabled, b.created_at,
+      b.id, b.name, b.slug, b.is_active, b.waiter_module_enabled, b.kitchen_module_enabled, b.created_at,
       (
         SELECT u.email 
         FROM users u 
@@ -345,6 +345,39 @@ superAdminRoutes.patch('/businesses/:id/waiter-module', async (req, res) => {
 
   const ok = await setWaiterModuleEnabled(idParsed.data, bodyParsed.data.enabled);
   if (!ok) {
+    res.status(404).json({ message: 'İşletme bulunamadı.' });
+    return;
+  }
+
+  res.status(200).json({ ok: true, enabled: bodyParsed.data.enabled });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// MUTFAK MODÜLÜ FLAG AÇ/KAPAT
+// ─────────────────────────────────────────────────────────────────
+
+// PATCH /api/superadmin/businesses/:id/kitchen-module
+// SuperAdmin bir işletme için mutfak ekranı modülünü açar veya kapatır.
+// Kapatılınca mutfak linki (token) çalışmaz; açık mutfak ekranları bağlantıyı kaybeder.
+superAdminRoutes.patch('/businesses/:id/kitchen-module', async (req, res) => {
+  const idParsed = z.string().uuid().safeParse(req.params.id);
+  if (!idParsed.success) {
+    res.status(400).json({ message: 'Geçersiz işletme id.' });
+    return;
+  }
+
+  const bodyParsed = setWaiterModuleSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ message: 'Geçersiz parametre (enabled: true/false).' });
+    return;
+  }
+
+  const result = await pool.query(
+    `UPDATE businesses SET kitchen_module_enabled = $1, updated_at = NOW()
+     WHERE id = $2 RETURNING id`,
+    [bodyParsed.data.enabled, idParsed.data]
+  );
+  if (result.rowCount !== 1) {
     res.status(404).json({ message: 'İşletme bulunamadı.' });
     return;
   }
