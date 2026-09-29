@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
+import { useLiveRefresh } from '../../context/WaiterCallsContext';
 import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
 import { AlertTriangle, ArrowLeft, Armchair, Check, ChevronLeft, ClipboardList, Lightbulb, Minus, NotebookPen, Plus, RefreshCw, Smartphone, User, UtensilsCrossed, XCircle } from 'lucide-react';
@@ -47,17 +48,25 @@ export function WaiterTableDetailPage() {
   useEffect(() => {
     if (!token || !tabId || !id) return;
     loadDetail();
+    // Yedek: canlı bağlantı kopuk kalsa bile 15 sn'de bir sessiz yenile
+    const interval = setInterval(() => loadDetail(true), 15000);
+    return () => clearInterval(interval);
   }, [token, tabId, id]);
+
+  // Başka garson/admin bu masada bir şey değiştirince anında yenile
+  useLiveRefresh(() => loadDetail(true));
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 2400);
   }
 
-  async function loadDetail() {
+  async function loadDetail(silent = false) {
     if (!token || !tabId || !id) return;
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const result = await getTableDetail(token, tabId, id);
       setData(result);
@@ -66,9 +75,9 @@ export function WaiterTableDetailPage() {
         logout();
         return;
       }
-      setError(e instanceof Error ? e.message : 'Masa detayı alınamadı.');
+      if (!silent) setError(e instanceof Error ? e.message : 'Masa detayı alınamadı.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 

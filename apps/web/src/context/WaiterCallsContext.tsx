@@ -12,7 +12,10 @@
 // - SSE'ye bağlan, yeni çağrı geldiğinde:
 //   - State'e ekle
 //   - Ses çal
-// - 'call_taken' event geldiğinde state'ten sil (başka garson aldı)
+// - 'call_taken' event geldiğinde state'ten sil (başka garson ya da admin aldı)
+// - Her canlı olayda liveVersion artar → açık garson ekranları (masalar, masa detayı) kendini yeniler
+// - SSE koptuktan sonra yeniden bağlanınca, sekme/telefon öne gelince ve ağ geri gelince
+//   çağrılar yeniden çekilir (kopukken kaçan olaylar telafi edilir); ayrıca 30 sn'de bir yedek yenileme
 // - takeCall(id) → POST /api/public/waiter/calls/:id/take
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -26,7 +29,11 @@ type WaiterCallsContextValue = {
   refresh: () => Promise<void>;
   takeCall: (callId: string) => Promise<{ ok: boolean; error?: string }>;
   loading: boolean;
+  /** Her canlı olayda / yeniden senkronda artar — ekranlar useLiveRefresh ile dinler */
+  liveVersion: number;
 };
+
+const CALLS_FALLBACK_POLL_MS = 30_000;
 
 const WaiterCallsContext = createContext<WaiterCallsContextValue | null>(null);
 
@@ -34,6 +41,8 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
   const { token, tabId, isAuthenticated } = useWaiterAuth();
   const [calls, setCalls] = useState<WaiterActiveCall[]>([]);
   const [loading, setLoading] = useState(false);
+  const [liveVersion, setLiveVersion] = useState(0);
+  const bumpLive = useCallback(() => setLiveVersion(v => v + 1), []);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -117,9 +126,22 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
     const es = new EventSource(url, { withCredentials: false });
     eventSourceRef.current = es;
 
+    // İlk açılış dışında her (yeniden) bağlanışta kopukken kaçan olayları telafi et
+    let opened = false;
+    es.onopen = () => {
+      if (opened) {
+        refresh();
+        bumpLive();
+      }
+      opened = true;
+    };
+
     es.addEventListener('order', (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
+
+        // Her olay: açık ekranlar (masalar / masa detayı) yenilensin
+        bumpLive();
 
         // Yeni çağrı geldi
         if (data.type === 'call' && data.order) {
@@ -145,6 +167,12 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
         if (data.type === 'call_taken' && data.order_id) {
           setCalls(prev => prev.filter(c => c.id !== data.order_id));
         }
+
+        // Çağrı admin tarafından kapatıldı/iptal edildi
+        if ((data.type === 'order_status' || data.type === 'order_cancelled') && data.order_id
+            && data.order_type === 'call' && data.status !== 'pending') {
+          setCalls(prev => prev.filter(c => c.id !== data.order_id));
+        }
       } catch (err) {
         console.error('SSE parse error:', err);
       }
@@ -154,14 +182,36 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
       console.warn('SSE bağlantı hatası, otomatik yeniden denenecek:', err);
     };
 
+    // Telefon/sekme öne gelince veya ağ geri gelince senkronla
+    let lastSync = 0;
+    const resync = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastSync < 2000) return;
+      lastSync = Date.now();
+      refresh();
+      bumpLive();
+    };
+    document.addEventListener('visibilitychange', resync);
+    window.addEventListener('focus', resync);
+    window.addEventListener('online', resync);
+
+    // Yedek: SSE sessizce kopuk kalırsa bile çağrı listesi en geç 30 sn'de güncellensin
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, CALLS_FALLBACK_POLL_MS);
+
     return () => {
       es.close();
       eventSourceRef.current = null;
+      document.removeEventListener('visibilitychange', resync);
+      window.removeEventListener('focus', resync);
+      window.removeEventListener('online', resync);
+      clearInterval(poll);
     };
-  }, [token, tabId, isAuthenticated, refresh]);
+  }, [token, tabId, isAuthenticated, refresh, bumpLive]);
 
   return (
-    <WaiterCallsContext.Provider value={{ calls, refresh, takeCall, loading }}>
+    <WaiterCallsContext.Provider value={{ calls, refresh, takeCall, loading, liveVersion }}>
       {children}
     </WaiterCallsContext.Provider>
   );
@@ -171,6 +221,26 @@ export function useWaiterCalls() {
   const ctx = useContext(WaiterCallsContext);
   if (!ctx) throw new Error('useWaiterCalls must be used within WaiterCallsProvider');
   return ctx;
+}
+
+/**
+ * Canlı olay geldiğinde (başka garson/admin bir şey değiştirdiğinde) ekranı yeniler.
+ * Arka arkaya gelen olaylar tek yenilemeye birleştirilir (debounce).
+ */
+export function useLiveRefresh(onChange: () => void, debounceMs = 400) {
+  const { liveVersion } = useWaiterCalls();
+  const callbackRef = useRef(onChange);
+  callbackRef.current = onChange;
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) {
+      isFirst.current = false;
+      return;
+    }
+    const t = setTimeout(() => callbackRef.current(), debounceMs);
+    return () => clearTimeout(t);
+  }, [liveVersion, debounceMs]);
 }
 
 // Çağrı türü ikon/etiket/renk bilgisi: lib/callTypes.ts (getCallType) — tek kaynak

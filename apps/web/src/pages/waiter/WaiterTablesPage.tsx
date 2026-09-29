@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
+import { useLiveRefresh } from '../../context/WaiterCallsContext';
 import { WaiterTable, listTables } from '../../api/waiterPublicApi';
 import { waiterMoveSession, waiterMergeSessions } from '../../api/tableOperationsApi';
 import { AlertTriangle, ArrowLeftRight, Armchair, Bell, ClipboardList, Link2, Plus, RefreshCw, Timer, UtensilsCrossed, Wallet } from 'lucide-react';
@@ -466,6 +467,9 @@ export function WaiterTablesPage() {
     const interval = setInterval(() => loadTables(true), 10000);
     return () => clearInterval(interval);
   }, [token, tabId]);
+
+  // Başka garson/admin bir şey değiştirince (çağrı, sipariş, taşıma, ödeme…) anında yenile
+  useLiveRefresh(() => loadTables(true));
 
   function showToast(message: string, type: 'error' | 'success') {
     setToast({ message, type });
