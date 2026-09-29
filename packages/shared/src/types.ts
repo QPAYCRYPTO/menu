@@ -63,6 +63,11 @@ export interface BusinessSettingsResponse {
   contact_email: string | null;
   contact_whatsapp: string | null;
   contact_instagram: string | null;
+  address: string | null;
+  wifi_name: string | null;
+  wifi_password: string | null;
+  /** "Sipariş alımı açık" anahtarı (şimdilik yalnızca kaydedilir) */
+  is_accepting_orders: boolean;
   /** Süper admin tarafından açılıp kapatılan modül (kapalıysa admin menüsünde sekme görünmez) */
   waiter_module_enabled?: boolean;
   kitchen_module_enabled?: boolean;
@@ -93,9 +98,14 @@ export interface PublicMenuResponse {
     theme_color?: string | null;
     bg_color?: string | null;
     dark_mode?: boolean;
+    description?: string | null;
     contact_phone?: string | null;
     contact_email?: string | null;
     contact_whatsapp?: string | null;
+    contact_instagram?: string | null;
+    address?: string | null;
+    wifi_name?: string | null;
+    wifi_password?: string | null;
   };
   categories: PublicMenuCategory[];
 }

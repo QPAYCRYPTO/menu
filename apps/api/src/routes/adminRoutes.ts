@@ -76,19 +76,56 @@ const updateCategorySchema = z
     message: 'En az bir alan gönderilmelidir.'
   });
 
+// İşletme ayarları: alan gönderilmezse (undefined) mevcut değer korunur; boş metin ("") ya da null → NULL yazılır
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const PHONE = /^\+?[\d\s\-()]{7,20}$/;
+const clearable = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(v => (typeof v === 'string' && v.trim() === '' ? null : v), schema.nullable()).optional();
+
 const businessUpdateSchema = z.object({
-  name: z.string().min(1).max(120).optional(),
-  logo_url: z.string().url().max(500).optional(),
-  theme_color: z.string().max(32).optional(),
+  name: z.string().trim().min(1, 'İşletme adı boş olamaz.').max(120).optional(),
+  logo_url: clearable(z.string().url().max(500)),
+  theme_color: z.string().regex(HEX_COLOR, 'Tema rengi #RRGGBB biçiminde olmalı.').optional(),
   bg_color: z.string().max(32).optional(),
   dark_mode: z.boolean().optional(),
-  description: z.string().max(2000).optional(),
-  contact_name: z.string().max(120).optional(),
-  contact_phone: z.string().max(40).optional(),
-  contact_email: z.string().email().max(160).optional(),
-  contact_whatsapp: z.string().max(40).optional(),
-  contact_instagram: z.string().max(120).optional()
+  description: clearable(z.string().max(2000)),
+  contact_name: clearable(z.string().max(120)),
+  contact_phone: clearable(z.string().trim().regex(PHONE, 'Telefon numarası geçersiz.')),
+  contact_email: clearable(z.string().trim().email('E-posta adresi geçersiz.').max(160)),
+  contact_whatsapp: clearable(z.string().trim().regex(PHONE, 'WhatsApp numarası geçersiz.')),
+  contact_instagram: clearable(z.string().max(120)),
+  address: clearable(z.string().max(500)),
+  wifi_name: clearable(z.string().max(64)),
+  wifi_password: clearable(z.string().max(128)),
+  is_accepting_orders: z.boolean().optional()
 });
+
+type BusinessUpdate = z.infer<typeof businessUpdateSchema>;
+
+/** Sütun → değeri nasıl yazacağımız. Metinler HTML'den arındırılır; Wi-Fi şifresi olduğu gibi saklanır
+ *  (ekranda React zaten kaçışlar, arındırma "<" gibi karakterleri bozardı). */
+const BUSINESS_COLUMNS: Array<{ key: keyof BusinessUpdate; kind: 'text' | 'raw' | 'bool' }> = [
+  { key: 'name', kind: 'text' },
+  { key: 'logo_url', kind: 'raw' },
+  { key: 'theme_color', kind: 'raw' },
+  { key: 'bg_color', kind: 'text' },
+  { key: 'dark_mode', kind: 'bool' },
+  { key: 'description', kind: 'text' },
+  { key: 'contact_name', kind: 'text' },
+  { key: 'contact_phone', kind: 'text' },
+  { key: 'contact_email', kind: 'text' },
+  { key: 'contact_whatsapp', kind: 'text' },
+  { key: 'contact_instagram', kind: 'text' },
+  { key: 'address', kind: 'text' },
+  { key: 'wifi_name', kind: 'text' },
+  { key: 'wifi_password', kind: 'raw' },
+  { key: 'is_accepting_orders', kind: 'bool' }
+];
+
+const BUSINESS_SETTINGS_FIELDS = `id, name, slug, logo_url, theme_color, bg_color, dark_mode,
+            description, contact_name, contact_phone, contact_email, contact_whatsapp, contact_instagram,
+            address, wifi_name, wifi_password, is_accepting_orders,
+            waiter_module_enabled, kitchen_module_enabled`;
 
 const getProductsQuerySchema = z.object({
   category_id: z.string().uuid().optional(),
@@ -142,9 +179,7 @@ adminRoutes.get('/business', async (req, res) => {
   const businessId = req.ctx!.businessId!;
 
   const result = await pool.query(
-    `SELECT id, name, slug, logo_url, theme_color, bg_color, dark_mode,
-            description, contact_name, contact_phone, contact_email, contact_whatsapp, contact_instagram,
-            waiter_module_enabled, kitchen_module_enabled
+    `SELECT ${BUSINESS_SETTINGS_FIELDS}
      FROM businesses
      WHERE id = $1`,
     [businessId]
@@ -163,57 +198,49 @@ adminRoutes.put('/business', async (req, res) => {
   const parsed = businessUpdateSchema.safeParse(req.body);
 
   if (!parsed.success) {
-    res.status(400).json({ message: 'Geçersiz işletme ayarları verisi.' });
+    // Alan bazlı mesaj (ör. "Tema rengi #RRGGBB biçiminde olmalı.") kullanıcıya gösterilir
+    const first = parsed.error.issues[0];
+    const field = first?.path[0];
+    res.status(400).json({
+      message: first?.message && !first.message.startsWith('Invalid') && !first.message.startsWith('Expected')
+        ? first.message
+        : 'Geçersiz işletme ayarları verisi.',
+      field: typeof field === 'string' ? field : undefined
+    });
     return;
   }
 
   const payload = parsed.data;
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  for (const { key, kind } of BUSINESS_COLUMNS) {
+    const value = payload[key];
+    if (value === undefined) continue; // gönderilmedi → dokunma
+    let dbValue: unknown;
+    if (kind === 'bool') {
+      dbValue = value;
+    } else if (value === null || value === '') {
+      dbValue = null; // boşaltıldı → NULL
+    } else {
+      const text = String(value);
+      dbValue = kind === 'text' ? sanitizeText(text) || null : text;
+    }
+    params.push(dbValue);
+    sets.push(`${key} = $${params.length}`);
+  }
 
-  const values = {
-    name: payload.name ? sanitizeText(payload.name) : null,
-    logo_url: payload.logo_url ?? null,
-    theme_color: payload.theme_color ? sanitizeText(payload.theme_color) : null,
-    bg_color: payload.bg_color ? sanitizeText(payload.bg_color) : null,
-    dark_mode: payload.dark_mode ?? null,
-    description: payload.description ? sanitizeText(payload.description) : null,
-    contact_name: payload.contact_name ? sanitizeText(payload.contact_name) : null,
-    contact_phone: payload.contact_phone ? sanitizeText(payload.contact_phone) : null,
-    contact_email: payload.contact_email ? sanitizeText(payload.contact_email) : null,
-    contact_whatsapp: payload.contact_whatsapp ? sanitizeText(payload.contact_whatsapp) : null,
-    contact_instagram: payload.contact_instagram ? sanitizeText(payload.contact_instagram) : null
-  };
+  if (sets.length === 0) {
+    res.status(400).json({ message: 'En az bir alan gönderilmelidir.' });
+    return;
+  }
+  params.push(businessId);
 
   const result = await pool.query(
     `UPDATE businesses
-     SET name = COALESCE($1, name),
-         logo_url = COALESCE($2, logo_url),
-         theme_color = COALESCE($3, theme_color),
-         bg_color = COALESCE($4, bg_color),
-         dark_mode = COALESCE($5, dark_mode),
-         description = COALESCE($6, description),
-         contact_name = COALESCE($7, contact_name),
-         contact_phone = COALESCE($8, contact_phone),
-         contact_email = COALESCE($9, contact_email),
-         contact_whatsapp = COALESCE($10, contact_whatsapp),
-         contact_instagram = COALESCE($11, contact_instagram),
-         updated_at = NOW()
-     WHERE id = $12
-     RETURNING id, name, slug, logo_url, theme_color, bg_color, dark_mode,
-               description, contact_name, contact_phone, contact_email, contact_whatsapp, contact_instagram`,
-    [
-      values.name,
-      values.logo_url,
-      values.theme_color,
-      values.bg_color,
-      values.dark_mode,
-      values.description,
-      values.contact_name,
-      values.contact_phone,
-      values.contact_email,
-      values.contact_whatsapp,
-      values.contact_instagram,
-      businessId
-    ]
+     SET ${sets.join(', ')}, updated_at = NOW()
+     WHERE id = $${params.length}
+     RETURNING ${BUSINESS_SETTINGS_FIELDS}`,
+    params
   );
 
   if (result.rowCount !== 1) {

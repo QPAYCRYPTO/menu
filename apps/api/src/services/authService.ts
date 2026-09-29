@@ -152,6 +152,53 @@ export async function isPasswordResetTokenValid(token: string): Promise<boolean>
   return result.rowCount === 1;
 }
 
+export type ChangePasswordResult =
+  | { ok: true; access_token: string; refresh_token: string }
+  | { ok: false; reason: 'not_found' | 'wrong_password' | 'same_password' };
+
+/**
+ * Oturum açık kullanıcının şifresini değiştirir.
+ * password_version artar → diğer cihazlardaki oturumlar düşer; bu oturuma yeni token çifti verilir.
+ */
+export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<ChangePasswordResult> {
+  const result = await pool.query(
+    `SELECT id, business_id, email, role, password_hash, password_version
+     FROM users WHERE id = $1 AND is_active = TRUE`,
+    [userId]
+  );
+  if (result.rowCount !== 1) return { ok: false, reason: 'not_found' };
+  const user = result.rows[0];
+
+  if (!(await argon2.verify(user.password_hash, currentPassword))) {
+    return { ok: false, reason: 'wrong_password' };
+  }
+  if (await argon2.verify(user.password_hash, newPassword)) {
+    return { ok: false, reason: 'same_password' };
+  }
+
+  const passwordHash = await argon2.hash(newPassword);
+  const refresh_token = generateOpaqueToken();
+  const updated = await pool.query(
+    `UPDATE users
+     SET password_hash = $1,
+         refresh_token_hash = $2,
+         password_version = password_version + 1,
+         updated_at = NOW()
+     WHERE id = $3
+     RETURNING password_version`,
+    [passwordHash, hashToken(refresh_token), user.id]
+  );
+
+  const access_token = createAccessToken({
+    user_id: user.id,
+    business_id: user.business_id,
+    email: user.email,
+    role: user.role ?? 'admin',
+    password_version: updated.rows[0].password_version
+  });
+  return { ok: true, access_token, refresh_token };
+}
+
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
   const tokenHash = hashToken(token);
   const client = await pool.connect();

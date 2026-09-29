@@ -1,9 +1,11 @@
 // apps/api/src/routes/authRoutes.ts
 import { Router } from 'express';
+import { z } from 'zod';
 import { loginSchema, refreshSchema, requestResetSchema, resetPasswordSchema } from '@menu/shared';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
-import { loginRateLimit, requestResetRateLimit } from '../middleware/rateLimit.js';
-import { createPasswordResetToken, isPasswordResetTokenValid, login, refresh, resetPassword } from '../services/authService.js';
+import { requireAuth } from '../middleware/auth.js';
+import { changePasswordRateLimit, loginRateLimit, requestResetRateLimit } from '../middleware/rateLimit.js';
+import { changePassword, createPasswordResetToken, isPasswordResetTokenValid, login, refresh, resetPassword } from '../services/authService.js';
 import { sendPasswordResetMail } from '../services/mailService.js';
 
 export const authRoutes = Router();
@@ -72,6 +74,35 @@ authRoutes.post('/reset-token/validate', async (req, res) => {
     return;
   }
   res.status(200).json({ valid: await isPasswordResetTokenValid(token) });
+});
+
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1).max(200),
+  new_password: z.string().min(8).max(200)
+});
+
+// Oturum açıkken şifre değiştirme (Ayarlar → Hesap). Yanıttaki yeni token çifti bu oturumu açık tutar.
+authRoutes.post('/change-password', changePasswordRateLimit, requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError('Yeni şifre en az 8 karakter olmalıdır.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+  const userId = req.ctx?.userId;
+  if (!userId) {
+    throw new AppError('Oturum bulunamadı.', 401, APP_ERROR_CODES.UNAUTHORIZED);
+  }
+
+  const result = await changePassword(userId, parsed.data.current_password, parsed.data.new_password);
+  if (!result.ok) {
+    const message =
+      result.reason === 'wrong_password' ? 'Mevcut şifre hatalı.'
+      : result.reason === 'same_password' ? 'Yeni şifre mevcut şifreyle aynı olamaz.'
+      : 'Kullanıcı bulunamadı.';
+    throw new AppError(message, result.reason === 'not_found' ? 404 : 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({ access_token: result.access_token, refresh_token: result.refresh_token });
 });
 
 authRoutes.post('/reset-password', async (req, res) => {

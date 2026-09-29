@@ -33,6 +33,9 @@ type PublicMenuPayload = {
     contact_email: string | null;
     contact_whatsapp: string | null;
     contact_instagram: string | null;
+    address: string | null;
+    wifi_name: string | null;
+    wifi_password: string | null;
   };
   categories: MenuCategory[];
 };
@@ -50,7 +53,8 @@ export async function getPublicMenuBySlug(slug: string): Promise<PublicMenuPaylo
 
   const businessResult = await pool.query(
     `SELECT id, name, slug, logo_url, theme_color, bg_color, dark_mode,
-            description, contact_phone, contact_email, contact_whatsapp, contact_instagram
+            description, contact_phone, contact_email, contact_whatsapp, contact_instagram,
+            address, wifi_name, wifi_password
      FROM businesses
      WHERE slug = $1 AND is_active = TRUE`,
     [slug]
@@ -106,6 +110,9 @@ export async function getPublicMenuBySlug(slug: string): Promise<PublicMenuPaylo
       contact_email: business.contact_email ?? null,
       contact_whatsapp: business.contact_whatsapp ?? null,
       contact_instagram: business.contact_instagram ?? null,
+      address: business.address ?? null,
+      wifi_name: business.wifi_name ?? null,
+      wifi_password: business.wifi_password ?? null,
     },
     categories: categoriesResult.rows.map((category) => ({
       id: category.id,

@@ -42,6 +42,13 @@ export const loginRateLimit = createSlidingWindowRateLimiter({
   includeEmail: true
 });
 
+/** Oturum açıkken şifre değiştirme: mevcut şifreyi deneme-yanılmaya karşı */
+export const changePasswordRateLimit = createSlidingWindowRateLimiter({
+  keyPrefix: 'rl:auth:change-password',
+  maxRequests: 5,
+  windowMs: 60_000
+});
+
 export const requestResetRateLimit = createSlidingWindowRateLimiter({
   keyPrefix: 'rl:auth:request-reset',
   maxRequests: 3,
