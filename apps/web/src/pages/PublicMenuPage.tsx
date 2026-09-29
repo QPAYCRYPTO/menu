@@ -77,7 +77,7 @@ function buildContactLink(menu: PublicMenuResponse | null): string {
 
 export function PublicMenuPage() {
   const { slug = '' } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tableId = searchParams.get('masa');
 
   const [menu, setMenu] = useState<PublicMenuResponse | null>(null);
@@ -86,7 +86,16 @@ export function PublicMenuPage() {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  const [mainTab, setMainTab] = useState<MainTab>('menu');
+  // Sekme URL'de (?tab=orders): sayfa yenilenince Siparişlerim açık kalır
+  const mainTab: MainTab = searchParams.get('tab') === 'orders' && tableId ? 'orders' : 'menu';
+  function setMainTab(tab: MainTab) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'orders') next.set('tab', 'orders');
+      else next.delete('tab');
+      return next;
+    }, { replace: true });
+  }
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -404,17 +413,7 @@ export function PublicMenuPage() {
         )}
 
         {mainTab === 'orders' && tableId ? (
-          <MyOrdersTab
-            slug={slug}
-            tableId={tableId}
-            token={customerToken}
-            themeColor="var(--accent)"
-            textColor="#FFFFFF"
-            textMuted="rgba(255,255,255,0.72)"
-            cardBg="rgba(255,255,255,0.18)"
-            cardBorder="rgba(255,255,255,0.35)"
-            darkMode={true}
-          />
+          <MyOrdersTab slug={slug} tableId={tableId} token={customerToken} />
         ) : (
           <>
             {/* Arama */}
