@@ -1,23 +1,28 @@
 // apps/web/src/pages/waiter/WaiterLayout.tsx
 // CHANGELOG:
 // - Alt nav "Çağrılar" sekmesinde aktif çağrı sayısı rozet (kırmızı, animate-pulse)
+// - Atölye tasarımı: gece/gündüz temasına uyar (bg-page / ui-card / text-ink), başlıkta güneş/ay düğmesi.
+//   Butonlar petrol (btn-primary), vurgular altın (text-accent). Telefonda alt menü korunur.
 
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { useWaiterCalls } from '../../context/WaiterCallsContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
+import { useThemedPage } from '../../lib/theme';
 import { Bell, LogOut, User, UtensilsCrossed } from 'lucide-react';
 
 export function WaiterLayout() {
   const { waiter, isAuthenticated, isChecking, logout } = useWaiterAuth();
   const { calls, readyOrders } = useWaiterCalls();
   const location = useLocation();
+  useThemedPage();
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="glass-panel rounded-3xl px-8 py-7 text-center fade-enter">
-          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
-          <div className="text-sm font-semibold text-white/80">Yükleniyor...</div>
+      <div className="min-h-screen bg-page text-ink flex items-center justify-center p-6">
+        <div className="ui-card rounded-3xl px-8 py-7 text-center fade-enter">
+          <div className="w-10 h-10 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+          <div className="text-sm font-semibold text-ink-muted">Yükleniyor...</div>
         </div>
       </div>
     );
@@ -42,26 +47,28 @@ export function WaiterLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col text-white">
+    <div className="min-h-screen flex flex-col bg-page text-ink">
 
-      <div className="sticky top-0 z-40 px-3.5 pt-3">
-        <div className="mx-auto max-w-[520px] glass-panel rounded-3xl px-3.5 py-3 flex items-center justify-between gap-3">
+      <div className="sticky top-0 z-40 px-3.5 pt-3 bg-page">
+        <div className="mx-auto max-w-[520px] ui-card rounded-3xl px-3.5 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="btn-accent w-11 h-11 rounded-2xl flex items-center justify-center text-base font-extrabold flex-shrink-0">
+            <div className="bg-brand text-on-brand w-11 h-11 rounded-2xl flex items-center justify-center text-base font-extrabold flex-shrink-0">
               {waiter.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="text-[11px] text-white/70 font-medium">Hoşgeldin,</div>
-              <div className="font-serif font-bold text-base leading-tight truncate">
+              <div className="ui-eyebrow">Garson</div>
+              <div className="font-serif font-bold text-lg leading-tight truncate">
                 {waiter.name}
               </div>
             </div>
           </div>
-          <button onClick={logout}
-            className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn"
-            style={{ background: 'var(--danger-bg)', color: 'var(--danger)', borderColor: 'rgba(251,113,133,0.45)' }}>
-            <LogOut size={12} aria-hidden /> Çıkış
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ThemeToggle />
+            <button onClick={logout}
+              className="min-h-[40px] px-3.5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 spring-btn bg-state-danger-bg text-state-danger">
+              <LogOut size={13} aria-hidden /> Çıkış
+            </button>
+          </div>
         </div>
       </div>
 
@@ -72,36 +79,19 @@ export function WaiterLayout() {
       </div>
 
       <div className="fixed bottom-3 left-0 right-0 z-40 px-3.5">
-        <div className="mx-auto max-w-[520px] flex items-center gap-1 p-1.5 rounded-3xl bg-black/45 border border-white/25 backdrop-blur-xl"
-          style={{ boxShadow: 'var(--glass-shadow-sm)' }}>
+        <nav className="mx-auto max-w-[520px] flex items-center gap-1 p-1.5 rounded-3xl bg-surface border border-line shadow-lg"
+          aria-label="Garson menüsü">
           {navItems.map(item => {
             const active = isActive(item.to, item.exact);
             return (
-              <Link key={item.to} to={item.to}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl relative spring-btn ${active ? 'btn-accent' : 'text-white/70'}`}
-                style={{ textDecoration: 'none' }}>
-                <div style={{ position: 'relative' }}>
-                  <span className="leading-none flex"><item.icon size={18} aria-hidden /></span>
+              <Link key={item.to} to={item.to} aria-current={active ? 'page' : undefined}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl relative spring-btn no-underline ${
+                  active ? 'bg-brand text-on-brand' : 'text-ink-muted'}`}>
+                <div className="relative">
+                  <span className="leading-none flex"><item.icon size={19} aria-hidden /></span>
                   {item.badge > 0 && (
-                    <span style={{
-                      position: 'absolute',
-                      top: -6,
-                      right: -12,
-                      background: 'linear-gradient(135deg, #FB7185, #E11D48)',
-                      color: 'white',
-                      fontSize: 10,
-                      fontWeight: 800,
-                      minWidth: 18,
-                      height: 18,
-                      borderRadius: 9,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 5px',
-                      border: '1px solid rgba(255,255,255,0.7)',
-                      boxShadow: '0 4px 10px rgba(225,29,72,0.5)',
-                      animation: 'badge-pulse 1.5s ease-in-out infinite'
-                    }}>
+                    <span className="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] px-[5px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white border-2 border-[var(--surface)]"
+                      style={{ background: '#d4453d', animation: 'badge-pulse 1.5s ease-in-out infinite' }}>
                       {item.badge}
                     </span>
                   )}
@@ -110,7 +100,7 @@ export function WaiterLayout() {
               </Link>
             );
           })}
-        </div>
+        </nav>
       </div>
 
       <style>{`

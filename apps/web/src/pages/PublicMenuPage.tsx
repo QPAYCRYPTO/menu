@@ -717,8 +717,7 @@ export function PublicMenuPage() {
 
                         {isNoteOpen && (
                           <div className="px-3 pt-2.5 pb-3 bg-surface border-t border-line">
-                            <OrderNoteTemplates
-                              variant="themed"
+                            <OrderNoteTemplates
                               value={item.note ?? ''}
                               onChange={(newNote) => updateItemNote(item.product_id, newNote)}
                               label={`${item.name} İçin Not`}

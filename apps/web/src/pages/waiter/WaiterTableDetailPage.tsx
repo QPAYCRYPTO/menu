@@ -4,6 +4,7 @@
 // - Kritik türler kırmızı kart
 // - "Diğer" türü için müşteri açıklaması gösteriliyor
 // - Birden fazla çağrı varsa hepsi ayrı kart
+// - Atölye tasarımı: gece/gündüz uyumlu (ui-card, durum renkleri --state-*); iptal butonu temaya uyan kırmızı
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -137,23 +138,23 @@ export function WaiterTableDetailPage() {
 
   if (loading) {
     return (
-      <div className="glass-panel rounded-3xl text-center py-14 text-white">
-        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
-        <p className="text-sm font-semibold text-white/80">Yükleniyor...</p>
+      <div className="ui-card rounded-3xl text-center py-14 text-ink">
+        <div className="w-10 h-10 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+        <p className="text-sm font-semibold text-ink-muted">Yükleniyor...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="text-white">
+      <div className="text-ink">
         <button onClick={() => navigate('/garson')}
-          className="glass-pill mb-3 min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn inline-flex items-center gap-1">
+          className="btn-outline mb-3 min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn inline-flex items-center gap-1">
           <ArrowLeft size={12} aria-hidden /> Masalar
         </button>
-        <div className="glass-card text-center py-14 rounded-3xl" style={{ borderColor: 'rgba(251,113,133,0.55)' }}>
-          <div className="mb-3 flex justify-center" style={{ color: 'var(--danger)' }}><AlertTriangle size={36} aria-hidden /></div>
-          <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>{error ?? 'Masa bulunamadı.'}</p>
+        <div className="ui-card text-center py-14 rounded-3xl" style={{ borderColor: 'var(--state-danger)' }}>
+          <div className="mb-3 flex justify-center" style={{ color: 'var(--state-danger)' }}><AlertTriangle size={36} aria-hidden /></div>
+          <p className="text-sm font-semibold" style={{ color: 'var(--state-danger)' }}>{error ?? 'Masa bulunamadı.'}</p>
         </div>
       </div>
     );
@@ -162,29 +163,26 @@ export function WaiterTableDetailPage() {
   const canCancelOrders = waiter?.permissions.can_delete_items ?? false;
 
   return (
-    <div className="text-white" style={{ paddingBottom: 100 }}>
+    <div className="text-ink" style={{ paddingBottom: 100 }}>
 
       {toast && (
-        <div className="fixed top-24 left-4 right-4 z-50 glass-panel px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter"
-          style={{
-            background: toast.type === 'error' ? 'rgba(225,29,72,0.85)' : 'rgba(5,150,105,0.85)',
-            color: '#fff',
-            maxWidth: 480
-          }}>
+        <div className="fixed top-24 left-4 right-4 z-50 px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter shadow-lg max-w-[480px]"
+          role="status"
+          style={{ background: toast.type === 'error' ? 'var(--state-danger)' : 'var(--state-ok)', color: 'var(--bg)' }}>
           {toast.message}
         </div>
       )}
 
-      <div className="glass-panel rounded-3xl p-2.5 flex items-center gap-2 mb-3">
+      <div className="ui-card rounded-3xl p-2.5 flex items-center gap-2 mb-3">
         <button onClick={() => navigate('/garson')} aria-label="Masalar"
-          className="glass-pill w-10 h-10 rounded-2xl text-sm font-bold flex items-center justify-center flex-shrink-0 spring-btn">
+          className="ui-chip w-10 h-10 rounded-2xl text-sm font-bold flex items-center justify-center flex-shrink-0 spring-btn">
           <ChevronLeft size={14} aria-hidden />
         </button>
         <h2 className="font-serif font-bold text-xl flex-1 truncate flex items-center gap-2">
-          <UtensilsCrossed size={20} className="shrink-0" aria-hidden /> <span className="truncate">{data.table.name}</span>
+          <UtensilsCrossed size={20} className="shrink-0 text-accent" aria-hidden /> <span className="truncate">{data.table.name}</span>
         </h2>
         <button onClick={() => loadDetail()} aria-label="Yenile"
-          className="glass-pill w-10 h-10 rounded-2xl text-sm flex items-center justify-center flex-shrink-0 spring-btn">
+          className="ui-chip w-10 h-10 rounded-2xl text-sm flex items-center justify-center flex-shrink-0 spring-btn">
           <RefreshCw size={14} aria-hidden />
         </button>
       </div>
@@ -196,36 +194,27 @@ export function WaiterTableDetailPage() {
         <div className="space-y-2 mb-3">
           {data.active_calls.map(call => {
             const info = getCallType(call.call_type);
-            const edgeColor = info.critical ? '#FB7185' : '#FBBF24';
-            const accentColor = info.critical ? 'var(--danger)' : 'var(--warning)';
+            const tone = info.critical ? 'var(--state-danger)' : 'var(--state-warn)';
 
             return (
               <div key={call.id}
-                className="glass-dark rounded-3xl overflow-hidden fade-enter"
-                style={{
-                  background: info.critical ? 'rgba(60,14,22,0.66)' : 'rgba(40,28,12,0.64)',
-                  borderLeft: `5px solid ${edgeColor}`
-                }}>
-                <div style={{
-                  padding: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12
-                }}>
+                className="ui-card rounded-3xl overflow-hidden fade-enter"
+                style={{ borderLeft: `5px solid ${tone}` }}>
+                <div className={`p-3.5 flex items-center gap-3 ${info.critical ? 'bg-state-danger-bg' : 'bg-state-warn-bg'}`}>
                   <CallTypeBadge callType={call.call_type} size={48} filled />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontSize: 10, fontWeight: 800,
                       textTransform: 'uppercase', letterSpacing: '0.06em',
-                      color: accentColor, marginBottom: 2
+                      color: tone, marginBottom: 2
                     }}>
                       {info.critical ? <span className="inline-flex items-center gap-1"><AlertTriangle size={11} aria-hidden /> Acil İstek</span> : 'Müşteri Çağrısı'}
                     </div>
-                    <div className="font-serif font-bold text-white" style={{ fontSize: 16, lineHeight: 1.2 }}>
+                    <div className="font-serif font-bold text-ink" style={{ fontSize: 16, lineHeight: 1.2 }}>
                       {info.label}
                     </div>
                     {call.note && call.note.trim() && (
-                      <div className="glass-pill" style={{
+                      <div className="bg-surface border border-line" style={{
                         fontSize: 13,
                         marginTop: 6, padding: '6px 9px',
                         borderRadius: 10,
@@ -238,10 +227,10 @@ export function WaiterTableDetailPage() {
                 </div>
                 <div style={{
                   padding: '8px 14px',
-                  background: 'rgba(0,0,0,0.2)',
-                  borderTop: '1px solid rgba(255,255,255,0.14)',
+                  background: 'var(--surface-2)',
+                  borderTop: '1px solid var(--line)',
                   fontSize: 11,
-                  color: 'var(--text-muted)',
+                  color: 'var(--ink-muted)',
                   textAlign: 'center',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
                 }}>
@@ -255,18 +244,18 @@ export function WaiterTableDetailPage() {
 
       {data.session ? (
         <>
-          <div className="glass-panel mb-3 p-4 rounded-3xl">
+          <div className="ui-card mb-3 p-4 rounded-3xl">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
                   Açık Adisyon
                 </div>
-                <div className="font-serif font-bold text-3xl mt-1 text-amber-300">
+                <div className="font-serif font-bold text-3xl mt-1">
                   {formatPrice(data.session.total_int)}
                 </div>
               </div>
-              <div className="glass-pill text-right rounded-2xl px-3 py-1.5">
-                <div className="text-[10px] text-white/70 font-medium">Açılış</div>
+              <div className="bg-surface-2 border border-line text-right rounded-2xl px-3 py-1.5">
+                <div className="text-[10px] text-ink-muted font-medium">Açılış</div>
                 <div className="text-sm font-extrabold">
                   {new Date(data.session.opened_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -277,13 +266,13 @@ export function WaiterTableDetailPage() {
           <div className="mb-3">
             <div className="flex items-center gap-3 mb-3 px-1">
               <div className="font-serif font-bold text-base flex items-center gap-2">
-                <ClipboardList size={16} aria-hidden /> Siparişler ({data.orders.length})
+                <ClipboardList size={16} className="text-accent" aria-hidden /> Siparişler ({data.orders.length})
               </div>
-              <div className="flex-1 h-px bg-white/20" />
+              <div className="flex-1 h-px bg-line" />
             </div>
             {data.orders.length === 0 ? (
-              <div className="glass-card text-center py-8 rounded-3xl">
-                <p className="text-sm text-white/70">Henüz sipariş yok</p>
+              <div className="ui-card text-center py-8 rounded-3xl">
+                <p className="text-sm text-ink-muted">Henüz sipariş yok</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -293,20 +282,20 @@ export function WaiterTableDetailPage() {
                   const orderLabel = `#${idx + 1}`;
 
                   return (
-                    <div key={order.id} className="glass-dark rounded-3xl overflow-hidden">
+                    <div key={order.id} className="ui-card rounded-3xl overflow-hidden">
                       <div className="px-4 py-2.5 flex items-center justify-between"
                         style={{
-                          borderBottom: '1px solid rgba(255,255,255,0.14)',
-                          background: order.status === 'delivered' ? 'var(--success-bg)' :
-                                      order.status === 'cancelled' ? 'var(--danger-bg)' :
-                                      order.status === 'ready' ? 'var(--success-bg)' :
-                                      order.status === 'preparing' ? 'var(--info-bg)' : 'var(--warning-bg)'
+                          borderBottom: '1px solid var(--line)',
+                          background: order.status === 'delivered' ? 'var(--state-ok-bg)' :
+                                      order.status === 'cancelled' ? 'var(--state-danger-bg)' :
+                                      order.status === 'ready' ? 'var(--state-ok-bg)' :
+                                      order.status === 'preparing' ? 'var(--state-info-bg)' : 'var(--state-warn-bg)'
                         }}>
                         <span className="text-xs font-extrabold" style={{
-                          color: order.status === 'delivered' ? 'var(--success)' :
-                                 order.status === 'cancelled' ? 'var(--danger)' :
-                                 order.status === 'ready' ? 'var(--success)' :
-                                 order.status === 'preparing' ? 'var(--info)' : 'var(--warning)'
+                          color: order.status === 'delivered' ? 'var(--state-ok)' :
+                                 order.status === 'cancelled' ? 'var(--state-danger)' :
+                                 order.status === 'ready' ? 'var(--state-ok)' :
+                                 order.status === 'preparing' ? 'var(--state-info)' : 'var(--state-warn)'
                         }}>
                           {orderLabel} · {
                             order.status === 'pending' ? 'Bekliyor' :
@@ -317,11 +306,11 @@ export function WaiterTableDetailPage() {
                           }
                         </span>
                         {order.waiter_name ? (
-                          <span className="text-xs font-bold inline-flex items-center gap-1" style={{ color: '#FDBA74' }}>
+                          <span className="text-xs font-bold inline-flex items-center gap-1 text-accent">
                             <User size={12} aria-hidden /> {order.waiter_name}
                           </span>
                         ) : (
-                          <span className="text-xs text-white/60 inline-flex items-center gap-1">
+                          <span className="text-xs text-ink-muted inline-flex items-center gap-1">
                             <Smartphone size={12} aria-hidden /> Müşteri
                           </span>
                         )}
@@ -330,23 +319,23 @@ export function WaiterTableDetailPage() {
                         {order.items.map(item => (
                           <div key={item.id}
                             className="py-2"
-                            style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                            style={{ borderBottom: '1px solid var(--line)' }}>
                             <div className="flex items-center gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold">
                                   {item.product_name}
                                 </div>
-                                <div className="text-xs text-white/65">
-                                  {formatPrice(item.price_int)} × {item.quantity} = <span className="font-bold text-amber-300">{formatPrice(item.price_int * item.quantity)}</span>
+                                <div className="text-xs text-ink-muted">
+                                  {formatPrice(item.price_int)} × {item.quantity} = <span className="font-bold text-ink">{formatPrice(item.price_int * item.quantity)}</span>
                                 </div>
                               </div>
 
                               {isEditable ? (
-                                <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
+                                <div className="flex items-center gap-1.5 bg-surface-2 p-1 rounded-xl border border-line">
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
                                     disabled={item.quantity <= 1}
-                                    className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn"
+                                    className="btn-outline w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn"
                                     style={{
                                       opacity: item.quantity <= 1 ? 0.3 : 1
                                     }}
@@ -356,10 +345,10 @@ export function WaiterTableDetailPage() {
                                   </span>
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
-                                    className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn" aria-label="Artır"><Plus size={14} aria-hidden /></button>
+                                    className="btn-primary w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn" aria-label="Artır"><Plus size={14} aria-hidden /></button>
                                 </div>
                               ) : (
-                                <span className="glass-pill text-xs font-bold px-2.5 py-1 rounded-lg text-white/75">
+                                <span className="bg-surface-2 border border-line text-xs font-bold px-2.5 py-1 rounded-lg text-ink-muted">
                                   {item.quantity}x
                                 </span>
                               )}
@@ -367,35 +356,32 @@ export function WaiterTableDetailPage() {
 
                             {/* ÜRÜN BAŞINA NOT — sarı şerit */}
                             {item.note && item.note.trim() && (
-                              <div className="mt-1.5 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5"
-                                style={{ background: 'rgba(245,158,11,0.2)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
+                              <div className="mt-1.5 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 bg-state-warn-bg text-state-warn font-semibold">
                                 <NotebookPen size={12} className="shrink-0" aria-hidden /> {item.note}
                               </div>
                             )}
                           </div>
                         ))}
                         {order.note && (
-                          <div className="mt-2 mb-1 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5"
-                            style={{ background: 'rgba(245,158,11,0.2)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
+                          <div className="mt-2 mb-1 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 bg-state-warn-bg text-state-warn font-semibold">
                             <ClipboardList size={12} className="shrink-0" aria-hidden /> <span><strong>Genel:</strong> {order.note}</span>
                           </div>
                         )}
                       </div>
 
                       {isEditable && canCancelOrders && (
-                        <div className="px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                        <div className="px-4 py-2.5 border-t border-line">
                           <button
                             onClick={() => openCancelModal(order.id, orderLabel)}
-                            className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5"
-                            style={{ background: 'var(--danger-bg)', color: '#FECDD3', border: '1px solid rgba(251,113,133,0.45)' }}>
+                            className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5 bg-state-danger-bg text-state-danger">
                             <XCircle size={14} aria-hidden /> Siparişi İptal Et
                           </button>
                         </div>
                       )}
 
                       {isDelivered && (
-                        <div className="px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-                          <div className="text-xs text-center text-white/55">
+                        <div className="px-4 py-2 border-t border-line">
+                          <div className="text-xs text-center text-ink-muted">
                             Teslim edildi · Adisyon kasada kapatılır
                           </div>
                         </div>
@@ -408,10 +394,10 @@ export function WaiterTableDetailPage() {
           </div>
         </>
       ) : (
-        <div className="glass-card mb-3 p-8 rounded-3xl text-center">
-          <div className="mb-2 flex justify-center text-white/70"><Armchair size={36} aria-hidden /></div>
+        <div className="ui-card mb-3 p-8 rounded-3xl text-center">
+          <div className="mb-2 flex justify-center text-accent"><Armchair size={36} aria-hidden /></div>
           <p className="font-serif font-bold text-base">Masa boş</p>
-          <p className="text-xs mt-1 text-white/65">
+          <p className="text-xs mt-1 text-ink-muted">
             Sipariş alarak yeni adisyon açın.
           </p>
         </div>
@@ -420,27 +406,27 @@ export function WaiterTableDetailPage() {
       <div className="fixed bottom-[92px] left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
         <button
           onClick={() => navigate(`/garson/masa/${id}/menu`)}
-          className="btn-accent w-full py-3.5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 spring-btn">
+          className="btn-primary w-full py-3.5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 spring-btn">
           <Plus size={14} aria-hidden /> Sipariş Al
         </button>
       </div>
 
       {cancelModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark sheet-enter w-full max-w-[520px] rounded-t-[32px] flex flex-col border-t border-white/60 text-white"
+        <div className="fixed inset-0 z-50 flex items-end justify-center ui-scrim fade-enter">
+          <div className="bg-surface sheet-enter w-full max-w-[520px] rounded-t-[32px] flex flex-col border border-line text-ink"
             style={{ maxHeight: '90vh' }}>
-            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
-            <div className="px-5 pt-3 pb-3 border-b border-white/20">
-              <h3 className="font-serif font-bold text-lg flex items-center gap-2" style={{ color: 'var(--danger)' }}>
+            <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3" />
+            <div className="px-5 pt-3 pb-3 border-b border-line">
+              <h3 className="font-serif font-bold text-lg flex items-center gap-2" style={{ color: 'var(--state-danger)' }}>
                 <XCircle size={18} aria-hidden /> Sipariş İptal — {cancelModal.orderLabel}
               </h3>
-              <p className="text-xs mt-1 text-white/65">
+              <p className="text-xs mt-1 text-ink-muted">
                 İptal sebebini seç. Bu işlem loglanır.
               </p>
             </div>
             <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '60vh' }}>
               <div>
-                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-white/70">
+                <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-ink-muted">
                   İptal Sebebi
                 </label>
                 <div className="space-y-1.5">
@@ -448,15 +434,15 @@ export function WaiterTableDetailPage() {
                     <label key={opt.code}
                       className="flex items-center gap-2.5 p-3 min-h-[44px] rounded-2xl cursor-pointer transition-colors"
                       style={{
-                        background: cancelReason === opt.code ? 'var(--danger-bg)' : 'rgba(255,255,255,0.1)',
-                        border: '1px solid ' + (cancelReason === opt.code ? 'rgba(251,113,133,0.7)' : 'rgba(255,255,255,0.22)')
+                        background: cancelReason === opt.code ? 'var(--state-danger-bg)' : 'var(--surface-2)',
+                        border: '1px solid ' + (cancelReason === opt.code ? 'var(--state-danger)' : 'var(--line)')
                       }}>
                       <input type="radio"
                         name="reason"
                         value={opt.code}
                         checked={cancelReason === opt.code}
                         onChange={() => setCancelReason(opt.code)}
-                        style={{ width: 16, height: 16, accentColor: '#FB7185' }} />
+                        style={{ width: 16, height: 16, accentColor: 'var(--state-danger)' }} />
                       <span className="text-sm font-semibold">
                         {opt.label}
                       </span>
@@ -467,31 +453,27 @@ export function WaiterTableDetailPage() {
 
               {cancelReason === 'other' && (
                 <div>
-                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
                     Açıklama (zorunlu, min 3 karakter)
                   </label>
                   <textarea value={cancelText}
                     onChange={e => setCancelText(e.target.value)}
                     placeholder="İptal sebebini açıkla..."
                     rows={2}
-                    className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
+                    className="ui-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
                 </div>
               )}
             </div>
-            <div className="px-5 pt-3 pb-6 flex gap-2 border-t border-white/20">
+            <div className="px-5 pt-3 pb-6 flex gap-2 border-t border-line">
               <button onClick={() => setCancelModal(null)}
                 disabled={cancelling}
-                className="glass-pill flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">
+                className="btn-outline flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">
                 Vazgeç
               </button>
               <button onClick={handleCancelOrder}
                 disabled={cancelling}
-                className="flex-1 py-3 rounded-full text-sm font-bold text-white spring-btn disabled:opacity-60"
-                style={{
-                  background: cancelling ? 'rgba(255,255,255,0.18)' : 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)',
-                  border: '1px solid rgba(255,255,255,0.55)',
-                  boxShadow: cancelling ? 'none' : '0 8px 20px rgba(225,29,72,0.4), inset 0 1px 1px rgba(255,255,255,0.7)'
-                }}>
+                className="flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50"
+                style={{ background: 'var(--state-danger)', color: 'var(--bg)' }}>
                 {cancelling ? 'İptal ediliyor...' : 'Siparişi İptal Et'}
               </button>
             </div>

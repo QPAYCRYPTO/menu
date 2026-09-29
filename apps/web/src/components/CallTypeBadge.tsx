@@ -1,8 +1,8 @@
 // apps/web/src/components/CallTypeBadge.tsx
-// Çağrı türü ikonu — türün kendi renginde yuvarlatılmış rozet (lib/callTypes tek kaynak)
+// Çağrı türü ikonu — türün kendi renginde yuvarlatılmış rozet (lib/callTypes tek kaynak). Gece/gündüz uyumlu.
 
 import { getCallType } from '../lib/callTypes';
-import { withAlpha } from '../lib/color';
+import { readableTextOn, withAlpha } from '../lib/color';
 
 export function CallTypeBadge({ callType, size = 44, filled = false }: {
   callType: string | null | undefined;
@@ -21,11 +21,11 @@ export function CallTypeBadge({ callType, size = 44, filled = false }: {
         width: size,
         height: size,
         borderRadius: Math.round(size * 0.32),
+        // Düz renk + okunur ikon rengi: hem gece hem gündüz temasında (ve eski koyu ekranlarda) çalışır
         ...(filled ? {
-          background: `linear-gradient(135deg, ${info.color}, ${withAlpha(info.color, 0.75)})`,
-          borderColor: 'rgba(255,255,255,0.35)',
-          color: '#fff',
-          boxShadow: `0 4px 14px ${withAlpha(info.color, 0.5)}`
+          background: info.color,
+          borderColor: 'transparent',
+          color: readableTextOn(info.color)
         } : {
           background: withAlpha(info.color, 0.15),
           borderColor: withAlpha(info.color, 0.25),

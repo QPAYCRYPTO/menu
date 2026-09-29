@@ -3,8 +3,9 @@
 // - Birleşik masalar mavi MergeGroupCard olarak gösterilir
 // - merge_group_id olan masalar normal listeden çıkar, grup kartına girer
 // - Taşı/Birleştir yetki kontrolü korundu
+// - Atölye tasarımı: gece/gündüz uyumlu kartlar; durum hapları Boş (yeşil) / Dolu (amber) / Çağrı (kırmızı) / Birleşik (mavi)
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { useLiveRefresh } from '../../context/WaiterCallsContext';
@@ -56,6 +57,13 @@ type MoveModalProps = {
   onError: (msg: string) => void;
 };
 
+// Seçenek satırı (taşı/birleştir modallarındaki masa listesi)
+function optionStyle(selected: boolean): CSSProperties {
+  return selected
+    ? { background: 'var(--accent-soft)', border: '1.5px solid var(--accent)' }
+    : { background: 'var(--surface-2)', border: '1.5px solid var(--line)' };
+}
+
 function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError }: MoveModalProps) {
   const [targetTableId, setTargetTableId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,38 +85,34 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+    <div className="fixed inset-0 z-50 flex items-end justify-center ui-scrim fade-enter"
       onClick={onClose}>
-      <div className="glass-dark sheet-enter w-full max-w-[520px] rounded-t-[32px] border-t border-white/60 text-white px-5 pb-6"
+      <div className="bg-surface text-ink sheet-enter w-full max-w-[520px] rounded-t-[32px] border border-line px-5 pb-6"
         onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 mb-3" />
-        <h3 className="font-serif font-bold text-lg mb-1 flex items-center gap-2">
-          <ArrowLeftRight size={18} aria-hidden /> Masa Taşı
+        <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 mb-3" />
+        <h3 className="font-serif font-bold text-xl mb-1 flex items-center gap-2">
+          <ArrowLeftRight size={18} className="text-accent" aria-hidden /> Masa Taşı
         </h3>
-        <p className="text-xs mb-4 text-white/65">
-          <strong className="text-white">{table.name}</strong> masasını boş bir masaya taşı
+        <p className="text-xs mb-4 text-ink-muted">
+          <strong className="text-ink">{table.name}</strong> masasını boş bir masaya taşı
         </p>
 
         {emptyTables.length === 0 ? (
-          <div className="text-center py-6 rounded-2xl mb-4"
-            style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.45)' }}>
-            <p className="text-sm font-bold" style={{ color: 'var(--danger)' }}>Boş masa yok</p>
+          <div className="text-center py-6 rounded-2xl mb-4 bg-state-danger-bg">
+            <p className="text-sm font-bold text-state-danger">Boş masa yok</p>
           </div>
         ) : (
           <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
             {emptyTables.map(t => (
               <label key={t.id}
                 className="flex items-center gap-3 p-3 min-h-[48px] rounded-2xl cursor-pointer transition-colors"
-                style={{
-                  background: targetTableId === t.id ? 'var(--accent-soft)' : 'rgba(255,255,255,0.1)',
-                  border: `1.5px solid ${targetTableId === t.id ? 'var(--accent)' : 'rgba(255,255,255,0.22)'}`
-                }}>
+                style={optionStyle(targetTableId === t.id)}>
                 <input type="radio" name="target" value={t.id}
                   checked={targetTableId === t.id}
                   onChange={() => setTargetTableId(t.id)}
-                  style={{ width: 18, height: 18, accentColor: '#FF7A29' }} />
+                  style={{ width: 18, height: 18, accentColor: 'var(--brand)' }} />
                 <span className="font-bold text-sm inline-flex items-center gap-2">
-                  <StatusDot color="#34D399" /> {t.name}
+                  <StatusDot color="var(--state-ok)" /> {t.name}
                 </span>
               </label>
             ))}
@@ -117,10 +121,10 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
 
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
-            className="glass-pill flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">İptal</button>
+            className="btn-outline flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">İptal</button>
           <button onClick={handleMove}
             disabled={loading || !targetTableId || emptyTables.length === 0}
-            className="btn-accent flex-1 py-3 rounded-full text-sm font-bold spring-btn">
+            className="btn-primary flex-1 py-3 rounded-full text-sm font-bold spring-btn">
             {loading ? 'Taşınıyor...' : 'Taşı'}
           </button>
         </div>
@@ -162,42 +166,38 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+    <div className="fixed inset-0 z-50 flex items-end justify-center ui-scrim fade-enter"
       onClick={onClose}>
-      <div className="glass-dark sheet-enter w-full max-w-[520px] rounded-t-[32px] border-t border-white/60 text-white px-5 pb-6"
+      <div className="bg-surface text-ink sheet-enter w-full max-w-[520px] rounded-t-[32px] border border-line px-5 pb-6"
         onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 mb-3" />
-        <h3 className="font-serif font-bold text-lg mb-1 flex items-center gap-2">
-          <Link2 size={18} aria-hidden /> Masa Birleştir
+        <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 mb-3" />
+        <h3 className="font-serif font-bold text-xl mb-1 flex items-center gap-2">
+          <Link2 size={18} className="text-accent" aria-hidden /> Masa Birleştir
         </h3>
-        <p className="text-xs mb-4 text-white/65">
-          <strong className="text-white">{table.name}</strong> masasını başka bir masayla birleştir.
+        <p className="text-xs mb-4 text-ink-muted">
+          <strong className="text-ink">{table.name}</strong> masasını başka bir masayla birleştir.
         </p>
 
         {occupiedTables.length === 0 ? (
-          <div className="text-center py-6 rounded-2xl mb-4"
-            style={{ background: 'var(--warning-bg)', border: '1px solid rgba(251,191,36,0.45)' }}>
-            <p className="text-sm font-bold" style={{ color: 'var(--warning)' }}>Birleştirilecek masa yok</p>
-            <p className="text-xs mt-1 text-white/65">Başka açık masa bulunmuyor.</p>
+          <div className="text-center py-6 rounded-2xl mb-4 bg-state-warn-bg">
+            <p className="text-sm font-bold text-state-warn">Birleştirilecek masa yok</p>
+            <p className="text-xs mt-1 text-ink-muted">Başka açık masa bulunmuyor.</p>
           </div>
         ) : (
           <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
             {occupiedTables.map(t => (
               <label key={t.id}
                 className="flex items-center gap-3 p-3 min-h-[48px] rounded-2xl cursor-pointer transition-colors"
-                style={{
-                  background: targetSessionId === t.session_id ? 'var(--accent-soft)' : 'rgba(255,255,255,0.1)',
-                  border: `1.5px solid ${targetSessionId === t.session_id ? 'var(--accent)' : 'rgba(255,255,255,0.22)'}`
-                }}>
+                style={optionStyle(targetSessionId === t.session_id)}>
                 <input type="radio" name="target" value={t.session_id ?? ''}
                   checked={targetSessionId === t.session_id}
                   onChange={() => setTargetSessionId(t.session_id ?? '')}
-                  style={{ width: 18, height: 18, accentColor: '#FF7A29' }} />
+                  style={{ width: 18, height: 18, accentColor: 'var(--brand)' }} />
                 <div className="flex-1">
                   <span className="font-bold text-sm inline-flex items-center gap-2">
-                    <StatusDot color="#FB7185" /> {t.name}
+                    <StatusDot color="var(--state-warn)" /> {t.name}
                   </span>
-                  <span className="text-xs ml-2 text-white/65">
+                  <span className="text-xs ml-2 text-ink-muted">
                     {formatPrice(t.total_int)} · {t.order_count} sipariş
                   </span>
                 </div>
@@ -206,21 +206,47 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
           </div>
         )}
 
-        <div className="p-3 rounded-2xl mb-4 text-xs flex items-start gap-1.5"
-          style={{ background: 'var(--warning-bg)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
-          <AlertTriangle size={14} className="shrink-0" aria-hidden /> <span><strong className="text-white">{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.</span>
+        <div className="p-3 rounded-2xl mb-4 text-xs flex items-start gap-1.5 bg-state-warn-bg text-state-warn font-semibold">
+          <AlertTriangle size={14} className="shrink-0" aria-hidden /> <span><strong className="text-ink">{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.</span>
         </div>
 
         <div className="flex gap-3">
           <button onClick={onClose} disabled={loading}
-            className="glass-pill flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">İptal</button>
+            className="btn-outline flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">İptal</button>
           <button onClick={handleMerge}
             disabled={loading || !targetSessionId || occupiedTables.length === 0}
-            className="btn-accent flex-1 py-3 rounded-full text-sm font-bold spring-btn">
+            className="btn-primary flex-1 py-3 rounded-full text-sm font-bold spring-btn">
             {loading ? 'Birleştiriliyor...' : 'Birleştir'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Referans tasarımdaki durum hapı: yumuşak zemin + koyu yazı + nokta
+// Tailwind yalnızca tam yazılmış sınıf adlarını üretir → birleştirme yerine sabit eşleme
+const PILL_TONE = {
+  ok: 'bg-state-ok-bg text-state-ok',
+  warn: 'bg-state-warn-bg text-state-warn',
+  danger: 'bg-state-danger-bg text-state-danger',
+  info: 'bg-state-info-bg text-state-info'
+} as const;
+
+function StatePill({ tone, children }: { tone: keyof typeof PILL_TONE; children: ReactNode }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap ${PILL_TONE[tone]}`}>
+      <StatusDot color="currentColor" /> {children}
+    </span>
+  );
+}
+
+// Kart içi küçük bilgi satırı (Adisyon / Sipariş)
+function InfoRow({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {
+  return (
+    <div className="flex justify-between items-center px-2.5 py-1.5 rounded-xl bg-surface-2">
+      <span className="text-[11px] font-semibold text-ink-muted">{label}</span>
+      <span className={strong ? 'text-[15px] font-extrabold' : 'text-[13px] font-bold'}>{value}</span>
     </div>
   );
 }
@@ -237,68 +263,31 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
   const orderCount = tables.reduce((sum, t) => sum + t.order_count, 0);
 
   return (
-    <div className="glass-card rounded-3xl text-white" style={{
-      background: 'rgba(14,165,233,0.2)',
-      borderColor: 'rgba(125,211,252,0.6)',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '8px 14px',
-        background: 'rgba(14,165,233,0.35)',
-        borderBottom: '1px solid rgba(125,211,252,0.4)',
-        color: '#E0F2FE',
-        fontWeight: 800,
-        fontSize: 11,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        display: 'flex', alignItems: 'center', gap: 6
-      }}>
-        <StatusDot color="#38BDF8" /> BİRLEŞİK MASA GRUBU
+    <div className="ui-card rounded-3xl overflow-hidden flex flex-col" style={{ borderColor: 'var(--state-info)' }}>
+      <div className="px-3.5 pt-3">
+        <StatePill tone="info">Birleşik grup</StatePill>
       </div>
 
-      <div style={{ padding: 14 }}>
+      <div className="p-3.5">
         {/* Masa isimleri */}
         {tables.map(t => (
-          <div key={t.id} className="font-serif" style={{
-            fontSize: 20, fontWeight: 700, color: '#fff', lineHeight: 1.3
-          }}>
+          <div key={t.id} className="font-serif font-bold text-xl leading-snug">
             {t.name}
           </div>
         ))}
 
-        <div style={{ height: 1, background: 'rgba(125,211,252,0.35)', margin: '10px 0' }} />
+        <div className="h-px bg-line my-2.5" />
 
-        {/* Adisyon */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '7px 10px', background: 'rgba(0,0,0,0.28)', borderRadius: 12, marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Toplam Adisyon</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--info)' }}>
-            {formatPrice(totalInt)}
-          </span>
-        </div>
-
-        <div style={{ padding: '5px 8px', background: 'rgba(0,0,0,0.28)', borderRadius: 12,
-          textAlign: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Toplam Sipariş
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{orderCount}</div>
+        <div className="flex flex-col gap-1.5 mb-2.5">
+          <InfoRow label="Toplam Adisyon" value={formatPrice(totalInt)} strong />
+          <InfoRow label="Toplam Sipariş" value={orderCount} />
         </div>
 
         {/* Her masaya git linkleri */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="flex flex-col gap-1.5">
           {tables.map(t => (
             <Link key={t.id} to={`/garson/masa/${t.id}`}
-              className="glass-pill spring-btn"
-              style={{
-                textDecoration: 'none', padding: '9px 10px',
-                borderRadius: 14, minHeight: 36,
-                fontSize: 12, fontWeight: 700, textAlign: 'center',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
-              }}>
+              className="btn-outline spring-btn no-underline px-2.5 py-2 rounded-2xl min-h-[36px] text-xs font-bold text-center flex items-center justify-center gap-1.5">
               <ClipboardList size={12} aria-hidden /> {t.name} — Adisyon Aç
             </Link>
           ))}
@@ -307,17 +296,16 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
 
       {/* Operasyon butonları */}
       {(canTransfer || canMerge) && tables[0] && (
-        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid rgba(125,211,252,0.35)', display: 'flex', gap: 6 }}>
+        <div className="px-3.5 pt-2 pb-3 border-t border-line flex gap-1.5">
           {canTransfer && (
             <button onClick={() => onMove(tables[0])}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1">
+              className="btn-outline flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1">
               <ArrowLeftRight size={12} aria-hidden /> Taşı
             </button>
           )}
           {canMerge && (
             <button onClick={() => onMerge(tables[0])}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1"
-              style={{ background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
+              className="btn-outline flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1">
               <Link2 size={12} aria-hidden /> Ekle
             </button>
           )}
@@ -337,83 +325,44 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
 }) {
   const isOccupied = table.has_active_session;
   const hasCall = table.active_calls > 0;
-  const duration = isOccupied && table.opened_at ? useDuration(table.opened_at) : null;
-
-  const colors = hasCall
-    ? { bg: 'rgba(244,63,94,0.3)', border: 'rgba(251,113,133,0.9)', accent: 'var(--danger)', header: 'rgba(225,29,72,0.55)' }
-    : isOccupied
-    ? { bg: 'rgba(244,63,94,0.18)', border: 'rgba(251,113,133,0.5)', accent: 'var(--danger)', header: 'rgba(244,63,94,0.3)' }
-    : { bg: 'rgba(16,185,129,0.18)', border: 'rgba(52,211,153,0.5)', accent: 'var(--success)', header: 'rgba(16,185,129,0.3)' };
+  // Hook her render'da çağrılır (koşullu çağrı masa dolunca "hook sayısı değişti" hatası verirdi)
+  const elapsed = useDuration(table.opened_at ?? new Date().toISOString());
+  const duration = isOccupied && table.opened_at ? elapsed : null;
 
   return (
-    <div className="glass-card glass-card-hover rounded-3xl text-white" style={{
-      background: colors.bg,
-      borderColor: colors.border,
-      borderWidth: hasCall ? 2 : 1,
-      overflow: 'visible',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'relative'
-    }}>
+    <div className="ui-card rounded-3xl flex flex-col relative"
+      style={hasCall ? { borderColor: 'var(--state-danger)', borderWidth: 2 } : undefined}>
       {hasCall && (
-        <div className="animate-pulse" style={{
-          position: 'absolute', top: -8, right: -8,
-          width: 30, height: 30, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #FB7185, #E11D48)', color: 'white',
-          border: '1px solid rgba(255,255,255,0.7)',
-          boxShadow: '0 6px 14px rgba(225,29,72,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, zIndex: 1
-        }}><Bell size={14} aria-hidden /></div>
+        <div className="animate-pulse absolute -top-2 -right-2 w-[30px] h-[30px] rounded-full flex items-center justify-center z-[1] shadow"
+          style={{ background: 'var(--state-danger)', color: 'var(--bg)' }}>
+          <Bell size={14} aria-hidden />
+        </div>
       )}
 
-      <div style={{
-        padding: '8px 14px', background: colors.header, color: 'white',
-        borderBottom: `1px solid ${colors.border}`,
-        borderTopLeftRadius: 23, borderTopRightRadius: 23,
-        fontWeight: 800, fontSize: 11, textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-      }}>
-        <span className="inline-flex items-center gap-1.5">{hasCall
-          ? <><Bell size={11} aria-hidden /> ÇAĞRI</>
-          : isOccupied
-            ? <><StatusDot color="#fff" /> Dolu</>
-            : <><StatusDot color="#fff" hollow /> Boş</>}</span>
-        {isOccupied && duration && (
-          <span className="font-mono text-white/90 inline-flex items-center gap-1"><Timer size={11} aria-hidden /> {duration}</span>
-        )}
-      </div>
-
-      <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none', flex: 1, color: 'inherit' }}>
-        <div style={{ padding: 14 }}>
-          <h3 className="font-serif" style={{ fontWeight: 700, fontSize: 20, color: '#fff',
-            lineHeight: 1.1, marginBottom: 12 }}>
+      <Link to={`/garson/masa/${table.id}`} className="no-underline text-inherit flex-1">
+        <div className="p-3.5">
+          <h3 className="font-serif font-bold text-xl leading-tight mb-2">
             {table.name}
           </h3>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+            {hasCall
+              ? <StatePill tone="danger">Çağrı</StatePill>
+              : isOccupied
+                ? <StatePill tone="warn">Dolu</StatePill>
+                : <StatePill tone="ok">Boş</StatePill>}
+            {duration && (
+              <span className="font-mono text-[11px] text-ink-muted inline-flex items-center gap-1"><Timer size={11} aria-hidden /> {duration}</span>
+            )}
+          </div>
 
-          {isOccupied && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', padding: '7px 10px', background: 'rgba(0,0,0,0.28)', borderRadius: 12 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Adisyon</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: '#FCD34D' }}>
-                  {formatPrice(table.total_int)}
-                </span>
-              </div>
-              <div style={{ padding: '5px 8px', background: 'rgba(0,0,0,0.28)', borderRadius: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Sipariş
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{table.order_count}</div>
-              </div>
+          {isOccupied ? (
+            <div className="flex flex-col gap-1.5">
+              <InfoRow label="Adisyon" value={formatPrice(table.total_int)} strong />
+              <InfoRow label="Sipariş" value={table.order_count} />
             </div>
-          )}
-
-          {!isOccupied && (
-            <div style={{ padding: '14px 8px', textAlign: 'center',
-              background: 'rgba(0,0,0,0.2)', borderRadius: 14, border: '1px dashed rgba(52,211,153,0.6)' }}>
-              <div style={{ fontSize: 11, color: colors.accent, fontWeight: 700 }}>Müşteri bekleniyor</div>
+          ) : (
+            <div className="py-3 px-2 text-center rounded-2xl border border-dashed border-line">
+              <div className="text-[11px] font-bold text-state-ok">Müşteri bekleniyor</div>
             </div>
           )}
         </div>
@@ -421,31 +370,27 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
 
       {/* Operasyon butonları */}
       {isOccupied && (canTransfer || canMerge) && (
-        <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.16)', display: 'flex', gap: 6 }}>
+        <div className="px-3.5 py-2 border-t border-line flex gap-1.5">
           {canTransfer && (
             <button onClick={e => { e.preventDefault(); onMove(); }}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1"
-              style={{ background: 'var(--info-bg)', color: '#E0F2FE', borderColor: 'rgba(125,211,252,0.45)' }}>
+              className="btn-outline flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1">
               <ArrowLeftRight size={12} aria-hidden /> Taşı
             </button>
           )}
           {canMerge && (
             <button onClick={e => { e.preventDefault(); onMerge(); }}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1"
-              style={{ background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
+              className="btn-outline flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1">
               <Link2 size={12} aria-hidden /> Birleştir
             </button>
           )}
         </div>
       )}
 
-      <div style={{ padding: '8px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.16)' }}>
-        <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none' }}
-          className={`${isOccupied ? 'glass-pill' : 'btn-accent'} spring-btn flex items-center justify-center min-h-[38px] rounded-full`}>
-          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: 5 }}>
-            {isOccupied ? <ClipboardList size={12} aria-hidden /> : <Plus size={12} aria-hidden />}
-            {isOccupied ? 'Adisyonu Aç' : 'Sipariş Al'}
-          </div>
+      <div className="px-3 pt-2 pb-3 border-t border-line">
+        <Link to={`/garson/masa/${table.id}`}
+          className={`${isOccupied ? 'btn-outline' : 'btn-primary'} no-underline spring-btn flex items-center justify-center gap-1.5 min-h-[38px] rounded-full text-xs font-extrabold`}>
+          {isOccupied ? <ClipboardList size={12} aria-hidden /> : <Plus size={12} aria-hidden />}
+          {isOccupied ? 'Adisyonu Aç' : 'Sipariş Al'}
         </Link>
       </div>
     </div>
@@ -527,24 +472,21 @@ export function WaiterTablesPage() {
   const totalOpen = tables.reduce((sum, t) => sum + (t.total_int || 0), 0);
 
   return (
-    <div className="text-white">
+    <div className="text-ink">
       {toast && (
-        <div className="fixed top-24 left-4 right-4 z-50 glass-panel px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter"
-          style={{
-            background: toast.type === 'error' ? 'rgba(225,29,72,0.85)' : 'rgba(5,150,105,0.85)',
-            color: '#fff',
-            maxWidth: 480
-          }}>
+        <div className="fixed top-24 left-4 right-4 z-50 px-4 py-3 rounded-2xl text-sm font-bold mx-auto fade-enter shadow-lg max-w-[480px]"
+          role="status"
+          style={{ background: toast.type === 'error' ? 'var(--state-danger)' : 'var(--state-ok)', color: 'var(--bg)' }}>
           {toast.message}
         </div>
       )}
 
-      <div className="glass-panel rounded-3xl px-4 py-3 flex items-center justify-between mb-3">
-        <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-          <UtensilsCrossed size={18} aria-hidden /> Masalar
+      <div className="ui-card rounded-3xl px-4 py-3 flex items-center justify-between mb-3">
+        <h2 className="font-serif font-bold text-xl flex items-center gap-2">
+          <UtensilsCrossed size={18} className="text-accent" aria-hidden /> Masalar
         </h2>
         <button onClick={() => loadTables()}
-          className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn inline-flex items-center gap-1">
+          className="btn-outline min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn inline-flex items-center gap-1">
           <RefreshCw size={12} aria-hidden /> Yenile
         </button>
       </div>
@@ -552,19 +494,13 @@ export function WaiterTablesPage() {
       {/* İstatistikler */}
       {tables.length > 0 && (
         <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
-          <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--success-bg)', borderColor: 'rgba(52,211,153,0.5)' }}>
-            <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: '#A7F3D0' }}><StatusDot color="#34D399" /> Boş: {emptyCount}</span>
-          </div>
-          <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--danger-bg)', borderColor: 'rgba(251,113,133,0.5)' }}>
-            <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: '#FECDD3' }}><StatusDot color="#FB7185" /> Dolu: {busyCount}</span>
-          </div>
+          <div className="flex-shrink-0"><StatePill tone="ok">Boş: {emptyCount}</StatePill></div>
+          <div className="flex-shrink-0"><StatePill tone="warn">Dolu: {busyCount}</StatePill></div>
           {mergedCount > 0 && (
-            <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--info-bg)', borderColor: 'rgba(125,211,252,0.5)' }}>
-              <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: '#E0F2FE' }}><StatusDot color="#38BDF8" /> Birleşik: {mergedCount} grup</span>
-            </div>
+            <div className="flex-shrink-0"><StatePill tone="info">Birleşik: {mergedCount} grup</StatePill></div>
           )}
           {totalOpen > 0 && (
-            <div className="btn-accent flex-shrink-0 px-3 py-1.5 rounded-2xl">
+            <div className="bg-brand text-on-brand flex-shrink-0 px-3 py-1 rounded-full">
               <span className="text-xs font-extrabold inline-flex items-center gap-1"><Wallet size={12} aria-hidden /> {formatPrice(totalOpen)}</span>
             </div>
           )}
@@ -572,16 +508,16 @@ export function WaiterTablesPage() {
       )}
 
       {loading && tables.length === 0 && (
-        <div className="glass-panel rounded-3xl text-center py-14">
-          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-3" />
-          <p className="text-sm font-semibold text-white/80">Masalar yükleniyor...</p>
+        <div className="ui-card rounded-3xl text-center py-14">
+          <div className="w-10 h-10 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin mx-auto mb-3" />
+          <p className="text-sm font-semibold text-ink-muted">Masalar yükleniyor...</p>
         </div>
       )}
 
       {!loading && tables.length === 0 && (
-        <div className="glass-card text-center py-14 rounded-3xl">
-          <div className="mb-3 flex justify-center text-white/70"><Armchair size={36} aria-hidden /></div>
-          <p className="text-sm text-white/70">Henüz masa yok</p>
+        <div className="ui-card text-center py-14 rounded-3xl">
+          <div className="mb-3 flex justify-center text-accent"><Armchair size={36} aria-hidden /></div>
+          <p className="text-sm text-ink-muted">Henüz masa yok</p>
         </div>
       )}
 
