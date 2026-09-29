@@ -15,6 +15,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { requireWaiterAuth } from '../middleware/waiterAuth.js';
+import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import {
   moveSession,
@@ -79,6 +80,7 @@ const transferOrdersSchema = z.object({
 export const adminTableOperationsRoutes = Router();
 adminTableOperationsRoutes.use(requireAuth);
 adminTableOperationsRoutes.use(requireAdmin);
+adminTableOperationsRoutes.use(publishTablesChangedOnSuccess('table_operation'));
 
 // POST /api/admin/table-operations/move
 adminTableOperationsRoutes.post('/move', async (req, res) => {
@@ -148,6 +150,7 @@ adminTableOperationsRoutes.post('/transfer-orders', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const waiterTableOperationsRoutes = Router();
 waiterTableOperationsRoutes.use(requireWaiterAuth);
+waiterTableOperationsRoutes.use(publishTablesChangedOnSuccess('table_operation'));
 
 // POST /api/public/waiter/table-operations/move
 waiterTableOperationsRoutes.post('/move', async (req, res) => {

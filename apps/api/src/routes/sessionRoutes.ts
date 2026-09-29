@@ -11,12 +11,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/postgres.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import { getSessionWithOrders } from '../services/sessionService.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 
 export const sessionRoutes = Router();
 sessionRoutes.use(requireAuth);
 sessionRoutes.use(requireAdmin);
+sessionRoutes.use(publishTablesChangedOnSuccess('session'));
 
 // GET /api/admin/sessions
 // Tüm açık masaları listeler

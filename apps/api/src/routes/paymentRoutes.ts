@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import { publishOrder } from '../db/redisPubSub.js';
+import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import {
   getSessionBillDetails,
   payItems,
@@ -20,6 +21,7 @@ import {
 export const paymentRoutes = Router();
 paymentRoutes.use(requireAuth);
 paymentRoutes.use(requireAdmin);
+paymentRoutes.use(publishTablesChangedOnSuccess('payment'));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/payment/session/:session_id

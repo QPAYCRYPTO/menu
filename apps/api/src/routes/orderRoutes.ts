@@ -183,7 +183,7 @@ orderRoutes.put('/:id', async (req, res) => {
            updated_at = NOW(),
            ${deliveredAtClause}
        WHERE id = $2 AND business_id = $3
-       RETURNING id, status, table_name, type, delivered_at`,
+       RETURNING id, status, table_name, type, table_id, delivered_at`,
       [newStatus, id, businessId]
     );
 
@@ -208,7 +208,27 @@ orderRoutes.put('/:id', async (req, res) => {
     }
 
     await client.query('COMMIT');
-    res.status(200).json(updateResult.rows[0]);
+
+    // Durum değişikliğini diğer ekranlara duyur (garson masaları/çağrıları anında güncellensin)
+    const updated = updateResult.rows[0];
+    try {
+      await publishOrder(businessId, {
+        type: 'order_status',
+        order_id: updated.id,
+        order_type: updated.type,
+        status: updated.status,
+        table_id: updated.table_id,
+        table_name: updated.table_name
+      });
+      // Admin çağrıyı "İlgilendim" ile kapattıysa garson çağrı listelerinden de düşsün
+      if (updated.type === 'call' && updated.status === 'delivered') {
+        await publishOrder(businessId, { type: 'call_taken', order_id: updated.id, table_name: updated.table_name });
+      }
+    } catch {
+      // yayın hatası isteği etkilemesin
+    }
+
+    res.status(200).json(updated);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
