@@ -129,7 +129,7 @@ export function QrPage() {
 
           <div className="flex-1 w-full min-w-0">
             {publicLink && (
-              <p className="text-xs mb-3 font-mono truncate text-accent">{publicLink}</p>
+              <p className="text-xs mb-3 font-mono truncate text-ink-muted">{publicLink}</p>
             )}
             <div className="flex flex-col gap-2">
               <button onClick={() => downloadQr(qrBlob, 'atlasqr-menu.png')}
@@ -208,7 +208,7 @@ export function QrPage() {
                 </div>
               ) : null}
 
-              <p className="text-xs text-center mb-4 font-mono text-accent break-all">
+              <p className="text-xs text-center mb-4 font-mono text-ink-muted break-all">
                 {PUBLIC_BASE_URL}/m/{slug}?masa={selectedTable.id.slice(0, 8)}...
               </p>
 

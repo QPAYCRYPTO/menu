@@ -191,7 +191,7 @@ export function ProductsPage() {
             </div>
             <div className="p-3 flex-1 flex flex-col">
               <div className="font-serif font-bold text-sm mb-1 leading-snug">{item.name}</div>
-              <div className="font-extrabold text-sm mb-3 text-accent tracking-tight">{priceIntToTl(item.price_int)} TL</div>
+              <div className="font-extrabold text-sm mb-3 text-ink tracking-tight">{priceIntToTl(item.price_int)} TL</div>
               <div className="flex gap-2 mt-auto">
                 <button onClick={() => openEditModal(item)}
                   className="ui-chip flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 spring-btn">

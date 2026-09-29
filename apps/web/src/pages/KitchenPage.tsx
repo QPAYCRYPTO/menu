@@ -112,7 +112,7 @@ export function KitchenPage() {
           ) : (
             <>
               <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Mutfak linki</label>
-              <div className="ui-input rounded-2xl px-4 py-3 text-sm font-mono break-all select-all text-accent">{link}</div>
+              <div className="ui-input rounded-2xl px-4 py-3 text-sm font-mono break-all select-all text-ink">{link}</div>
               <p className="text-xs mt-2 text-ink-muted">
                 Oluşturulma: {new Date(token.created_at).toLocaleString('tr-TR')} · Bu linki yalnızca mutfakla paylaşın.
               </p>
