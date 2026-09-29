@@ -34,6 +34,8 @@
   --color-on-brand: var(--on-brand);
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
+  --color-biz: var(--biz);
+  --color-on-biz: var(--on-biz);
   --color-state-ok: var(--state-ok);
   --color-state-ok-bg: var(--state-ok-bg);
   --color-state-warn: var(--state-warn);
@@ -72,8 +74,11 @@
   /* Birincil buton/aktif sekme zemini ve üzerindeki yazı */
   --brand: #073f46;
   --on-brand: #ffffff;
-  /* Vurgu: ikon, alt başlık, odak halkası. Müşteri menüsü işletme rengini buraya yazar. */
-  --accent: #ae9168;
+  /* Vurgu: ikon, alt başlık, odak halkası. Müşteri menüsünde işletme rengi (--biz-accent-*, lib/businessTheme.ts) */
+  --accent: var(--biz-accent-light, #ae9168);
+  /* Birincil eylem (buton dolgusu + üstündeki yazı): müşteri menüsünde işletme rengi, diğer ekranlarda petrol */
+  --biz: var(--biz-light, var(--brand));
+  --on-biz: var(--on-biz-light, var(--on-brand));
   --shadow: 0 2px 10px rgba(24, 59, 64, 0.06);
   --scrim: rgba(23, 60, 64, 0.33);
 
@@ -105,7 +110,9 @@ html[data-theme="dark"] {
   --line: var(--d-line);
   --brand: var(--d-brand);
   --on-brand: #ffffff;
-  --accent: var(--d-accent);
+  --accent: var(--biz-accent-dark, var(--d-accent));
+  --biz: var(--biz-dark, var(--brand));
+  --on-biz: var(--on-biz-dark, var(--on-brand));
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
   --scrim: rgba(4, 10, 13, 0.6);
 
@@ -200,6 +207,72 @@ body {
 select option { color: #073f46; background: #fff; }
 
 @layer components {
+  /* ── Yeni (temaya uyan) ortak bileşenler — taşınan sayfalar bunları kullanır ───────── */
+
+  .ui-card {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .ui-input {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .ui-input::placeholder { color: var(--ink-muted); }
+  .ui-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  /* Birincil eylem: müşteri menüsünde işletme rengi, diğer ekranlarda petrol */
+  .btn-primary {
+    background: var(--biz);
+    color: var(--on-biz);
+    border: 1px solid transparent;
+  }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-outline {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-outline:hover { background: var(--surface-2); }
+
+  /* Seçilebilir hap/sekme (kategori, ana sekme) */
+  .ui-chip {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .ui-chip-active {
+    background: var(--biz);
+    color: var(--on-biz);
+    border: 1px solid transparent;
+  }
+
+  /* Modal / sheet arka perdesi */
+  .ui-scrim {
+    background: var(--scrim);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Referans tasarımın alt başlık stili: altın, harf aralıklı, büyük harf */
+  .ui-eyebrow {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
   /* ── Legacy yüzeyler: düz renk, bulanıklık yok, gece paleti ─────────────── */
 
   /* Başlık/sidebar/modal gibi büyük yüzeyler */

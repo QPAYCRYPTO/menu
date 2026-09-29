@@ -1,6 +1,8 @@
 // apps/web/src/pages/PublicMenuPage.tsx
 // CHANGELOG:
-// - Warm glassmorphism tasarım (cam kartlar, turuncu vurgu, alttan açılan sheet'ler)
+// - Atölye tasarımı: sade açık tema + gece modu (bg-page / ui-card / text-ink), başlıkta gece/gündüz düğmesi
+//   İşletme rengi (theme_color) yalnızca butonlarda ve vurgularda; her temada okunur olacak şekilde ayarlanır
+//   Masaüstünde solda kategori şeridi, telefonda üstte kategori hapları + altta Garson Çağır / Sepetim
 // - Menüde arama (tüm kategorilerde), ürün kartında hızlı "+" ile sepete ekleme
 // - "Garson Çağır" butonu artık modal açıyor (12 çağrı türü)
 // - "Diğer" seçilirse serbest text alanı çıkıyor (zorunlu min 3 karakter)
@@ -14,12 +16,15 @@ import { apiRequest } from '../api/client';
 import { getCustomerToken } from '../utils/customerToken';
 import { MyOrdersTab } from '../components/MyOrdersTab';
 import { OrderNoteTemplates } from '../components/OrderNoteTemplates';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useBusinessTheme } from '../lib/businessTheme';
+import { useThemedPage } from '../lib/theme';
 import {
   Armchair, Bell, Check, CheckCircle2, ChevronRight, ClipboardList, Clock, Info, Minus, NotebookPen, Phone, Plus, Receipt,
   Search, Send, ShoppingBasket, ShoppingCart, UtensilsCrossed, Wheat, X
 } from 'lucide-react';
 import { CALL_TYPES, type CallTypeCode } from '../lib/callTypes';
-import { withAlpha } from '../lib/color';
+import { readableTextOn, withAlpha } from '../lib/color';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const BRAND_NAME = 'AtlasQR';
@@ -145,20 +150,10 @@ export function PublicMenuPage() {
     return () => { mounted = false; };
   }, [slug, tableId]);
 
-  // İşletmenin tema rengi yalnızca müşteri menüsünde: vurgular (--accent) + birincil butonlar (--business-accent).
-  // Diğer tonlar index.css'te bundan türetilir. Sadece geçerli hex kabul edilir;
-  // sayfadan çıkınca sistem renkleri (petrol/altın) geri gelir.
-  const accentColor = menu?.business.theme_color?.trim();
-  useEffect(() => {
-    if (!accentColor || !/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(accentColor)) return;
-    const root = document.documentElement;
-    root.style.setProperty('--accent', accentColor);
-    root.style.setProperty('--business-accent', accentColor);
-    return () => {
-      root.style.removeProperty('--accent');
-      root.style.removeProperty('--business-accent');
-    };
-  }, [accentColor]);
+  // Sayfa gece/gündüz temasına uyar; işletme rengi yalnızca bu sayfada butonlara ve vurgulara uygulanır
+  // (her tema için okunurluk ayarlı — lib/businessTheme.ts). Sayfadan çıkınca sistem renkleri geri gelir.
+  useThemedPage();
+  useBusinessTheme(menu?.business.theme_color);
 
   const activeCategory = useMemo<PublicMenuCategory | null>(() => {
     if (!menu) return null;
@@ -345,20 +340,20 @@ export function PublicMenuPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="glass-panel rounded-3xl px-8 py-7 text-center fade-enter">
-        <div className="w-12 h-12 rounded-full border-2 border-white/30 border-t-[var(--accent)] animate-spin mx-auto mb-4" />
-        <p className="text-sm font-semibold text-white/80">Menü yükleniyor...</p>
+    <div className="min-h-screen bg-page text-ink flex items-center justify-center p-6">
+      <div className="ui-card rounded-3xl px-8 py-7 text-center fade-enter">
+        <div className="w-12 h-12 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin mx-auto mb-4" />
+        <p className="text-sm font-semibold text-ink-muted">Menü yükleniyor...</p>
       </div>
     </div>
   );
 
   if (!menu) return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="glass-panel rounded-3xl p-8 text-center max-w-sm fade-enter">
-        <div className="mb-4 flex justify-center text-white/80"><UtensilsCrossed size={48} strokeWidth={1.5} /></div>
-        <h1 className="font-serif font-bold text-xl mb-2 text-white">Menü Bulunamadı</h1>
-        <p className="text-sm text-white/70">Bu menü mevcut değil veya kaldırılmış olabilir.</p>
+    <div className="min-h-screen bg-page text-ink flex items-center justify-center p-6">
+      <div className="ui-card rounded-3xl p-8 text-center max-w-sm fade-enter">
+        <div className="mb-4 flex justify-center text-accent"><UtensilsCrossed size={48} strokeWidth={1.5} /></div>
+        <h1 className="font-serif font-bold text-xl mb-2">Menü Bulunamadı</h1>
+        <p className="text-sm text-ink-muted">Bu menü mevcut değil veya kaldırılmış olabilir.</p>
       </div>
     </div>
   );
@@ -370,217 +365,235 @@ export function PublicMenuPage() {
   const description = (menu.business as any).description as string | undefined;
 
   return (
-    <div className="min-h-screen text-white">
-      <div className="mx-auto w-full max-w-[480px] px-3.5 pt-3" style={{ paddingBottom: tableId ? 104 : 24 }}>
+    <div className="min-h-screen bg-page text-ink">
+      <div className="mx-auto w-full max-w-[480px] md:max-w-5xl px-3.5 md:px-6 pt-3 md:pt-6"
+        style={{ paddingBottom: tableId ? 104 : 24 }}>
 
         {/* Bildirimler */}
         {orderSent && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter flex items-center gap-2"
-            style={{ background: 'var(--accent-gradient)' }}>
-            <CheckCircle2 size={16} className="flex-shrink-0" /> Siparişiniz alındı!
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] ui-card rounded-2xl px-5 py-3 text-sm font-bold fade-enter flex items-center gap-2"
+            role="status">
+            <CheckCircle2 size={18} className="flex-shrink-0 text-state-ok" /> Siparişiniz alındı!
           </div>
         )}
 
-        {/* Başlık kartı */}
-        <div className="glass-panel rounded-3xl p-3.5 flex items-center justify-between gap-3 mb-3">
+        {/* Başlık: işletme adı (serif) + altın alt başlık | masa + gece/gündüz */}
+        <header className="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-line">
           <div className="flex items-center gap-3 min-w-0">
             {menu.business.logo_url ? (
               <img src={menu.business.logo_url} alt={menu.business.name}
-                className="w-12 h-12 rounded-2xl object-cover flex-shrink-0 border border-white/40" />
+                className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover flex-shrink-0 border border-line" />
             ) : (
-              <div className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-xl text-white border border-white/30 bg-white/10">
-                <Wheat size={20} />
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex-shrink-0 flex items-center justify-center bg-surface border border-line text-accent">
+                <Wheat size={22} />
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="font-serif font-bold text-lg leading-tight tracking-wide truncate">{menu.business.name}</h1>
-              {description && (
-                <p className="text-[11px] text-white/80 font-medium truncate">{description}</p>
-              )}
+              <h1 className="font-serif font-bold text-xl md:text-4xl leading-tight line-clamp-2 break-words">{menu.business.name}</h1>
+              {description && <p className="ui-eyebrow mt-1 truncate">{description}</p>}
             </div>
           </div>
 
-          {tableId && tableName && (
-            <div className="glass-pill rounded-2xl px-3 py-1.5 flex flex-col items-center justify-center text-center min-w-[72px] flex-shrink-0">
-              <div className="flex items-center gap-1 text-[10px] text-white/70 font-medium">
-                <Armchair size={9} />
-                <span>Masa</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {tableId && tableName && (
+              <div className="ui-chip rounded-2xl px-3 py-1.5 flex flex-col items-center justify-center text-center min-w-[64px]">
+                <div className="flex items-center gap-1 text-[10px] text-ink-muted font-medium">
+                  <Armchair size={10} />
+                  <span>Masa</span>
+                </div>
+                <span className="font-extrabold text-sm leading-tight truncate max-w-[90px]">{tableName}</span>
               </div>
-              <span className="font-extrabold text-sm leading-tight truncate max-w-[90px]">{tableName}</span>
-            </div>
-          )}
-        </div>
+            )}
+            <ThemeToggle />
+          </div>
+        </header>
 
         {/* Menü / Siparişlerim */}
         {tableId && (
-          <div className="flex gap-1 p-1 mb-3 rounded-2xl bg-black/35 border border-white/20 backdrop-blur-xl">
+          <div className="flex gap-1 p-1 mb-4 rounded-2xl bg-surface-2 border border-line md:max-w-sm">
             {([['menu', UtensilsCrossed, 'Menü'], ['orders', Receipt, 'Siparişlerim']] as const).map(([tab, TabIcon, label]) => (
-              <button key={tab} onClick={() => setMainTab(tab)}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 spring-btn ${mainTab === tab ? 'btn-accent' : 'text-white/70'}`}>
-                <TabIcon size={12} /> {label}
+              <button key={tab} onClick={() => setMainTab(tab)} aria-pressed={mainTab === tab}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 spring-btn ${
+                  mainTab === tab ? 'ui-chip-active' : 'text-ink-muted'}`}>
+                <TabIcon size={13} /> {label}
               </button>
             ))}
           </div>
         )}
 
         {mainTab === 'orders' && tableId ? (
-          <MyOrdersTab slug={slug} tableId={tableId} token={customerToken} />
+          <div className="md:max-w-2xl">
+            <MyOrdersTab slug={slug} tableId={tableId} token={customerToken} />
+          </div>
         ) : (
-          <>
-            {/* Arama */}
-            <div className="relative mb-3">
-              <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
-              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Menüde ara..."
-                className="glass-input w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm font-medium" />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 text-xs" aria-label="Aramayı temizle">
-                  <X size={12} className="block" />
-                </button>
-              )}
-            </div>
+          <div className="md:grid md:grid-cols-[190px_1fr] md:gap-6 md:items-start">
+            {/* Masaüstü: sol kategori şeridi */}
+            <nav className="hidden md:flex flex-col gap-1.5 sticky top-6" aria-label="Kategoriler">
+              {menu.categories.map(cat => {
+                const active = !searchQuery && activeCategory?.id === cat.id;
+                return (
+                  <button key={cat.id} onClick={() => { setSearchQuery(''); setActiveCategoryId(cat.id); }}
+                    aria-current={active ? 'true' : undefined}
+                    className={`text-left px-4 py-3 rounded-2xl font-serif text-[15px] spring-btn ${
+                      active ? 'ui-chip-active' : 'text-ink hover:bg-surface-2'}`}>
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </nav>
 
-            {/* Kategoriler */}
-            {!searchQuery && (
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 mb-3">
-                {menu.categories.map(cat => {
-                  const active = activeCategory?.id === cat.id;
-                  return (
-                    <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
-                      className={`flex-shrink-0 px-4 py-2 rounded-2xl text-xs font-semibold spring-btn ${active ? 'btn-accent' : 'glass-pill'}`}>
-                      {cat.name}
-                    </button>
-                  );
-                })}
+            <div className="min-w-0">
+              {/* Arama */}
+              <div className="relative mb-3">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Menüde ara..." aria-label="Menüde ara"
+                  className="ui-input w-full pl-10 pr-9 py-3 rounded-2xl text-sm font-medium" />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-label="Aramayı temizle">
+                    <X size={14} className="block" />
+                  </button>
+                )}
               </div>
-            )}
 
-            {/* Bölüm başlığı */}
-            <div className="flex items-center gap-3 mb-3 px-1">
-              <h2 className="font-serif font-bold text-base">
-                {searchQuery ? 'Arama Sonuçları' : activeCategory?.name}
-              </h2>
-              <div className="flex-1 h-px bg-white/20" />
-              <span className="glass-pill text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
-                {visibleProducts.length} ürün
-              </span>
-            </div>
-
-            {/* Ürünler */}
-            <div className="space-y-3">
-              {visibleProducts.length === 0 && (
-                <div className="glass-card rounded-3xl py-8 text-center text-white/70">
-                  <UtensilsCrossed size={24} className="mb-2 text-amber-300 inline-block" />
-                  <p className="text-xs">{searchQuery ? 'Aramanıza uygun ürün bulunamadı.' : 'Bu kategoride henüz ürün yok.'}</p>
+              {/* Mobil: yatay kategori hapları */}
+              {!searchQuery && (
+                <div className="md:hidden flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 mb-3">
+                  {menu.categories.map(cat => {
+                    const active = activeCategory?.id === cat.id;
+                    return (
+                      <button key={cat.id} onClick={() => setActiveCategoryId(cat.id)}
+                        aria-pressed={active}
+                        className={`flex-shrink-0 px-4 py-2 rounded-2xl text-xs font-semibold spring-btn ${active ? 'ui-chip-active' : 'ui-chip'}`}>
+                        {cat.name}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
-              {visibleProducts.map(product => {
-                const inCart = cart.find(i => i.product_id === product.id);
-                // Masadan açıldıysa karta dokunmak sepete ekler (garson menüsü gibi); değilse detay açar
-                const onCardTap = () => (tableId ? addToCart(product) : setSelectedProduct(product));
-                return (
-                  <div key={product.id} onClick={onCardTap}
-                    role="button" aria-label={tableId ? `${product.name} sepete ekle` : product.name}
-                    className="glass-card glass-card-hover rounded-3xl p-3 flex gap-3 cursor-pointer relative select-none"
-                    style={inCart ? { borderColor: 'rgba(255,140,56,0.95)', boxShadow: '0 0 0 1px rgba(255,122,41,0.6), var(--glass-shadow-sm)' } : undefined}>
-                    <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white/10 shadow-md">
-                      {product.image_url ? (
-                        <img src={product.thumb_url ?? product.image_url} alt={product.name} loading="lazy"
-                          className="w-full h-full object-cover pointer-events-none" draggable={false} />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/60"><UtensilsCrossed size={30} strokeWidth={1.5} /></div>
-                      )}
-                      {inCart && (
-                        <span className="absolute top-1.5 left-1.5 z-10 btn-accent w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center pointer-events-none">
-                          {inCart.quantity}
-                        </span>
-                      )}
-                      {inCart && (
-                        <button onClick={e => { e.stopPropagation(); clearFromCart(product.id); }}
-                          className="absolute bottom-1.5 left-1.5 z-10 w-8 h-8 rounded-full flex items-center justify-center text-white spring-btn"
-                          style={{
-                            background: 'linear-gradient(135deg, #FB7185, #E11D48)',
-                            border: '1px solid rgba(255,255,255,0.7)',
-                            boxShadow: '0 4px 10px rgba(225,29,72,0.45)'
-                          }}
-                          title="Bu üründen vazgeç" aria-label="Bu üründen vazgeç">
-                          <X size={14} strokeWidth={3} />
+              {/* Bölüm başlığı */}
+              <div className="flex items-center gap-3 mb-3 px-1">
+                <h2 className="font-serif font-bold text-lg md:text-2xl">
+                  {searchQuery ? 'Arama Sonuçları' : activeCategory?.name}
+                </h2>
+                <div className="flex-1 h-px bg-line" />
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-surface-2 border border-line text-ink-muted">
+                  {visibleProducts.length} ürün
+                </span>
+              </div>
+
+              {/* Ürünler */}
+              <div className="grid gap-3 lg:grid-cols-2">
+                {visibleProducts.length === 0 && (
+                  <div className="ui-card rounded-3xl py-8 text-center text-ink-muted lg:col-span-2">
+                    <UtensilsCrossed size={24} className="mb-2 text-accent inline-block" />
+                    <p className="text-xs">{searchQuery ? 'Aramanıza uygun ürün bulunamadı.' : 'Bu kategoride henüz ürün yok.'}</p>
+                  </div>
+                )}
+
+                {visibleProducts.map(product => {
+                  const inCart = cart.find(i => i.product_id === product.id);
+                  // Masadan açıldıysa karta dokunmak sepete ekler (garson menüsü gibi); değilse detay açar
+                  const onCardTap = () => (tableId ? addToCart(product) : setSelectedProduct(product));
+                  return (
+                    <div key={product.id} onClick={onCardTap}
+                      role="button" aria-label={tableId ? `${product.name} sepete ekle` : product.name}
+                      className="ui-card rounded-3xl p-3 flex gap-3 cursor-pointer relative select-none transition-shadow hover:shadow-md"
+                      style={inCart ? { borderColor: 'var(--biz)', boxShadow: '0 0 0 1px var(--biz), var(--shadow)' } : undefined}>
+                      <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-surface-2">
+                        {product.image_url ? (
+                          <img src={product.thumb_url ?? product.image_url} alt={product.name} loading="lazy"
+                            className="w-full h-full object-cover pointer-events-none" draggable={false} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-accent"><UtensilsCrossed size={30} strokeWidth={1.5} /></div>
+                        )}
+                        {inCart && (
+                          <span className="absolute top-1.5 left-1.5 z-10 btn-primary w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center pointer-events-none shadow">
+                            {inCart.quantity}
+                          </span>
+                        )}
+                        {inCart && (
+                          <button onClick={e => { e.stopPropagation(); clearFromCart(product.id); }}
+                            className="absolute bottom-1.5 left-1.5 z-10 w-8 h-8 rounded-full flex items-center justify-center bg-surface border border-line text-state-danger shadow spring-btn"
+                            title="Bu üründen vazgeç" aria-label="Bu üründen vazgeç">
+                            <X size={15} strokeWidth={3} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col">
+                        <h4 className={`font-serif font-bold text-[15px] leading-snug ${tableId ? 'pr-9' : ''}`}>{product.name}</h4>
+                        {product.description && (
+                          <p className="text-xs text-ink-muted leading-snug mt-1 line-clamp-2">{product.description}</p>
+                        )}
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <span className="text-base font-extrabold tracking-tight">{formatPrice(product.price_int)}</span>
+                          {tableId && !inCart && (
+                            <span className="btn-primary w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn" aria-hidden="true">
+                              <Plus size={16} strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                        {inCart && (
+                          <div className="mt-2 flex items-center justify-between gap-1.5 bg-surface-2 p-1 rounded-xl border border-line">
+                            <button onClick={e => { e.stopPropagation(); removeFromCart(product.id); }} aria-label="Azalt"
+                              className="btn-outline w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">
+                              <Minus size={14} strokeWidth={3} />
+                            </button>
+                            <span className="font-extrabold text-xs">{inCart.quantity} adet</span>
+                            <button onClick={e => { e.stopPropagation(); addToCart(product); }} aria-label="Artır"
+                              className="btn-primary w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">
+                              <Plus size={14} strokeWidth={3} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {tableId && (
+                        <button onClick={e => { e.stopPropagation(); setSelectedProduct(product); }}
+                          className="absolute top-2 right-2 z-10 ui-chip w-8 h-8 rounded-full flex items-center justify-center spring-btn"
+                          title="Ürün detayı" aria-label={`${product.name} detayı`}>
+                          <Info size={14} />
                         </button>
                       )}
                     </div>
-
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      <h4 className={`font-serif font-bold text-sm leading-snug ${tableId ? 'pr-9' : ''}`}>{product.name}</h4>
-                      {product.description && (
-                        <p className="text-[11px] text-white/75 leading-tight mt-1 font-medium line-clamp-2">{product.description}</p>
-                      )}
-                      <div className="flex items-center justify-between mt-auto pt-2">
-                        <span className="text-sm font-extrabold tracking-tight">{formatPrice(product.price_int)}</span>
-                        {tableId && !inCart && (
-                          <span className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn" aria-hidden="true">
-                            <Plus size={14} strokeWidth={3} />
-                          </span>
-                        )}
-                      </div>
-                      {inCart && (
-                        <div className="mt-2 flex items-center justify-between gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
-                          <button onClick={e => { e.stopPropagation(); removeFromCart(product.id); }} aria-label="Azalt"
-                            className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn">
-                            <Minus size={14} strokeWidth={3} />
-                          </button>
-                          <span className="font-extrabold text-xs">{inCart.quantity} adet</span>
-                          <button onClick={e => { e.stopPropagation(); addToCart(product); }} aria-label="Artır"
-                            className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">
-                            <Plus size={14} strokeWidth={3} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {tableId && (
-                      <button onClick={e => { e.stopPropagation(); setSelectedProduct(product); }}
-                        className="absolute top-2 right-2 z-10 glass-pill w-8 h-8 rounded-full flex items-center justify-center spring-btn"
-                        title="Ürün detayı" aria-label={`${product.name} detayı`}>
-                        <Info size={14} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         {!tableId && (
           <div className="text-center px-4 pt-8 pb-2">
-            <a href={contactLink} className="btn-accent inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold mb-4 spring-btn">
+            <a href={contactLink} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold mb-4 spring-btn">
               <Phone size={14} /> İletişim
             </a>
-            <p className="text-xs text-white/60">
-              Powered by <span className="font-bold text-amber-300">{BRAND_NAME}</span>
+            <p className="text-xs text-ink-muted">
+              Powered by <span className="font-bold text-accent">{BRAND_NAME}</span>
             </p>
           </div>
         )}
       </div>
 
-      {/* Alt yüzen bar: Garson Çağır + Sepetim */}
+      {/* Alt yüzen bar: Garson Çağır + Sepetim (mobil ve masaüstü) */}
       {tableId && mainTab === 'menu' && (
         <div className="fixed bottom-3 left-0 right-0 z-30 px-3.5">
           <div className="mx-auto max-w-[480px] flex items-center gap-2">
             <button onClick={openCallModal}
-              className="glass-panel rounded-full px-4 py-3 text-xs font-extrabold flex items-center gap-2 spring-btn">
-              <Bell size={14} />
+              className="btn-outline rounded-full px-4 py-3 text-xs font-extrabold flex items-center gap-2 spring-btn shadow-lg">
+              <Bell size={15} />
               <span className="whitespace-nowrap">Garson Çağır</span>
             </button>
             <button onClick={() => setCartOpen(true)}
-              className="btn-accent flex-1 rounded-full px-4 py-3 text-xs font-extrabold flex items-center justify-between spring-btn">
+              className="btn-primary flex-1 rounded-full px-4 py-3 text-xs font-extrabold flex items-center justify-between spring-btn shadow-lg">
               <span className="flex items-center gap-2">
                 <span className="relative">
-                  <ShoppingCart size={14} className="block" />
+                  <ShoppingCart size={15} className="block" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2.5 bg-white text-[var(--accent-deep)] font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-2 -right-2.5 bg-surface text-ink border border-line font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
                       {cartCount}
                     </span>
                   )}
@@ -589,7 +602,7 @@ export function PublicMenuPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 {cartCount > 0 && <span>{cartCount} ürün • {formatPrice(cartTotal)}</span>}
-                <ChevronRight size={12} className="text-white/80" />
+                <ChevronRight size={13} />
               </span>
             </button>
           </div>
@@ -598,9 +611,9 @@ export function PublicMenuPage() {
 
       {/* Ürün detay sheet */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center ui-scrim fade-enter"
           onClick={() => setSelectedProduct(null)}>
-          <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] overflow-hidden border-t border-white/60"
+          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] overflow-hidden border border-line"
             onClick={e => e.stopPropagation()}>
             {selectedProduct.image_url && (
               <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
@@ -610,20 +623,20 @@ export function PublicMenuPage() {
             )}
             <div className="p-6">
               <div className="flex items-start justify-between gap-3 mb-2">
-                <h3 className="font-serif font-bold text-xl flex-1">{selectedProduct.name}</h3>
+                <h3 className="font-serif font-bold text-2xl flex-1">{selectedProduct.name}</h3>
                 <button onClick={() => setSelectedProduct(null)} aria-label="Kapat"
-                  className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
-                  <X size={12} />
+                  className="ui-chip w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 spring-btn">
+                  <X size={14} />
                 </button>
               </div>
               {selectedProduct.description && (
-                <p className="text-sm text-white/75 mb-4 leading-relaxed">{selectedProduct.description}</p>
+                <p className="text-sm text-ink-muted mb-4 leading-relaxed">{selectedProduct.description}</p>
               )}
-              <div className="pt-4 border-t border-white/20 flex items-center justify-between">
-                <span className="font-extrabold text-2xl text-amber-300">{formatPrice(selectedProduct.price_int)}</span>
+              <div className="pt-4 border-t border-line flex items-center justify-between">
+                <span className="font-serif font-bold text-2xl">{formatPrice(selectedProduct.price_int)}</span>
                 {tableId && (
                   <button onClick={() => addToCart(selectedProduct)}
-                    className="btn-accent px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 spring-btn">
+                    className="btn-primary px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 spring-btn">
                     <Plus size={14} strokeWidth={3} /> Sepete Ekle
                   </button>
                 )}
@@ -635,28 +648,28 @@ export function PublicMenuPage() {
 
       {/* Sepet sheet */}
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center ui-scrim fade-enter"
           onClick={() => setCartOpen(false)}>
-          <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] flex flex-col border-t border-white/60"
+          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] flex flex-col border border-line"
             style={{ maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
+            <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 md:hidden" />
 
-            <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-white/20">
+            <div className="px-5 pt-3 md:pt-5 pb-3 flex items-center justify-between border-b border-line">
               <div>
-                <h3 className="font-serif font-bold text-lg leading-tight">Sipariş Sepetiniz</h3>
-                {tableName && <p className="text-[11px] text-white/65">{tableName} • Anında mutfak iletimi</p>}
+                <h3 className="font-serif font-bold text-xl leading-tight">Sipariş Sepetiniz</h3>
+                {tableName && <p className="text-[11px] text-ink-muted">{tableName} • Anında mutfak iletimi</p>}
               </div>
               <button onClick={() => setCartOpen(false)} aria-label="Kapat"
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
-                <X size={12} />
+                className="ui-chip w-9 h-9 rounded-full flex items-center justify-center spring-btn">
+                <X size={14} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-3">
               {cart.length === 0 ? (
-                <div className="text-center py-10 text-white/65">
-                  <ShoppingBasket size={30} className="mb-2 text-amber-300 inline-block" />
+                <div className="text-center py-10 text-ink-muted">
+                  <ShoppingBasket size={30} className="mb-2 text-accent inline-block" />
                   <p className="text-sm">Sepetiniz şu anda boş.</p>
                 </div>
               ) : (
@@ -667,26 +680,27 @@ export function PublicMenuPage() {
 
                     return (
                       <div key={item.product_id}
-                        className={`glass-card rounded-2xl overflow-hidden ${hasNote ? 'border-amber-300/70' : ''}`}>
+                        className="bg-surface-2 border border-line rounded-2xl overflow-hidden"
+                        style={hasNote ? { borderColor: 'var(--state-warn)' } : undefined}>
                         <div className="p-3 flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="font-bold text-sm truncate">{item.name}</div>
-                            <div className="text-xs font-extrabold text-amber-300">{formatPrice(item.price_int * item.quantity)}</div>
+                            <div className="text-xs font-extrabold text-ink-muted">{formatPrice(item.price_int * item.quantity)}</div>
                           </div>
-                          <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
+                          <div className="flex items-center gap-1.5 bg-surface p-1 rounded-xl border border-line">
                             <button onClick={() => removeFromCart(item.product_id)} aria-label="Azalt"
-                              className="w-7 h-7 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn"><Minus size={14} strokeWidth={3} /></button>
+                              className="btn-outline w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center spring-btn"><Minus size={14} strokeWidth={3} /></button>
                             <span className="font-extrabold text-sm w-5 text-center">{item.quantity}</span>
                             <button onClick={() => addToCart({ id: item.product_id, name: item.name, price_int: item.price_int })} aria-label="Artır"
-                              className="w-7 h-7 rounded-lg btn-accent font-bold text-sm flex items-center justify-center spring-btn"><Plus size={14} strokeWidth={3} /></button>
+                              className="btn-primary w-7 h-7 rounded-lg font-bold text-sm flex items-center justify-center spring-btn"><Plus size={14} strokeWidth={3} /></button>
                           </div>
                         </div>
 
                         {hasNote && !isNoteOpen && (
-                          <div className="px-3 py-2 bg-amber-500/20 border-t border-amber-300/30 flex items-center justify-between gap-2">
-                            <div className="text-xs text-amber-100 flex-1 min-w-0"><NotebookPen size={12} className="inline-block align-[-2px]" /> <strong>{item.note}</strong></div>
+                          <div className="px-3 py-2 bg-state-warn-bg border-t border-line flex items-center justify-between gap-2">
+                            <div className="text-xs text-state-warn flex-1 min-w-0"><NotebookPen size={12} className="inline-block align-[-2px]" /> <strong>{item.note}</strong></div>
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              className="text-xs font-bold text-amber-300 whitespace-nowrap">
+                              className="text-xs font-bold text-ink underline underline-offset-2 whitespace-nowrap">
                               Düzenle
                             </button>
                           </div>
@@ -695,15 +709,16 @@ export function PublicMenuPage() {
                         {!hasNote && !isNoteOpen && (
                           <div className="px-3 pb-2.5">
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              className="text-xs font-semibold text-amber-300 inline-flex items-center gap-1">
-                              <NotebookPen size={12} /> + Bu ürüne özel not ekle
+                              className="text-xs font-semibold text-ink-muted hover:text-ink inline-flex items-center gap-1">
+                              <NotebookPen size={12} className="text-accent" /> + Bu ürüne özel not ekle
                             </button>
                           </div>
                         )}
 
                         {isNoteOpen && (
-                          <div className="px-3 pt-2.5 pb-3 bg-black/25 border-t border-white/20">
+                          <div className="px-3 pt-2.5 pb-3 bg-surface border-t border-line">
                             <OrderNoteTemplates
+                              variant="themed"
                               value={item.note ?? ''}
                               onChange={(newNote) => updateItemNote(item.product_id, newNote)}
                               label={`${item.name} İçin Not`}
@@ -711,7 +726,7 @@ export function PublicMenuPage() {
                               rows={2}
                             />
                             <button onClick={() => setOpenNoteFor(null)}
-                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
+                              className="mt-2 w-full py-2 rounded-xl btn-outline text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
                               <Check size={14} strokeWidth={3} /> Tamam
                             </button>
                           </div>
@@ -723,29 +738,29 @@ export function PublicMenuPage() {
               )}
 
               {cart.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-dashed border-white/25">
-                  <label className="text-[11px] font-bold text-white/70 flex items-center gap-1 mb-1 uppercase tracking-wider">
+                <div className="mt-4 pt-4 border-t border-dashed border-line">
+                  <label className="text-[11px] font-bold text-ink-muted flex items-center gap-1 mb-1 uppercase tracking-wider">
                     <ClipboardList size={11} /> Sipariş Geneli Not (opsiyonel)
                   </label>
-                  <p className="text-[11px] text-white/55 mb-2">
+                  <p className="text-[11px] text-ink-muted mb-2">
                     Tüm sipariş için geçerli notlar (örn: "kapı kenarında oturuyoruz")
                   </p>
                   <textarea value={orderNote} onChange={e => setOrderNote(e.target.value)}
                     placeholder="Mutfak için özel not ekleyin..."
                     rows={2}
-                    className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
+                    className="ui-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
                 </div>
               )}
             </div>
 
             {cart.length > 0 && (
-              <div className="px-5 pt-3 pb-6 border-t border-white/20">
+              <div className="px-5 pt-3 pb-6 border-t border-line">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="font-bold text-white/75 text-sm">Toplam Tutar</span>
-                  <span className="font-extrabold text-xl text-amber-300">{formatPrice(cartTotal)}</span>
+                  <span className="font-bold text-ink-muted text-sm">Toplam Tutar</span>
+                  <span className="font-serif font-bold text-2xl">{formatPrice(cartTotal)}</span>
                 </div>
                 <button onClick={sendOrder} disabled={orderLoading}
-                  className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
+                  className="btn-primary w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
                   {orderLoading ? 'Gönderiliyor...' : (<><Send size={14} /> Siparişi Gönder</>)}
                 </button>
               </div>
@@ -760,29 +775,29 @@ export function PublicMenuPage() {
         const sentType = lastCall ? CALL_TYPES.find(ct => ct.code === lastCall.code) ?? null : null;
         const recentCode = lastCall && Date.now() - lastCall.at <= CALL_MEMORY_MS ? lastCall.code : null;
         return (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 backdrop-blur-md fade-enter"
+        <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center ui-scrim fade-enter"
           onClick={closeCallSheet}>
-          <div className="glass-dark sheet-enter w-full max-w-[480px] rounded-t-[32px] flex flex-col border-t border-white/60"
+          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] flex flex-col border border-line"
             style={{ maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
+            <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 md:hidden" />
 
-            <div className="px-5 pt-3 pb-3 flex items-center justify-between">
+            <div className="px-5 pt-3 md:pt-5 pb-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center border"
                   style={{ background: 'var(--accent-soft)', borderColor: 'color-mix(in srgb, var(--accent) 35%, transparent)', color: 'var(--accent)' }}>
                   <Bell size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg leading-tight tracking-tight">Garson Çağır</h3>
-                  <p className="text-xs text-white/60 font-medium">
+                  <h3 className="font-serif font-bold text-xl leading-tight">Garson Çağır</h3>
+                  <p className="text-xs text-ink-muted font-medium">
                     {showCallSuccess ? (tableName || 'Masanız') : 'Ne istediğinizi seçin'}
                   </p>
                 </div>
               </div>
               <button onClick={closeCallSheet}
                 disabled={callLoading} aria-label="Kapat"
-                className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/80 spring-btn disabled:opacity-50">
+                className="ui-chip w-9 h-9 rounded-full flex items-center justify-center spring-btn disabled:opacity-50">
                 <X size={16} />
               </button>
             </div>
@@ -794,25 +809,25 @@ export function PublicMenuPage() {
                   <div className="absolute w-24 h-24 rounded-full animate-ping"
                     style={{ background: withAlpha(sentType.color, 0.18), animationDuration: '2.4s' }} />
                   <div className="relative w-20 h-20 rounded-full flex items-center justify-center"
-                    style={{ background: `linear-gradient(135deg, ${sentType.color}, ${withAlpha(sentType.color, 0.7)})`, boxShadow: `0 10px 30px ${withAlpha(sentType.color, 0.45)}` }}>
-                    <CheckCircle2 size={40} color="#fff" />
+                    style={{ background: sentType.color, boxShadow: `0 10px 30px ${withAlpha(sentType.color, 0.35)}` }}>
+                    <CheckCircle2 size={40} color={readableTextOn(sentType.color)} />
                   </div>
                 </div>
-                <h4 className="text-2xl font-bold tracking-tight">Garsonunuz haberdar edildi</h4>
-                <p className="text-sm font-semibold mt-1.5" style={{ color: sentType.color }}>
+                <h4 className="font-serif text-2xl font-bold">Garsonunuz haberdar edildi</h4>
+                <p className="text-sm font-semibold mt-1.5 text-ink">
                   “{sentType.label}” {lastCall.already ? 'talebiniz zaten iletilmişti' : 'talebiniz iletildi'}
                 </p>
-                <p className="text-xs text-white/55 mt-1 flex items-center gap-1.5">
+                <p className="text-xs text-ink-muted mt-1 flex items-center gap-1.5">
                   <Clock size={12} /> {minutesAgoLabel(lastCall.at)}{tableName ? ` • ${tableName}` : ''}
                 </p>
 
                 <div className="w-full mt-7 space-y-2">
                   <button onClick={() => dismissCallSuccess(true)}
-                    className="btn-accent w-full py-3.5 rounded-full text-sm font-bold spring-btn">
+                    className="btn-primary w-full py-3.5 rounded-full text-sm font-bold spring-btn">
                     Tamam
                   </button>
                   <button onClick={() => dismissCallSuccess(false)}
-                    className="w-full py-3 rounded-full text-sm font-semibold text-white/80 bg-white/10 border border-white/10 spring-btn">
+                    className="btn-outline w-full py-3 rounded-full text-sm font-semibold spring-btn">
                     Başka bir istek
                   </button>
                 </div>
@@ -828,36 +843,31 @@ export function PublicMenuPage() {
                         <button key={ct.code}
                           onClick={() => setSelectedCallType(ct.code)}
                           aria-pressed={isSelected}
-                          className="relative rounded-[22px] p-3 min-h-[98px] flex flex-col items-center justify-center gap-2 spring-btn border"
+                          className={`relative rounded-[22px] p-3 min-h-[98px] flex flex-col items-center justify-center gap-2 spring-btn border ${
+                            isSelected ? '' : 'bg-surface-2 border-line'}`}
                           style={isSelected ? {
-                            background: withAlpha(ct.color, 0.18),
-                            borderColor: withAlpha(ct.color, 0.7),
-                            boxShadow: `0 0 22px ${withAlpha(ct.color, 0.35)}, inset 0 1px 1px rgba(255,255,255,0.35)`
-                          } : {
-                            background: 'rgba(255,255,255,0.05)',
-                            borderColor: 'rgba(255,255,255,0.09)'
-                          }}>
-                          <span className="w-11 h-11 rounded-2xl flex items-center justify-center border transition-all"
+                            background: withAlpha(ct.color, 0.12),
+                            borderColor: ct.color,
+                            boxShadow: `0 0 0 1px ${ct.color}`
+                          } : undefined}>
+                          <span className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all"
                             style={isSelected ? {
-                              background: `linear-gradient(135deg, ${ct.color}, ${withAlpha(ct.color, 0.75)})`,
-                              borderColor: 'rgba(255,255,255,0.35)',
-                              color: '#fff',
-                              boxShadow: `0 4px 14px ${withAlpha(ct.color, 0.5)}`
+                              background: ct.color,
+                              color: readableTextOn(ct.color)
                             } : {
-                              background: withAlpha(ct.color, 0.15),
-                              borderColor: withAlpha(ct.color, 0.25),
+                              background: withAlpha(ct.color, 0.14),
                               color: ct.color
                             }}>
                             <Icon size={20} />
                           </span>
-                          <span className={`text-[12px] text-center leading-tight tracking-tight ${isSelected ? 'font-bold text-white' : 'font-semibold text-white/80'}`}>
+                          <span className={`text-[12px] text-center leading-tight tracking-tight ${isSelected ? 'font-bold text-ink' : 'font-semibold text-ink-muted'}`}>
                             {ct.label}
                           </span>
                           {recentCode === ct.code && (
                             <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
                               title="Az önce iletildi"
-                              style={{ background: withAlpha(ct.color, 0.9) }}>
-                              <Check size={12} color="#fff" />
+                              style={{ background: ct.color, color: readableTextOn(ct.color) }}>
+                              <Check size={12} />
                             </span>
                           )}
                         </button>
@@ -868,7 +878,7 @@ export function PublicMenuPage() {
                   {/* "Diğer" seçilince serbest text */}
                   {selectedCallType === 'other' && (
                     <div className="mt-4">
-                      <label className="text-[11px] font-bold text-white/70 block mb-1.5 uppercase tracking-wider">
+                      <label className="text-[11px] font-bold text-ink-muted block mb-1.5 uppercase tracking-wider">
                         Açıklama (zorunlu, en az 3 karakter)
                       </label>
                       <textarea value={callNote}
@@ -876,33 +886,29 @@ export function PublicMenuPage() {
                         placeholder="Ne istediğinizi yazın..."
                         rows={3}
                         autoFocus
-                        className={`glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none ${callNote.trim().length < 3 && callNote.length > 0 ? 'border-rose-300' : ''}`} />
+                        className="ui-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none"
+                        style={callNote.trim().length < 3 && callNote.length > 0 ? { borderColor: 'var(--state-danger)' } : undefined} />
                       {callNote.trim().length < 3 && callNote.length > 0 && (
-                        <div className="text-[11px] text-rose-300 mt-1">En az 3 karakter yazın</div>
+                        <div className="text-[11px] text-state-danger mt-1 font-semibold">En az 3 karakter yazın</div>
                       )}
                     </div>
                   )}
                 </div>
 
-                <div className="px-5 pt-3 pb-6 border-t border-white/10">
+                <div className="px-5 pt-3 pb-6 border-t border-line">
                   <button onClick={sendCall}
                     disabled={!canSendCall || callLoading}
-                    className="w-full py-3.5 rounded-[22px] text-sm font-bold flex items-center justify-center gap-2 spring-btn border disabled:cursor-not-allowed"
+                    className={`w-full py-3.5 rounded-[22px] text-sm font-bold flex items-center justify-center gap-2 spring-btn border disabled:cursor-not-allowed ${
+                      selected && canSendCall && !callLoading ? '' : 'bg-surface-2 border-line text-ink-muted'}`}
                     style={selected && canSendCall && !callLoading ? {
-                      background: `linear-gradient(135deg, ${selected.color}, ${withAlpha(selected.color, 0.8)})`,
-                      borderColor: 'rgba(255,255,255,0.35)',
-                      color: '#fff',
-                      boxShadow: `0 8px 24px -4px ${withAlpha(selected.color, 0.55)}`
-                    } : {
-                      background: 'rgba(255,255,255,0.06)',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.45)'
-                    }}>
+                      background: selected.color,
+                      borderColor: 'transparent',
+                      color: readableTextOn(selected.color)
+                    } : undefined}>
                     <Bell size={16} />
                     {callLoading ? 'Gönderiliyor...' : selected ? `“${selected.label}” Çağrısını Gönder` : 'Çağrıyı Gönder'}
                   </button>
-                  <p className="text-[11px] text-center mt-2 font-semibold"
-                    style={{ color: selected ? selected.color : 'rgba(255,255,255,0.5)' }}>
+                  <p className="text-[11px] text-center mt-2 font-semibold text-ink-muted">
                     {selected ? `Seçilen: ${selected.label}` : 'Önce bir seçenek seçin'}
                   </p>
                 </div>

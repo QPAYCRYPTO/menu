@@ -4,6 +4,7 @@
 // - Her kalemin durumu (bekliyor / hazırlanıyor / hazır / teslim / iptal)
 // - Alt kısımda toplam / ödenen / kalan
 // - 30 sn'de bir otomatik yenilenir; Yenile butonu sadece adisyonu yeniler
+// - Tema: gece/gündüz değişkenleri (ui-card, text-ink, durum renkleri --state-*)
 // Veri: GET /public/table/:slug/:table_id (active_session_id) → GET /public/sessions/:id/bill
 
 import { useCallback, useEffect, useState } from 'react';
@@ -47,12 +48,13 @@ type Props = {
   token: string;
 };
 
-const STATUS_META: Record<ItemStatus, { label: string; icon: LucideIcon; bg: string; color: string }> = {
-  pending:   { label: 'Bekliyor',     icon: Clock,      bg: 'rgba(251,191,36,0.18)',  color: '#FBBF24' },
-  preparing: { label: 'Hazırlanıyor', icon: ChefHat,    bg: 'rgba(56,189,248,0.18)',  color: '#38BDF8' },
-  ready:     { label: 'Hazır',        icon: Sparkles,   bg: 'rgba(52,211,153,0.18)',  color: '#34D399' },
-  delivered: { label: 'Teslim',       icon: CheckCheck, bg: 'rgba(161,161,170,0.18)', color: '#D4D4D8' },
-  cancelled: { label: 'İptal',        icon: Ban,        bg: 'rgba(251,113,133,0.16)', color: '#FB7185' }
+// Durum rozetleri: referans tasarımdaki yumuşak zemin + koyu yazı (temaya göre değişir)
+const STATUS_META: Record<ItemStatus, { label: string; icon: LucideIcon; className: string }> = {
+  pending:   { label: 'Bekliyor',     icon: Clock,      className: 'bg-state-warn-bg text-state-warn' },
+  preparing: { label: 'Hazırlanıyor', icon: ChefHat,    className: 'bg-state-info-bg text-state-info' },
+  ready:     { label: 'Hazır',        icon: Sparkles,   className: 'bg-state-ok-bg text-state-ok' },
+  delivered: { label: 'Teslim',       icon: CheckCheck, className: 'bg-surface-2 text-ink-muted' },
+  cancelled: { label: 'İptal',        icon: Ban,        className: 'bg-state-danger-bg text-state-danger' }
 };
 
 function formatPrice(priceInt: number): string {
@@ -116,13 +118,13 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
     <div className="flex items-center justify-between gap-3 mb-3 px-1">
       <div className="min-w-0">
         <h2 className="font-serif font-bold text-base leading-tight">Masa Adisyonu</h2>
-        <p className="text-[11px] text-white/55">
+        <p className="text-[11px] text-ink-muted">
           {error ? 'Bağlantı sorunu — tekrar denenecek' : updatedAt ? `Güncellendi: ${timeLabel(new Date(updatedAt).toISOString())}` : ' '}
         </p>
       </div>
       <button onClick={handleRefresh} disabled={refreshing}
         aria-label="Siparişleri yenile"
-        className="glass-pill px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 spring-btn disabled:opacity-60">
+        className="btn-outline px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 spring-btn disabled:opacity-60">
         <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Yenile
       </button>
     </div>
@@ -130,10 +132,10 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
 
   if (loading) {
     return (
-      <div className="glass-card rounded-3xl p-10 text-center">
-        <div className="w-10 h-10 rounded-full border-2 border-white/30 animate-spin mx-auto"
+      <div className="ui-card rounded-3xl p-10 text-center">
+        <div className="w-10 h-10 rounded-full border-2 border-line animate-spin mx-auto"
           style={{ borderTopColor: 'var(--accent)' }} />
-        <p className="text-white/70 text-sm mt-3">Adisyon yükleniyor...</p>
+        <p className="text-ink-muted text-sm mt-3">Adisyon yükleniyor...</p>
       </div>
     );
   }
@@ -142,10 +144,10 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
     return (
       <div>
         {header}
-        <div className="glass-card rounded-3xl py-10 px-6 text-center">
-          <ClipboardList size={44} className="mx-auto mb-3 text-white/60" />
-          <h3 className="font-bold text-base mb-1">Henüz sipariş yok</h3>
-          <p className="text-white/65 text-sm">Menüden sipariş verdiğinizde burada durumunu takip edebilirsiniz.</p>
+        <div className="ui-card rounded-3xl py-10 px-6 text-center">
+          <ClipboardList size={44} className="mx-auto mb-3 text-accent" />
+          <h3 className="font-serif font-bold text-base mb-1">Henüz sipariş yok</h3>
+          <p className="text-ink-muted text-sm">Menüden sipariş verdiğinizde burada durumunu takip edebilirsiniz.</p>
         </div>
       </div>
     );
@@ -159,7 +161,7 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
       {header}
 
       {othersCount > 0 && (
-        <div className="flex items-center gap-3 text-[11px] text-white/60 mb-2.5 px-1">
+        <div className="flex items-center gap-3 text-[11px] text-ink-muted mb-2.5 px-1">
           <span className="flex items-center gap-1.5"><User size={12} /> Sizin: {myCount}</span>
           <span className="flex items-center gap-1.5 opacity-70"><Users size={12} /> Masadaki diğer: {othersCount}</span>
         </div>
@@ -172,25 +174,19 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
           const cancelled = item.status === 'cancelled';
           return (
             <div key={item.item_id}
-              className={`glass-card rounded-2xl p-3 ${item.is_mine ? '' : 'text-white/75'}`}
-              style={item.is_mine ? undefined : {
-                // Başkasının siparişi: yine buzlu cam (okunur kalsın) ama koyu ton + kesikli kenar
-                background: 'rgba(10,10,10,0.42)',
-                borderColor: 'rgba(255,255,255,0.16)',
-                borderStyle: 'dashed',
-                boxShadow: 'none'
-              }}>
+              // Başkasının siparişi: sönük zemin + kesikli kenar (okunur kalır ama sizinkinden ayrışır)
+              className={`rounded-2xl p-3 ${item.is_mine ? 'ui-card' : 'bg-surface-2 text-ink border border-dashed border-line'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5 min-w-0">
-                  <span className="min-w-[26px] h-[26px] px-1.5 rounded-lg text-xs font-extrabold flex items-center justify-center flex-shrink-0"
-                    style={item.is_mine ? { background: 'var(--accent-gradient)' } : { background: 'rgba(255,255,255,0.12)' }}>
+                  <span className={`min-w-[26px] h-[26px] px-1.5 rounded-lg text-xs font-extrabold flex items-center justify-center flex-shrink-0 ${
+                    item.is_mine ? 'btn-primary' : 'bg-surface border border-line text-ink-muted'}`}>
                     {item.quantity}×
                   </span>
                   <div className="min-w-0">
-                    <div className={`font-semibold text-sm leading-snug ${cancelled ? 'line-through text-white/50' : ''}`}>
+                    <div className={`font-semibold text-sm leading-snug ${cancelled ? 'line-through text-ink-muted' : ''}`}>
                       {item.product_name}
                     </div>
-                    <div className="text-[11px] text-white/55 flex flex-wrap items-center gap-x-2 mt-0.5">
+                    <div className="text-[11px] text-ink-muted flex flex-wrap items-center gap-x-2 mt-0.5">
                       <span>{formatPrice(item.unit_price_int)}</span>
                       <span>• {timeLabel(item.created_at)}</span>
                       {!item.is_mine && (
@@ -200,7 +196,7 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
                       )}
                     </div>
                     {item.note && (
-                      <div className="text-[11px] text-amber-200/90 mt-1 flex items-center gap-1">
+                      <div className="text-[11px] text-state-warn mt-1 flex items-center gap-1 font-semibold">
                         <NotebookPen size={11} /> {item.note}
                       </div>
                     )}
@@ -208,15 +204,14 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
                 </div>
 
                 <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border"
-                    style={{ background: meta.bg, color: meta.color, borderColor: meta.bg }}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${meta.className}`}>
                     <StatusIcon size={11} /> {meta.label}
                   </span>
-                  <span className={`text-sm font-extrabold ${cancelled ? 'line-through text-white/40' : 'text-amber-300'}`}>
+                  <span className={`text-sm font-extrabold ${cancelled ? 'line-through text-ink-muted' : 'text-ink'}`}>
                     {formatPrice(item.line_total_int)}
                   </span>
                   {item.is_paid && !cancelled && (
-                    <span className="text-[10px] font-bold text-emerald-300 flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-state-ok flex items-center gap-1">
                       <CircleCheck size={11} /> Ödendi
                     </span>
                   )}
@@ -228,20 +223,20 @@ export function MyOrdersTab({ slug, tableId, token }: Props) {
       </div>
 
       {/* Toplamlar */}
-      <div className="glass-panel rounded-3xl p-4 mt-4 space-y-1.5">
-        <div className="flex justify-between text-sm text-white/75">
+      <div className="ui-card rounded-3xl p-4 mt-4 space-y-1.5">
+        <div className="flex justify-between text-sm text-ink-muted">
           <span>Toplam</span>
-          <span className="font-bold text-white">{formatPrice(bill.total_int)}</span>
+          <span className="font-bold text-ink">{formatPrice(bill.total_int)}</span>
         </div>
         {bill.paid_int > 0 && (
-          <div className="flex justify-between text-sm text-emerald-300">
+          <div className="flex justify-between text-sm text-state-ok">
             <span>Ödenen</span>
             <span className="font-bold">{formatPrice(bill.paid_int)}</span>
           </div>
         )}
-        <div className="flex justify-between items-center pt-2 border-t border-white/15">
+        <div className="flex justify-between items-center pt-2 border-t border-line">
           <span className="font-bold">Kalan</span>
-          <span className="font-extrabold text-xl text-amber-300">{formatPrice(bill.remaining_int)}</span>
+          <span className="font-serif font-bold text-2xl text-ink">{formatPrice(bill.remaining_int)}</span>
         </div>
       </div>
     </div>

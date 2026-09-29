@@ -86,3 +86,22 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void; toggle
     toggleTheme: useCallback(() => { toggleTheme(); }, [])
   };
 }
+
+/**
+ * Yeni temaya taşınmış sayfalar için: sayfa açıkken gövde zemini temaya uyar
+ * (taşınmamış sayfalar için gövde şimdilik gece zemininde — bkz. index.css).
+ * Böylece iOS'ta aşağı/yukarı esnemede ve kısa içerikte alttan koyu zemin görünmez.
+ */
+export function useThemedPage(): void {
+  useEffect(() => {
+    const body = document.body;
+    const prevBg = body.style.backgroundColor;
+    const prevColor = body.style.color;
+    body.style.backgroundColor = 'var(--bg)';
+    body.style.color = 'var(--ink)';
+    return () => {
+      body.style.backgroundColor = prevBg;
+      body.style.color = prevColor;
+    };
+  }, []);
+}

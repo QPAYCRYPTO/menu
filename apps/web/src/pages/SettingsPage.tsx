@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
+import { ThemeColorPicker } from '../components/ThemeColorPicker';
+import { isHexColor } from '../lib/color';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { BookUser, Camera, Eye, MessageCircle, Moon, Palette, Phone, Save, Store } from 'lucide-react';
 
@@ -79,6 +81,7 @@ export function SettingsPage() {
   async function saveSettings() {
     const name = form.name.trim();
     if (!name) { showToast('İşletme adı boş olamaz.', 'error'); return; }
+    if (!isHexColor(form.theme_color)) { showToast('Tema rengi geçerli bir hex kodu olmalı (örn. #c2410c).', 'error'); return; }
     try {
       await apiRequest<BusinessSettingsResponse>('/admin/business', {
         method: 'PUT', token: accessToken,
@@ -165,14 +168,12 @@ export function SettingsPage() {
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
             <Palette size={16} className="text-amber-300" /> Tema & Görünüm
           </h3>
+          <div className="mb-5">
+            <label className="block text-[11px] font-bold mb-1 uppercase tracking-wider text-white/70">Tema Rengi</label>
+            <p className="text-xs text-white/60 mb-3">Müşteri menüsündeki butonlar ve vurgular bu renkte olur. Gündüz ve gece modunda okunurluk otomatik ayarlanır.</p>
+            <ThemeColorPicker value={form.theme_color} onChange={hex => setForm(p => ({ ...p, theme_color: hex }))} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Tema Rengi</label>
-              <div className="glass-input flex items-center gap-3 px-4 py-2 rounded-2xl">
-                <input type="color" value={form.theme_color} onChange={e => setForm(p => ({ ...p, theme_color: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent" />
-                <span className="text-sm font-mono text-white">{form.theme_color}</span>
-              </div>
-            </div>
             <div>
               <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">Arkaplan Rengi</label>
               <div className="glass-input flex items-center gap-3 px-4 py-2 rounded-2xl">

@@ -6,6 +6,9 @@
 //   <OrderNoteTemplates value={note} onChange={setNote} />
 //
 // Şablon tıklanınca metne "; " ile eklenir. Yıkıcı değil — biriktirir.
+//
+// variant: 'themed' → yeni tema (gece/gündüz, müşteri menüsü). 'legacy' (varsayılan) → eski koyu görünüm
+// (garson ekranı yeni temaya taşınınca kaldırılacak).
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
@@ -135,6 +138,7 @@ type Props = {
   placeholder?: string;
   rows?: number;
   label?: string;
+  variant?: 'legacy' | 'themed';
 };
 
 export function OrderNoteTemplates({
@@ -142,8 +146,10 @@ export function OrderNoteTemplates({
   onChange,
   placeholder = 'Özel bir notunuz varsa yazın veya hızlı seçeneklerden ekleyin...',
   rows = 2,
-  label = 'Sipariş Notu (opsiyonel)'
+  label = 'Sipariş Notu (opsiyonel)',
+  variant = 'legacy'
 }: Props) {
+  const themed = variant === 'themed';
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
 
   function appendTemplate(text: string) {
@@ -165,13 +171,13 @@ export function OrderNoteTemplates({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+        <label className={`text-[11px] font-bold uppercase tracking-wider ${themed ? 'text-ink-muted' : 'text-white/70'}`}>
           {label}
         </label>
         {value.trim() && (
           <button onClick={clearNote}
             className="text-xs font-bold px-2 py-1 rounded-lg spring-btn flex items-center gap-1"
-            style={{ color: 'var(--danger)' }}>
+            style={{ color: themed ? 'var(--state-danger)' : 'var(--danger)' }}>
             <X size={12} /> Temizle
           </button>
         )}
@@ -180,7 +186,14 @@ export function OrderNoteTemplates({
       {/* Kategori chip'leri — yatay scroll */}
       <div className="-mx-1 px-1 pb-1 mb-2 overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex gap-1.5" style={{ minWidth: 'min-content' }}>
-          {CATEGORIES.map(cat => (
+          {CATEGORIES.map(cat => themed ? (
+            <button key={cat.id}
+              onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)}
+              aria-pressed={expandedCat === cat.id}
+              className={`${expandedCat === cat.id ? 'ui-chip-active' : 'ui-chip'} min-h-[36px] px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap spring-btn`}>
+              {cat.emoji} {cat.label}
+            </button>
+          ) : (
             <button key={cat.id}
               onClick={() => setExpandedCat(expandedCat === cat.id ? null : cat.id)}
               className="glass-pill min-h-[36px] px-3 py-1.5 rounded-2xl text-xs font-bold whitespace-nowrap spring-btn"
@@ -198,12 +211,12 @@ export function OrderNoteTemplates({
 
       {/* Açılan kategorinin şablonları */}
       {expandedCat && (
-        <div className="mb-2 p-2 rounded-2xl bg-black/25 border border-white/15 fade-enter">
+        <div className={`mb-2 p-2 rounded-2xl fade-enter ${themed ? 'bg-surface-2 border border-line' : 'bg-black/25 border border-white/15'}`}>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.find(c => c.id === expandedCat)?.templates.map(tpl => (
               <button key={tpl}
                 onClick={() => appendTemplate(tpl)}
-                className="glass-pill min-h-[32px] px-3 py-1 rounded-xl text-xs font-semibold spring-btn">
+                className={`${themed ? 'ui-chip' : 'glass-pill'} min-h-[32px] px-3 py-1 rounded-xl text-xs font-semibold spring-btn`}>
                 + {tpl}
               </button>
             ))}
@@ -216,7 +229,7 @@ export function OrderNoteTemplates({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="glass-input w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none" />
+        className={`${themed ? 'ui-input' : 'glass-input'} w-full px-3.5 py-2.5 rounded-2xl text-sm resize-none`} />
     </div>
   );
 }
