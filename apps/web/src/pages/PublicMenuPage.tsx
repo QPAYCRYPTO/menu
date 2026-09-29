@@ -15,7 +15,7 @@ import { getCustomerToken } from '../utils/customerToken';
 import { MyOrdersTab } from '../components/MyOrdersTab';
 import { OrderNoteTemplates } from '../components/OrderNoteTemplates';
 import {
-  Armchair, Bell, Check, CheckCircle2, ChevronRight, ClipboardList, Clock, Minus, NotebookPen, Phone, Plus, Receipt,
+  Armchair, Bell, Check, CheckCircle2, ChevronRight, ClipboardList, Clock, Info, Minus, NotebookPen, Phone, Plus, Receipt,
   Search, Send, ShoppingBasket, ShoppingCart, UtensilsCrossed, Wheat, X
 } from 'lucide-react';
 import { CALL_TYPES, type CallTypeCode } from '../lib/callTypes';
@@ -198,6 +198,12 @@ export function PublicMenuPage() {
       const remaining = cart.find(i => i.product_id === productId);
       if (!remaining || remaining.quantity <= 1) setOpenNoteFor(null);
     }
+  }
+
+  // Ürünü sepetten tamamen çıkar (kart üzerindeki ✕)
+  function clearFromCart(productId: string) {
+    setCart(prev => prev.filter(i => i.product_id !== productId));
+    if (openNoteFor === productId) setOpenNoteFor(null);
   }
 
   function updateItemNote(productId: string, newNote: string) {
@@ -467,39 +473,74 @@ export function PublicMenuPage() {
 
               {visibleProducts.map(product => {
                 const inCart = cart.find(i => i.product_id === product.id);
+                // Masadan açıldıysa karta dokunmak sepete ekler (garson menüsü gibi); değilse detay açar
+                const onCardTap = () => (tableId ? addToCart(product) : setSelectedProduct(product));
                 return (
-                  <div key={product.id} onClick={() => setSelectedProduct(product)}
-                    className="glass-card glass-card-hover rounded-3xl p-3 flex items-center gap-3 cursor-pointer">
+                  <div key={product.id} onClick={onCardTap}
+                    role="button" aria-label={tableId ? `${product.name} sepete ekle` : product.name}
+                    className="glass-card glass-card-hover rounded-3xl p-3 flex gap-3 cursor-pointer relative select-none"
+                    style={inCart ? { borderColor: 'rgba(255,140,56,0.95)', boxShadow: '0 0 0 1px rgba(255,122,41,0.6), var(--glass-shadow-sm)' } : undefined}>
                     <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white/10 shadow-md">
                       {product.image_url ? (
                         <img src={product.thumb_url ?? product.image_url} alt={product.name} loading="lazy"
-                          className="w-full h-full object-cover" />
+                          className="w-full h-full object-cover pointer-events-none" draggable={false} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/60"><UtensilsCrossed size={30} strokeWidth={1.5} /></div>
                       )}
                       {inCart && (
-                        <span className="absolute top-1.5 right-1.5 btn-accent w-6 h-6 rounded-full text-[11px] font-extrabold flex items-center justify-center">
+                        <span className="absolute top-1.5 left-1.5 z-10 btn-accent w-7 h-7 rounded-full text-xs font-extrabold flex items-center justify-center pointer-events-none">
                           {inCart.quantity}
                         </span>
                       )}
+                      {inCart && (
+                        <button onClick={e => { e.stopPropagation(); clearFromCart(product.id); }}
+                          className="absolute bottom-1.5 left-1.5 z-10 w-8 h-8 rounded-full flex items-center justify-center text-white spring-btn"
+                          style={{
+                            background: 'linear-gradient(135deg, #FB7185, #E11D48)',
+                            border: '1px solid rgba(255,255,255,0.7)',
+                            boxShadow: '0 4px 10px rgba(225,29,72,0.45)'
+                          }}
+                          title="Bu üründen vazgeç" aria-label="Bu üründen vazgeç">
+                          <X size={14} strokeWidth={3} />
+                        </button>
+                      )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-serif font-bold text-sm leading-snug">{product.name}</h4>
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <h4 className={`font-serif font-bold text-sm leading-snug ${tableId ? 'pr-9' : ''}`}>{product.name}</h4>
                       {product.description && (
                         <p className="text-[11px] text-white/75 leading-tight mt-1 font-medium line-clamp-2">{product.description}</p>
                       )}
-                      <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center justify-between mt-auto pt-2">
                         <span className="text-sm font-extrabold tracking-tight">{formatPrice(product.price_int)}</span>
-                        {tableId && (
-                          <button onClick={e => { e.stopPropagation(); addToCart(product); }}
-                            aria-label={`${product.name} sepete ekle`}
-                            className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn">
+                        {tableId && !inCart && (
+                          <span className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn" aria-hidden="true">
                             <Plus size={14} strokeWidth={3} />
-                          </button>
+                          </span>
                         )}
                       </div>
+                      {inCart && (
+                        <div className="mt-2 flex items-center justify-between gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
+                          <button onClick={e => { e.stopPropagation(); removeFromCart(product.id); }} aria-label="Azalt"
+                            className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn">
+                            <Minus size={14} strokeWidth={3} />
+                          </button>
+                          <span className="font-extrabold text-xs">{inCart.quantity} adet</span>
+                          <button onClick={e => { e.stopPropagation(); addToCart(product); }} aria-label="Artır"
+                            className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">
+                            <Plus size={14} strokeWidth={3} />
+                          </button>
+                        </div>
+                      )}
                     </div>
+
+                    {tableId && (
+                      <button onClick={e => { e.stopPropagation(); setSelectedProduct(product); }}
+                        className="absolute top-2 right-2 z-10 glass-pill w-8 h-8 rounded-full flex items-center justify-center spring-btn"
+                        title="Ürün detayı" aria-label={`${product.name} detayı`}>
+                        <Info size={14} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
