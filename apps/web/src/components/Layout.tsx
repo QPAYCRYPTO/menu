@@ -3,12 +3,14 @@
 // - Masalar altına "Ödemeler" alt menüsü eklendi (indent ile)
 // - Stil 5: Kart tarzı — sol kenar 3px renk şerit + hafif border + soft icon kutusu
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Armchair, Bell, ClipboardList, CreditCard, LayoutDashboard, List, LogOut, Menu, QrCode, Settings,
   ShoppingCart, Users
 } from 'lucide-react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import type { BusinessSettingsResponse } from '@menu/shared';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useOrders } from '../context/OrderContext';
 
@@ -31,14 +33,44 @@ const COLORS: Record<string, NavColor> = {
   qr:         { base: '#A5B4FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(99,102,241,0.26)', bgAktif: '#6366F1' }
 };
 
+type ModuleKey = 'waiter';
+type ModuleFlags = Record<ModuleKey, boolean>;
+
+/** Süper adminin işletme bazında açıp kapattığı modüller. Sekme pencereye dönülünce tazelenir. */
+function useModuleFlags(accessToken: string | null): ModuleFlags | null {
+  const [flags, setFlags] = useState<ModuleFlags | null>(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    const load = () => {
+      apiRequest<BusinessSettingsResponse>('/admin/business', { token: accessToken })
+        .then(b => { if (!cancelled) setFlags({ waiter: b.waiter_module_enabled === true }); })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener('focus', load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', load);
+    };
+  }, [accessToken]);
+
+  return flags;
+}
+
 export function AdminLayout() {
-  const { logout } = useAuth();
+  const { logout, accessToken } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { pendingCount, callCount, unlockAudio } = useOrders();
+  const moduleFlags = useModuleFlags(accessToken);
 
   // Ana nav item'ları — payment Masalar'ın altında sub-item olarak gelecek
-  const navItems = [
+  // `module` olan sekmeler yalnızca o modül işletmede açıksa görünür (bilinmiyorken gizli)
+  const allNavItems: Array<{
+    to: string; label: string; colorKey: string; sub: boolean; icon: JSX.Element; badge?: number; module?: ModuleKey;
+  }> = [
     {
       to: '/admin', label: 'Panel', colorKey: 'panel', sub: false,
       icon: <LayoutDashboard size={14} />
@@ -65,7 +97,7 @@ export function AdminLayout() {
       icon: <ShoppingCart size={14} />
     },
     {
-      to: '/admin/waiters', label: 'Garsonlar', colorKey: 'waiters', sub: false,
+      to: '/admin/waiters', label: 'Garsonlar', colorKey: 'waiters', sub: false, module: 'waiter',
       icon: <Users size={14} />
     },
     {
@@ -77,6 +109,7 @@ export function AdminLayout() {
       icon: <QrCode size={14} />
     },
   ];
+  const navItems = allNavItems.filter(i => !i.module || moduleFlags?.[i.module] === true);
 
   function isActive(path: string) {
     if (path === '/admin') return location.pathname === '/admin';
@@ -84,6 +117,12 @@ export function AdminLayout() {
   }
 
   const currentLabel = navItems.find(i => isActive(i.to))?.label ?? 'Panel';
+
+  // Modül kapalıyken sekmenin adresine doğrudan gelinirse panele dön
+  const blockedItem = moduleFlags
+    ? allNavItems.find(i => i.module && !moduleFlags[i.module] && location.pathname.startsWith(i.to))
+    : undefined;
+  if (blockedItem) return <Navigate to="/admin" replace />;
 
   const SidebarContent = () => (
     <>

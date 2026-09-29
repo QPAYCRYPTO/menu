@@ -63,6 +63,8 @@ export interface BusinessSettingsResponse {
   contact_email: string | null;
   contact_whatsapp: string | null;
   contact_instagram: string | null;
+  /** Süper admin tarafından açılıp kapatılan modül (kapalıysa admin menüsünde sekme görünmez) */
+  waiter_module_enabled?: boolean;
 }
 
 export interface PublicMenuCategory {

@@ -143,7 +143,8 @@ adminRoutes.get('/business', async (req, res) => {
 
   const result = await pool.query(
     `SELECT id, name, slug, logo_url, theme_color, bg_color, dark_mode,
-            description, contact_name, contact_phone, contact_email, contact_whatsapp, contact_instagram
+            description, contact_name, contact_phone, contact_email, contact_whatsapp, contact_instagram,
+            waiter_module_enabled
      FROM businesses
      WHERE id = $1`,
     [businessId]
