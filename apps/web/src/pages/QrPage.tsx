@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { Armchair, Copy, Download, QrCode, X } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
@@ -108,7 +109,7 @@ export function QrPage() {
       <div className="glass-panel rounded-3xl overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-white/20">
           <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-            <i className="fa-solid fa-qrcode text-amber-300 text-base" /> Genel Menü QR
+            <QrCode size={16} className="text-amber-300" /> Genel Menü QR
           </h2>
           <p className="text-xs mt-1 text-white/65">Masa seçimi olmadan direkt menüye yönlendirir</p>
         </div>
@@ -133,12 +134,12 @@ export function QrPage() {
             <div className="flex flex-col gap-2">
               <button onClick={() => downloadQr(qrBlob, 'atlasqr-menu.png')}
                 className="btn-accent py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 spring-btn">
-                <i className="fa-solid fa-download" />
+                <Download size={14} />
                 İndir
               </button>
               <button onClick={() => copyLink(publicLink)}
                 className="glass-pill py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn">
-                <i className="fa-regular fa-copy" />
+                <Copy size={14} />
                 Linki Kopyala
               </button>
             </div>
@@ -150,14 +151,14 @@ export function QrPage() {
       <div className="glass-dark rounded-3xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/15">
           <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-            <i className="fa-solid fa-chair text-amber-300 text-base" /> Masa QR Kodları
+            <Armchair size={16} className="text-amber-300" /> Masa QR Kodları
           </h2>
           <p className="text-xs mt-1 text-white/65">Her masaya özel QR — sipariş sistemi için gerekli</p>
         </div>
 
         {tables.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-4xl mb-3">🪑</div>
+            <div className="mb-3 flex justify-center text-white/60"><Armchair size={36} /></div>
             <p className="text-sm mb-2 text-white/75">Henüz masa tanımlanmamış</p>
             <p className="text-xs text-white/50">Masa yönetiminden masa ekleyin</p>
           </div>
@@ -167,7 +168,7 @@ export function QrPage() {
               <div key={table.id} className="px-6 py-4 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
                   style={{background: 'var(--accent-soft)', border: '1px solid rgba(255,255,255,0.35)'}}>
-                  <i className="fa-solid fa-qrcode" />
+                  <QrCode size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm">{table.name}</div>
@@ -192,7 +193,7 @@ export function QrPage() {
               <button onClick={() => { setSelectedTable(null); setTableQrSrc(''); }}
                 aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
 
@@ -214,11 +215,11 @@ export function QrPage() {
               <div className="flex gap-3 w-full">
                 <button onClick={() => downloadQr(tableQrBlob, `qr-${selectedTable.name}.png`)}
                   className="btn-accent flex-1 py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 spring-btn">
-                  <i className="fa-solid fa-download" /> İndir
+                  <Download size={14} /> İndir
                 </button>
                 <button onClick={() => copyLink(`${PUBLIC_BASE_URL}/m/${slug}?masa=${selectedTable.id}`)}
                   className="glass-pill flex-1 py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 spring-btn">
-                  <i className="fa-regular fa-copy" /> Linki Kopyala
+                  <Copy size={14} /> Linki Kopyala
                 </button>
               </div>
             </div>

@@ -14,7 +14,10 @@ import { apiRequest } from '../api/client';
 import { getCustomerToken } from '../utils/customerToken';
 import { MyOrdersTab } from '../components/MyOrdersTab';
 import { OrderNoteTemplates } from '../components/OrderNoteTemplates';
-import { Bell, Check, CheckCircle2, Clock, X } from 'lucide-react';
+import {
+  Armchair, Bell, Check, CheckCircle2, ChevronRight, ClipboardList, Clock, Minus, NotebookPen, Phone, Plus, Receipt,
+  Search, Send, ShoppingBasket, ShoppingCart, UtensilsCrossed, Wheat, X
+} from 'lucide-react';
 import { CALL_TYPES, type CallTypeCode } from '../lib/callTypes';
 import { withAlpha } from '../lib/color';
 
@@ -333,7 +336,7 @@ export function PublicMenuPage() {
   if (!menu) return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="glass-panel rounded-3xl p-8 text-center max-w-sm fade-enter">
-        <div className="text-5xl mb-4">🍽️</div>
+        <div className="mb-4 flex justify-center text-white/80"><UtensilsCrossed size={48} strokeWidth={1.5} /></div>
         <h1 className="font-serif font-bold text-xl mb-2 text-white">Menü Bulunamadı</h1>
         <p className="text-sm text-white/70">Bu menü mevcut değil veya kaldırılmış olabilir.</p>
       </div>
@@ -352,9 +355,9 @@ export function PublicMenuPage() {
 
         {/* Bildirimler */}
         {orderSent && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter"
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass-panel rounded-2xl px-5 py-3 text-sm font-bold fade-enter flex items-center gap-2"
             style={{ background: 'var(--accent-gradient)' }}>
-            ✅ Siparişiniz alındı!
+            <CheckCircle2 size={16} className="flex-shrink-0" /> Siparişiniz alındı!
           </div>
         )}
 
@@ -366,7 +369,7 @@ export function PublicMenuPage() {
                 className="w-12 h-12 rounded-2xl object-cover flex-shrink-0 border border-white/40" />
             ) : (
               <div className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-xl text-white border border-white/30 bg-white/10">
-                <i className="fa-solid fa-wheat-awn" />
+                <Wheat size={20} />
               </div>
             )}
             <div className="min-w-0">
@@ -380,7 +383,7 @@ export function PublicMenuPage() {
           {tableId && tableName && (
             <div className="glass-pill rounded-2xl px-3 py-1.5 flex flex-col items-center justify-center text-center min-w-[72px] flex-shrink-0">
               <div className="flex items-center gap-1 text-[10px] text-white/70 font-medium">
-                <i className="fa-solid fa-chair text-[9px]" />
+                <Armchair size={9} />
                 <span>Masa</span>
               </div>
               <span className="font-extrabold text-sm leading-tight truncate max-w-[90px]">{tableName}</span>
@@ -391,10 +394,10 @@ export function PublicMenuPage() {
         {/* Menü / Siparişlerim */}
         {tableId && (
           <div className="flex gap-1 p-1 mb-3 rounded-2xl bg-black/35 border border-white/20 backdrop-blur-xl">
-            {([['menu', 'fa-utensils', 'Menü'], ['orders', 'fa-receipt', 'Siparişlerim']] as const).map(([tab, icon, label]) => (
+            {([['menu', UtensilsCrossed, 'Menü'], ['orders', Receipt, 'Siparişlerim']] as const).map(([tab, TabIcon, label]) => (
               <button key={tab} onClick={() => setMainTab(tab)}
                 className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 spring-btn ${mainTab === tab ? 'btn-accent' : 'text-white/70'}`}>
-                <i className={`fa-solid ${icon}`} /> {label}
+                <TabIcon size={12} /> {label}
               </button>
             ))}
           </div>
@@ -416,14 +419,14 @@ export function PublicMenuPage() {
           <>
             {/* Arama */}
             <div className="relative mb-3">
-              <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 text-xs" />
+              <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Menüde ara..."
                 className="glass-input w-full pl-9 pr-9 py-2.5 rounded-2xl text-sm font-medium" />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 text-xs" aria-label="Aramayı temizle">
-                  <i className="fa-solid fa-xmark" />
+                  <X size={12} className="block" />
                 </button>
               )}
             </div>
@@ -458,7 +461,7 @@ export function PublicMenuPage() {
             <div className="space-y-3">
               {visibleProducts.length === 0 && (
                 <div className="glass-card rounded-3xl py-8 text-center text-white/70">
-                  <i className="fa-solid fa-utensils text-2xl mb-2 text-amber-300" />
+                  <UtensilsCrossed size={24} className="mb-2 text-amber-300 inline-block" />
                   <p className="text-xs">{searchQuery ? 'Aramanıza uygun ürün bulunamadı.' : 'Bu kategoride henüz ürün yok.'}</p>
                 </div>
               )}
@@ -473,7 +476,7 @@ export function PublicMenuPage() {
                         <img src={product.thumb_url ?? product.image_url} alt={product.name} loading="lazy"
                           className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
+                        <div className="w-full h-full flex items-center justify-center text-white/60"><UtensilsCrossed size={30} strokeWidth={1.5} /></div>
                       )}
                       {inCart && (
                         <span className="absolute top-1.5 right-1.5 btn-accent w-6 h-6 rounded-full text-[11px] font-extrabold flex items-center justify-center">
@@ -493,7 +496,7 @@ export function PublicMenuPage() {
                           <button onClick={e => { e.stopPropagation(); addToCart(product); }}
                             aria-label={`${product.name} sepete ekle`}
                             className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn">
-                            <i className="fa-solid fa-plus" />
+                            <Plus size={14} strokeWidth={3} />
                           </button>
                         )}
                       </div>
@@ -508,7 +511,7 @@ export function PublicMenuPage() {
         {!tableId && (
           <div className="text-center px-4 pt-8 pb-2">
             <a href={contactLink} className="btn-accent inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold mb-4 spring-btn">
-              <i className="fa-solid fa-phone" /> İletişim
+              <Phone size={14} /> İletişim
             </a>
             <p className="text-xs text-white/60">
               Powered by <span className="font-bold text-amber-300">{BRAND_NAME}</span>
@@ -523,14 +526,14 @@ export function PublicMenuPage() {
           <div className="mx-auto max-w-[480px] flex items-center gap-2">
             <button onClick={openCallModal}
               className="glass-panel rounded-full px-4 py-3 text-xs font-extrabold flex items-center gap-2 spring-btn">
-              <i className="fa-regular fa-bell text-sm" />
+              <Bell size={14} />
               <span className="whitespace-nowrap">Garson Çağır</span>
             </button>
             <button onClick={() => setCartOpen(true)}
               className="btn-accent flex-1 rounded-full px-4 py-3 text-xs font-extrabold flex items-center justify-between spring-btn">
               <span className="flex items-center gap-2">
                 <span className="relative">
-                  <i className="fa-solid fa-cart-shopping text-sm" />
+                  <ShoppingCart size={14} className="block" />
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2.5 bg-white text-[var(--accent-deep)] font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
                       {cartCount}
@@ -541,7 +544,7 @@ export function PublicMenuPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 {cartCount > 0 && <span>{cartCount} ürün • {formatPrice(cartTotal)}</span>}
-                <i className="fa-solid fa-chevron-right text-[10px] text-white/80" />
+                <ChevronRight size={12} className="text-white/80" />
               </span>
             </button>
           </div>
@@ -565,7 +568,7 @@ export function PublicMenuPage() {
                 <h3 className="font-serif font-bold text-xl flex-1">{selectedProduct.name}</h3>
                 <button onClick={() => setSelectedProduct(null)} aria-label="Kapat"
                   className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
-                  <i className="fa-solid fa-xmark" />
+                  <X size={12} />
                 </button>
               </div>
               {selectedProduct.description && (
@@ -576,7 +579,7 @@ export function PublicMenuPage() {
                 {tableId && (
                   <button onClick={() => addToCart(selectedProduct)}
                     className="btn-accent px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 spring-btn">
-                    <i className="fa-solid fa-plus" /> Sepete Ekle
+                    <Plus size={14} strokeWidth={3} /> Sepete Ekle
                   </button>
                 )}
               </div>
@@ -601,14 +604,14 @@ export function PublicMenuPage() {
               </div>
               <button onClick={() => setCartOpen(false)} aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-3">
               {cart.length === 0 ? (
                 <div className="text-center py-10 text-white/65">
-                  <i className="fa-solid fa-basket-shopping text-3xl mb-2 text-amber-300" />
+                  <ShoppingBasket size={30} className="mb-2 text-amber-300 inline-block" />
                   <p className="text-sm">Sepetiniz şu anda boş.</p>
                 </div>
               ) : (
@@ -627,16 +630,16 @@ export function PublicMenuPage() {
                           </div>
                           <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
                             <button onClick={() => removeFromCart(item.product_id)} aria-label="Azalt"
-                              className="w-7 h-7 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn">−</button>
+                              className="w-7 h-7 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn"><Minus size={14} strokeWidth={3} /></button>
                             <span className="font-extrabold text-sm w-5 text-center">{item.quantity}</span>
                             <button onClick={() => addToCart({ id: item.product_id, name: item.name, price_int: item.price_int })} aria-label="Artır"
-                              className="w-7 h-7 rounded-lg btn-accent font-bold text-sm flex items-center justify-center spring-btn">+</button>
+                              className="w-7 h-7 rounded-lg btn-accent font-bold text-sm flex items-center justify-center spring-btn"><Plus size={14} strokeWidth={3} /></button>
                           </div>
                         </div>
 
                         {hasNote && !isNoteOpen && (
                           <div className="px-3 py-2 bg-amber-500/20 border-t border-amber-300/30 flex items-center justify-between gap-2">
-                            <div className="text-xs text-amber-100 flex-1 min-w-0">📝 <strong>{item.note}</strong></div>
+                            <div className="text-xs text-amber-100 flex-1 min-w-0"><NotebookPen size={12} className="inline-block align-[-2px]" /> <strong>{item.note}</strong></div>
                             <button onClick={() => setOpenNoteFor(item.product_id)}
                               className="text-xs font-bold text-amber-300 whitespace-nowrap">
                               Düzenle
@@ -647,8 +650,8 @@ export function PublicMenuPage() {
                         {!hasNote && !isNoteOpen && (
                           <div className="px-3 pb-2.5">
                             <button onClick={() => setOpenNoteFor(item.product_id)}
-                              className="text-xs font-semibold text-amber-300">
-                              📝 + Bu ürüne özel not ekle
+                              className="text-xs font-semibold text-amber-300 inline-flex items-center gap-1">
+                              <NotebookPen size={12} /> + Bu ürüne özel not ekle
                             </button>
                           </div>
                         )}
@@ -658,13 +661,13 @@ export function PublicMenuPage() {
                             <OrderNoteTemplates
                               value={item.note ?? ''}
                               onChange={(newNote) => updateItemNote(item.product_id, newNote)}
-                              label={`📝 ${item.name} İçin Not`}
+                              label={`${item.name} İçin Not`}
                               placeholder="Bu ürüne özel istek (örn: sıcak olsun)..."
                               rows={2}
                             />
                             <button onClick={() => setOpenNoteFor(null)}
-                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn">
-                              ✓ Tamam
+                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
+                              <Check size={14} strokeWidth={3} /> Tamam
                             </button>
                           </div>
                         )}
@@ -676,8 +679,8 @@ export function PublicMenuPage() {
 
               {cart.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-dashed border-white/25">
-                  <label className="text-[11px] font-bold text-white/70 block mb-1 uppercase tracking-wider">
-                    📋 Sipariş Geneli Not (opsiyonel)
+                  <label className="text-[11px] font-bold text-white/70 flex items-center gap-1 mb-1 uppercase tracking-wider">
+                    <ClipboardList size={11} /> Sipariş Geneli Not (opsiyonel)
                   </label>
                   <p className="text-[11px] text-white/55 mb-2">
                     Tüm sipariş için geçerli notlar (örn: "kapı kenarında oturuyoruz")
@@ -698,7 +701,7 @@ export function PublicMenuPage() {
                 </div>
                 <button onClick={sendOrder} disabled={orderLoading}
                   className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
-                  {orderLoading ? 'Gönderiliyor...' : (<><i className="fa-solid fa-paper-plane" /> Siparişi Gönder</>)}
+                  {orderLoading ? 'Gönderiliyor...' : (<><Send size={14} /> Siparişi Gönder</>)}
                 </button>
               </div>
             )}

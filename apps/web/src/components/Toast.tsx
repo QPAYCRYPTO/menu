@@ -15,14 +15,15 @@
 // - 2.4 saniye sonra otomatik kapanır
 
 import { useEffect, useState } from 'react';
+import { Check, Info, X, type LucideIcon } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
 export type ToastState = { message: string; type: ToastType } | null;
 
-const STYLES: Record<ToastType, { bg: string; color: string; border: string; icon: string }> = {
-  success: { bg: 'var(--success-bg)', color: 'var(--success)', border: 'rgba(52,211,153,0.45)', icon: '✓' },
-  error:   { bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'rgba(251,113,133,0.45)', icon: '✕' },
-  info:    { bg: 'var(--info-bg)', color: 'var(--info)', border: 'rgba(125,211,252,0.45)', icon: 'ℹ' }
+const STYLES: Record<ToastType, { bg: string; color: string; border: string; icon: LucideIcon }> = {
+  success: { bg: 'var(--success-bg)', color: 'var(--success)', border: 'rgba(52,211,153,0.45)', icon: Check },
+  error:   { bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'rgba(251,113,133,0.45)', icon: X },
+  info:    { bg: 'var(--info-bg)', color: 'var(--info)', border: 'rgba(125,211,252,0.45)', icon: Info }
 };
 
 /**
@@ -45,6 +46,7 @@ export function Toast({ state }: { state: ToastState }) {
   if (!state) return null;
 
   const style = STYLES[state.type];
+  const Icon = style.icon;
 
   return (
     <div
@@ -85,7 +87,7 @@ export function Toast({ state }: { state: ToastState }) {
         fontWeight: 700,
         flexShrink: 0
       }}>
-        {style.icon}
+        <Icon size={13} strokeWidth={3} />
       </div>
       <span>{state.message}</span>
     </div>

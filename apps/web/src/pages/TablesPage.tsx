@@ -6,6 +6,10 @@
 // - merge_group_id ile birleşik masalar gruplanır
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  AlertTriangle, Armchair, Banknote, Check, Clock, CreditCard, Link2, Lock, Receipt, RefreshCw, Ticket, Timer,
+  NotebookPen, Wallet, X, type LucideIcon
+} from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
@@ -84,10 +88,10 @@ type PaymentModalProps = {
   onToast: (msg: string, type: 'success' | 'error') => void;
 };
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: string }[] = [
-  { value: 'cash', label: 'Nakit', icon: '💵' },
-  { value: 'card', label: 'Kredi Kartı', icon: '💳' },
-  { value: 'other', label: 'Yemek Kartı', icon: '🎫' },
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }[] = [
+  { value: 'cash', label: 'Nakit', icon: Banknote },
+  { value: 'card', label: 'Kredi Kartı', icon: CreditCard },
+  { value: 'other', label: 'Yemek Kartı', icon: Ticket },
 ];
 
 function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onToast }: PaymentModalProps) {
@@ -199,7 +203,7 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
         <div className="px-5 py-4 flex items-center justify-between flex-shrink-0 border-b border-white/15">
           <div>
             <div className="font-serif font-bold text-lg text-white flex items-center gap-2">
-              <i className="fa-solid fa-credit-card text-amber-300 text-base" />
+              <CreditCard size={16} className="text-amber-300" />
               Ödeme Al — {tableName}
             </div>
             {bill && (
@@ -208,9 +212,9 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
               </div>
             )}
           </div>
-          <button onClick={onClose}
+          <button onClick={onClose} aria-label="Kapat"
             className="glass-pill w-8 h-8 rounded-full flex items-center justify-center spring-btn">
-            <i className="fa-solid fa-xmark text-sm" />
+            <X size={14} />
           </button>
         </div>
 
@@ -239,8 +243,8 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
                 {PAYMENT_METHODS.map(pm => (
                   <button key={pm.value}
                     onClick={() => setPaymentMethod(pm.value)}
-                    className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold spring-btn ${paymentMethod === pm.value ? 'btn-accent' : 'glass-pill text-white/85'}`}>
-                    {pm.icon} {pm.label}
+                    className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold spring-btn flex items-center justify-center gap-1.5 ${paymentMethod === pm.value ? 'btn-accent' : 'glass-pill text-white/85'}`}>
+                    <pm.icon size={14} /> {pm.label}
                   </button>
                 ))}
               </div>
@@ -274,14 +278,14 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
                           }}>
                           <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
                             style={{ background: selected ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', border: `1.5px solid ${selected ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)'}` }}>
-                            {selected && <i className="fa-solid fa-check text-white text-[10px]" />}
+                            {selected && <Check size={10} strokeWidth={3.5} className="text-white" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold text-white">
                               {item.quantity}x {item.product_name}
                             </div>
                             {item.note && (
-                              <div className="text-xs text-amber-200/90">📝 {item.note}</div>
+                              <div className="text-xs text-amber-200/90 flex items-center gap-1"><NotebookPen size={12} className="flex-shrink-0" /> {item.note}</div>
                             )}
                           </div>
                           <div className="text-sm font-bold flex-shrink-0 text-amber-300">
@@ -307,7 +311,7 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)' }}>
                         <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
                           style={{ background: 'var(--success-bg)', border: '1.5px solid var(--success)' }}>
-                          <i className="fa-solid fa-check text-[10px]" style={{ color: 'var(--success)' }} />
+                          <Check size={10} strokeWidth={3.5} style={{ color: 'var(--success)' }} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold line-through text-white/70">
@@ -348,14 +352,14 @@ function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onT
               <div className="flex gap-2">
                 <button onClick={() => handlePay()}
                   disabled={paying || selectedItems.size === 0}
-                  className="btn-accent flex-1 py-3 rounded-2xl text-sm font-bold spring-btn">
-                  {paying ? 'İşleniyor...' : `💳 Tahsil Et${selectedItems.size > 0 ? ` (${formatPrice(selectedTotal)})` : ''}`}
+                  className="btn-accent flex-1 py-3 rounded-2xl text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
+                  {paying ? 'İşleniyor...' : <><CreditCard size={14} /> {`Tahsil Et${selectedItems.size > 0 ? ` (${formatPrice(selectedTotal)})` : ''}`}</>}
                 </button>
                 <button onClick={() => handleCloseTable()}
                   disabled={closing}
-                  className="px-4 py-3 rounded-2xl text-sm font-bold spring-btn"
+                  className="px-4 py-3 rounded-2xl text-sm font-bold spring-btn flex items-center justify-center gap-1.5"
                   style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1.5px solid var(--danger)' }}>
-                  {closing ? '...' : '🔒 Kapat'}
+                  {closing ? '...' : <><Lock size={14} /> Kapat</>}
                 </button>
               </div>
             </div>
@@ -375,9 +379,9 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   ready: 'Hazır',
 };
 
-const DECISION_OPTIONS: { value: OpenOrderDecision; label: string; hint: string; color: string; bg: string }[] = [
-  { value: 'customer_left', label: '✖ İptal Et', hint: 'Müşteri kalktı', color: 'var(--warning)', bg: 'var(--warning-bg)' },
-  { value: 'no_payment', label: '⚠ Zayi Say', hint: 'Hazırlandı, ödenmedi', color: 'var(--danger)', bg: 'var(--danger-bg)' },
+const DECISION_OPTIONS: { value: OpenOrderDecision; label: string; icon: LucideIcon; hint: string; color: string; bg: string }[] = [
+  { value: 'customer_left', label: 'İptal Et', icon: X, hint: 'Müşteri kalktı', color: 'var(--warning)', bg: 'var(--warning-bg)' },
+  { value: 'no_payment', label: 'Zayi Say', icon: AlertTriangle, hint: 'Hazırlandı, ödenmedi', color: 'var(--danger)', bg: 'var(--danger-bg)' },
 ];
 
 function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCancel, onConfirm }: {
@@ -396,7 +400,7 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
       <div className="flex-1 overflow-y-auto px-5 pt-4">
         <div className="mb-3 px-3 py-2.5 rounded-2xl text-xs font-semibold flex gap-2 items-start"
           style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.5)', color: '#FECDD3' }}>
-          <i className="fa-solid fa-triangle-exclamation mt-0.5" style={{ color: 'var(--danger)' }} />
+          <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'var(--danger)' }} />
           <span>Masa kapatılmadan önce ödenmemiş açık siparişler için karar verin. Karar verilmeden masa kapatılamaz.</span>
         </div>
 
@@ -440,7 +444,7 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
                         color: selected === opt.value ? '#14110F' : opt.color,
                         border: `1.5px solid ${opt.color}`
                       }}>
-                      {opt.label}
+                      <span className="inline-flex items-center gap-1"><opt.icon size={12} strokeWidth={2.5} /> {opt.label}</span>
                       <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{opt.hint}</div>
                     </button>
                   ))}
@@ -462,8 +466,8 @@ function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCance
           </button>
           <button onClick={onConfirm}
             disabled={closing || !allDecided}
-            className="btn-accent flex-1 py-3 rounded-2xl text-sm font-bold spring-btn">
-            {closing ? '...' : '🔒 Kararları Uygula ve Masayı Kapat'}
+            className="btn-accent flex-1 py-3 rounded-2xl text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
+            {closing ? '...' : <><Lock size={14} /> Kararları Uygula ve Masayı Kapat</>}
           </button>
         </div>
       </div>
@@ -713,7 +717,7 @@ export function TablesPage() {
       {/* Masa Ekle */}
       <div className="glass-panel rounded-3xl p-6 mb-6 max-w-2xl">
         <h2 className="text-[11px] font-semibold mb-4 uppercase tracking-wider text-white/70 flex items-center gap-2">
-          <i className="fa-solid fa-chair text-amber-300" /> Yeni Masa Ekle
+          <Armchair size={14} className="text-amber-300" /> Yeni Masa Ekle
         </h2>
         <div className="flex gap-3">
           <input value={newName} onChange={e => setNewName(e.target.value)}
@@ -729,26 +733,26 @@ export function TablesPage() {
       {tables.length > 0 && (
         <div className="flex gap-3 mb-4 flex-wrap">
           <div className="px-4 py-2 rounded-2xl backdrop-blur-md" style={{ background: 'var(--success-bg)', border: '1px solid rgba(52,211,153,0.5)' }}>
-            <span className="text-xs font-semibold" style={{ color: 'var(--success)' }}>
-              🟢 Boş: {tablesWithSession.filter(t => t.is_active && !t.session).length}
+            <span className="text-xs font-semibold inline-flex items-center gap-1.5" style={{ color: 'var(--success)' }}>
+              <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: '#22C55E' }} /> Boş: {tablesWithSession.filter(t => t.is_active && !t.session).length}
             </span>
           </div>
           <div className="px-4 py-2 rounded-2xl backdrop-blur-md" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.5)' }}>
-            <span className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>
-              🔴 Dolu: {tablesWithSession.filter(t => t.is_active && t.session && !t.isMerged).length}
+            <span className="text-xs font-semibold inline-flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
+              <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: '#EF4444' }} /> Dolu: {tablesWithSession.filter(t => t.is_active && t.session && !t.isMerged).length}
             </span>
           </div>
           {mergeGroups.size > 0 && (
             <div className="px-4 py-2 rounded-2xl backdrop-blur-md" style={{ background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.5)' }}>
-              <span className="text-xs font-semibold" style={{ color: 'var(--info)' }}>
-                🔵 Birleşik: {[...mergeGroups.values()].reduce((s, v) => s + v.length, 0)} masa
+              <span className="text-xs font-semibold inline-flex items-center gap-1.5" style={{ color: 'var(--info)' }}>
+                <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: '#3B82F6' }} /> Birleşik: {[...mergeGroups.values()].reduce((s, v) => s + v.length, 0)} masa
               </span>
             </div>
           )}
           {sessions.length > 0 && (
             <div className="glass-pill px-4 py-2 rounded-2xl">
-              <span className="text-xs font-semibold text-amber-300">
-                💰 Toplam: {formatPrice(sessions.filter(s => s.status === 'open').reduce((sum, s) => sum + s.cached_total_int, 0))}
+              <span className="text-xs font-semibold text-amber-300 inline-flex items-center gap-1.5">
+                <Wallet size={12} /> Toplam: {formatPrice(sessions.filter(s => s.status === 'open').reduce((sum, s) => sum + s.cached_total_int, 0))}
               </span>
             </div>
           )}
@@ -785,7 +789,7 @@ export function TablesPage() {
 
         {tables.length === 0 && (
           <div className="glass-card col-span-full text-center py-16 rounded-3xl" style={{ borderStyle: 'dashed' }}>
-            <div className="text-4xl mb-3">🪑</div>
+            <div className="mb-3 flex justify-center text-white/65"><Armchair size={36} strokeWidth={1.5} /></div>
             <p className="text-sm text-white/65">Henüz masa yok</p>
           </div>
         )}
@@ -799,13 +803,13 @@ export function TablesPage() {
             onClick={e => e.stopPropagation()}>
             <div className="border-b border-white/15" style={{ padding: '20px 24px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 className="font-serif text-white flex items-center gap-2" style={{ fontWeight: 700, fontSize: 20 }}>
-                <i className="fa-solid fa-receipt text-amber-300 text-base" />
+                <Receipt size={16} className="text-amber-300" />
                 {detailData?.table?.name ?? 'Masa Detayı'}
               </h3>
-              <button onClick={() => { setDetailOpen(null); setDetailData(null); }}
+              <button onClick={() => { setDetailOpen(null); setDetailData(null); }} aria-label="Kapat"
                 className="glass-pill spring-btn flex items-center justify-center"
                 style={{ width: 32, height: 32, borderRadius: '50%', cursor: 'pointer' }}>
-                <i className="fa-solid fa-xmark text-sm" />
+                <X size={14} />
               </button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
@@ -833,8 +837,8 @@ export function TablesPage() {
                   ) : detailData.orders.map((order, idx) => (
                     <div key={order.id} style={{ marginBottom: 10, border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
                       <div style={{ padding: '8px 12px', background: order.status === 'delivered' ? 'var(--success-bg)' : 'var(--warning-bg)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'delivered' ? 'var(--success)' : 'var(--warning)' }}>
-                          #{idx + 1} · {order.status === 'delivered' ? 'Teslim ✓' : order.status === 'pending' ? 'Bekliyor' : order.status}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'delivered' ? 'var(--success)' : 'var(--warning)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          #{idx + 1} · {order.status === 'delivered' ? <>Teslim <Check size={12} strokeWidth={3} /></> : order.status === 'pending' ? 'Bekliyor' : order.status}
                         </span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {new Date(order.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
@@ -861,15 +865,15 @@ export function TablesPage() {
                     setDetailData(null);
                     if (detailData?.table) setPaymentSession({ sessionId: detailOpen!, tableName: detailData.table.name });
                   }}
-                  className="btn-accent spring-btn"
+                  className="btn-accent spring-btn flex items-center justify-center gap-1.5"
                   style={{ flex: 1, padding: 12, borderRadius: 16, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                  💳 Ödeme Al
+                  <CreditCard size={16} /> Ödeme Al
                 </button>
                 <button
                   onClick={() => startCloseFlow(detailOpen!, detailData?.table?.name ?? 'Masa')}
-                  className="spring-btn"
+                  className="spring-btn flex items-center justify-center gap-1.5"
                   style={{ flex: 1, padding: 12, borderRadius: 16, border: '1.5px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                  🔒 Masayı Kapat
+                  <Lock size={16} /> Masayı Kapat
                 </button>
               </div>
             )}
@@ -883,7 +887,7 @@ export function TablesPage() {
           onClick={() => setCloseModal(null)}>
           <div className="glass-dark rounded-3xl text-white" style={{ maxWidth: 440, width: '100%', padding: 24 }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, color: 'var(--warning)' }}><AlertTriangle size={32} /></div>
             <h3 className="font-serif text-white" style={{ fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 8 }}>
               Teslim Edilmemiş Sipariş Var
             </h3>
@@ -892,14 +896,14 @@ export function TablesPage() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={() => tryCloseSession(closeModal.sessionId, closeModal.tableName, 'transfer')}
-                className="spring-btn"
+                className="spring-btn flex items-center gap-2"
                 style={{ padding: 12, borderRadius: 16, border: '1.5px solid var(--accent)', background: 'var(--accent-soft)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                🔄 Yeni müşteriye ait — yeni masa aç
+                <RefreshCw size={14} className="flex-shrink-0" /> Yeni müşteriye ait — yeni masa aç
               </button>
               <button onClick={() => cancelPendingAndOpenPayment(closeModal.sessionId, closeModal.tableName)}
-                className="spring-btn"
+                className="spring-btn flex items-center gap-2"
                 style={{ padding: 12, borderRadius: 16, border: '1.5px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                ❌ Bekleyenleri İptal Et ve Ödemeye Geç
+                <X size={14} strokeWidth={3} className="flex-shrink-0" /> Bekleyenleri İptal Et ve Ödemeye Geç
               </button>
               <button onClick={() => setCloseModal(null)}
                 className="glass-pill spring-btn"
@@ -971,9 +975,9 @@ function TableCard({
   const smallBtn = { flex: 1, padding: '6px', borderRadius: 10, fontWeight: 600, fontSize: 11, cursor: 'pointer' } as const;
 
   const statusLabel = isPassive ? 'Pasif'
-    : isMerged ? '🔵 Birleşik'
-    : isOccupied ? '● Dolu'
-    : '○ Boş';
+    : isMerged ? <><span className="inline-block w-2 h-2 rounded-full" style={{ background: '#3B82F6', boxShadow: '0 0 0 1px rgba(255,255,255,0.8)' }} /> Birleşik</>
+    : isOccupied ? <><span className="inline-block w-2 h-2 rounded-full bg-white" /> Dolu</>
+    : <><span className="inline-block w-2 h-2 rounded-full" style={{ border: '1.5px solid white' }} /> Boş</>;
 
   return (
     <div id={`table-card-${table.id}`} className="glass-card glass-card-hover text-white" style={{
@@ -999,9 +1003,9 @@ function TableCard({
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span>{statusLabel}</span>
+        <span className="inline-flex items-center gap-1.5">{statusLabel}</span>
         {isOccupied && duration && (
-          <span style={{ fontFamily: 'monospace' }}>⏱ {duration}</span>
+          <span className="inline-flex items-center gap-1" style={{ fontFamily: 'monospace' }}><Timer size={12} /> {duration}</span>
         )}
       </div>
 
@@ -1018,8 +1022,8 @@ function TableCard({
 
         {/* Birleşik masa görseli */}
         {isMerged && (
-          <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', borderRadius: 12, fontSize: 11, color: 'var(--info)', fontWeight: 600, textAlign: 'center' }}>
-            🔗 Birleşik Masa Grubu
+          <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', borderRadius: 12, fontSize: 11, color: 'var(--info)', fontWeight: 600, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <Link2 size={12} /> Birleşik Masa Grubu
           </div>
         )}
 
@@ -1053,8 +1057,8 @@ function TableCard({
 
         {!isOccupied && !editing && !isPassive && (
           <div style={{ padding: '14px 8px', textAlign: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: 14, border: '1px dashed rgba(110,231,183,0.55)', marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: colors.text, fontWeight: 600 }}>
-              <i className="fa-regular fa-clock" style={{ marginRight: 6 }} />Müşteri bekleniyor
+            <div style={{ fontSize: 11, color: colors.text, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Clock size={11} style={{ marginRight: 6 }} />Müşteri bekleniyor
             </div>
           </div>
         )}
@@ -1074,20 +1078,20 @@ function TableCard({
           <>
             {/* Ödeme Al butonu */}
             <button onClick={onOpenPayment}
-              className="btn-accent spring-btn"
+              className="btn-accent spring-btn flex items-center justify-center gap-1.5"
               style={{ width: '100%', padding: '9px', borderRadius: 12, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-              💳 Ödeme Al
+              <CreditCard size={12} /> Ödeme Al
             </button>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={onOpenDetail}
-                className="glass-pill spring-btn"
+                className="glass-pill spring-btn flex items-center justify-center gap-1"
                 style={{ flex: 1, padding: '7px', borderRadius: 12, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                💰 Detay
+                <Receipt size={11} /> Detay
               </button>
               <button onClick={onCloseSession}
-                className="spring-btn"
+                className="spring-btn flex items-center justify-center gap-1"
                 style={{ flex: 1, padding: '7px', borderRadius: 12, border: '1px solid var(--danger)', background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                🔒 Kapat
+                <Lock size={11} /> Kapat
               </button>
             </div>
           </>

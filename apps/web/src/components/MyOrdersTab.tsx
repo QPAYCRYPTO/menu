@@ -3,6 +3,7 @@
 // PublicMenuPage içinden kullanılır
 
 import { useEffect, useState } from 'react';
+import { ChefHat, ClipboardList, Clock, NotebookPen, Sparkles, type LucideIcon } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -34,10 +35,10 @@ type Props = {
   darkMode: boolean;
 };
 
-const STATUS_META: Record<string, { label: string; icon: string; bg: string; color: string }> = {
-  pending: { label: 'Bekliyor', icon: '⏱', bg: 'var(--warning-bg)', color: 'var(--warning)' },
-  preparing: { label: 'Hazırlanıyor', icon: '👨‍🍳', bg: 'var(--info-bg)', color: 'var(--info)' },
-  ready: { label: 'Hazır', icon: '✨', bg: 'var(--success-bg)', color: 'var(--success)' }
+const STATUS_META: Record<string, { label: string; icon: LucideIcon; bg: string; color: string }> = {
+  pending: { label: 'Bekliyor', icon: Clock, bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  preparing: { label: 'Hazırlanıyor', icon: ChefHat, bg: 'var(--info-bg)', color: 'var(--info)' },
+  ready: { label: 'Hazır', icon: Sparkles, bg: 'var(--success-bg)', color: 'var(--success)' }
 };
 
 function formatPrice(priceInt: number): string {
@@ -94,7 +95,7 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
   if (orders.length === 0) {
     return (
       <div className="glass-card rounded-3xl fade-enter" style={{ padding: '48px 20px', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center', color: textMuted }}><ClipboardList size={48} strokeWidth={1.5} /></div>
         <h3 className="font-serif" style={{ fontWeight: 700, fontSize: 17, color: textColor, marginBottom: 8 }}>
           Henüz aktif siparişiniz yok
         </h3>
@@ -129,7 +130,7 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
               justifyContent: 'space-between'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="glass-pill w-9 h-9 rounded-xl flex items-center justify-center" style={{ fontSize: 18 }}>{meta.icon}</span>
+                <span className="glass-pill w-9 h-9 rounded-xl flex items-center justify-center" style={{ fontSize: 18, color: meta.color }}><meta.icon size={18} /></span>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 14, color: meta.color }}>
                     {meta.label}
@@ -186,9 +187,12 @@ export function MyOrdersTab({ slug, tableId, token, themeColor, textColor, textM
                   background: 'rgba(245,158,11,0.2)',
                   border: '1px solid rgba(251,191,36,0.35)',
                   fontSize: 12,
-                  color: '#FDE68A'
+                  color: '#FDE68A',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 6
                 }}>
-                  📝 {order.note}
+                  <NotebookPen size={12} style={{ flexShrink: 0, marginTop: 2 }} /><span>{order.note}</span>
                 </div>
               )}
 

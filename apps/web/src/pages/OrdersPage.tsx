@@ -2,6 +2,10 @@
 // CHANGELOG v7: Ortak Toast komponentine geçti
 
 import { useEffect, useState } from 'react';
+import {
+  AlertTriangle, Bell, CalendarDays, Check, ChevronDown, ChevronUp, ClipboardList, Clock, ConciergeBell,
+  Flame, MapPin, NotebookPen, Plus, RefreshCw, Smartphone, Timer, User, UtensilsCrossed, X
+} from 'lucide-react';
 import { getCallType } from '../lib/callTypes';
 import { CallTypeBadge } from '../components/CallTypeBadge';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
@@ -90,18 +94,18 @@ function orderTotal(items: OrderItem[]): number { return items.reduce((sum, item
 function OrderSourceBadge({ order }: { order: Order }) {
   if (order.waiter_name) {
     return (
-      <span className="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
         style={{ background: 'var(--accent-soft)', color: '#FDBA74', border: '1px solid rgba(255,154,90,0.5)' }}
         title={`Garson: ${order.waiter_name}`}>
-        👤 {order.waiter_name}
+        <User size={12} /> {order.waiter_name}
       </span>
     );
   }
   return (
-    <span className="glass-pill px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
+    <span className="glass-pill inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap"
       style={{ color: 'var(--text-muted)' }}
       title="Müşteri tarafından QR ile verilen sipariş">
-      📱 Müşteri
+      <Smartphone size={12} /> Müşteri
     </span>
   );
 }
@@ -109,9 +113,9 @@ function OrderSourceBadge({ order }: { order: Order }) {
 function OrderTimeRow({ order }: { order: Order }) {
   return (
     <div className="flex items-center gap-1.5 mt-1 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
-      <span className="font-mono">📅 {formatDate(order.created_at)}</span>
+      <span className="font-mono inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(order.created_at)}</span>
       <span style={{ color: 'var(--text-faint)' }}>·</span>
-      <span className="font-mono">🕐 {formatTime(order.created_at)}</span>
+      <span className="font-mono inline-flex items-center gap-1"><Clock size={12} /> {formatTime(order.created_at)}</span>
       <span style={{ color: 'var(--text-faint)' }}>·</span>
       <span>{timeAgo(order.created_at)}</span>
     </div>
@@ -121,19 +125,19 @@ function OrderTimeRow({ order }: { order: Order }) {
 function LiveTimerBadge({ dateStr }: { dateStr: string }) {
   const elapsed = useLiveElapsed(dateStr);
   return (
-    <span className="glass-pill font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
+    <span className="glass-pill inline-flex items-center gap-1 font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
       style={{ color: '#FCD34D' }}
       title="Sipariş verildikten beri geçen süre">
-      ⏱ {elapsed}
+      <Timer size={12} /> {elapsed}
     </span>
   );
 }
 
 function StaticTimerBadge({ duration, bg, color, title }: { duration: string; bg: string; color: string; title: string; }) {
   return (
-    <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
+    <span className="inline-flex items-center gap-1 font-mono text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
       style={{ background: bg, color, border: '1px solid rgba(255,255,255,0.28)' }} title={title}>
-      ⏱ {duration}
+      <Timer size={12} /> {duration}
     </span>
   );
 }
@@ -157,7 +161,7 @@ function ChangeRow({ change }: { change: OrderChange }) {
   if (change.action === 'added') {
     return (
       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
-        <span className="font-bold" style={{ color: 'var(--success)' }}>➕ EKLENDI</span>
+        <span className="font-bold inline-flex items-center gap-1" style={{ color: 'var(--success)' }}><Plus size={12} strokeWidth={3} /> EKLENDI</span>
         <span className="font-semibold">{change.product_name}</span>
         <span style={{ color: 'var(--text-muted)' }}>×{change.quantity}</span>
       </div>
@@ -166,11 +170,11 @@ function ChangeRow({ change }: { change: OrderChange }) {
   if (change.action === 'quantity_changed') {
     const oldQ = change.old_quantity ?? 0;
     const newQ = change.new_quantity ?? 0;
-    const direction = newQ > oldQ ? '🔼' : '🔽';
+    const DirectionIcon = newQ > oldQ ? ChevronUp : ChevronDown;
     const dirColor = newQ > oldQ ? 'var(--success)' : 'var(--danger)';
     return (
       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text)' }}>
-        <span className="font-bold" style={{ color: dirColor }}>{direction} ADET</span>
+        <span className="font-bold inline-flex items-center gap-1" style={{ color: dirColor }}><DirectionIcon size={12} strokeWidth={3} /> ADET</span>
         <span className="font-semibold">{change.product_name}</span>
         <span className="font-mono" style={{ color: 'var(--text-muted)' }}>
           {oldQ} → <strong style={{ color: dirColor }}>{newQ}</strong>
@@ -181,7 +185,7 @@ function ChangeRow({ change }: { change: OrderChange }) {
   if (change.action === 'removed') {
     return (
       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--danger)' }}>
-        <span className="font-bold">❌ KALDIRILDI</span>
+        <span className="font-bold inline-flex items-center gap-1"><X size={12} strokeWidth={3} /> KALDIRILDI</span>
         <span className="font-semibold">{change.product_name}</span>
       </div>
     );
@@ -196,16 +200,16 @@ function UpdatePanel({ update, onAcknowledge }: { update: OrderUpdate; onAcknowl
         borderTop: '1px solid rgba(251,191,36,0.6)', borderBottom: '1px solid rgba(251,191,36,0.6)' }}>
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-1.5">
-          <span className="text-base animate-pulse">🔔</span>
+          <span className="text-base animate-pulse inline-flex" style={{ color: '#FCD34D' }}><Bell size={16} /></span>
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#FCD34D' }}>Güncelleme</span>
           {update.waiter_name && (
-            <span className="text-xs font-semibold" style={{ color: '#FDE68A' }}>· 👤 {update.waiter_name}</span>
+            <span className="text-xs font-semibold inline-flex items-center gap-1" style={{ color: '#FDE68A' }}>· <User size={12} /> {update.waiter_name}</span>
           )}
         </div>
         <button onClick={onAcknowledge}
-          className="px-2.5 py-1 rounded-full text-xs font-bold text-white spring-btn"
+          className="px-2.5 py-1 rounded-full text-xs font-bold text-white spring-btn inline-flex items-center gap-1"
           style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.5)' }}
-          title="Bu uyarıyı kapat">✓ Gördüm</button>
+          title="Bu uyarıyı kapat"><Check size={12} strokeWidth={3} /> Gördüm</button>
       </div>
       <div className="space-y-1 pl-5">
         {update.changes.map((change, idx) => <ChangeRow key={idx} change={change} />)}
@@ -376,7 +380,7 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
       <div className="px-4 py-3">
         {isCancelled && reasonInfo && (
           <div className="mb-3 px-3 py-2 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.45)' }}>
-            <div className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>❌ {reasonInfo.label}</div>
+            <div className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--danger)' }}><X size={12} strokeWidth={3} /> {reasonInfo.label}</div>
             {reasonInfo.text && <div className="text-xs mt-1" style={{ color: '#FECDD3' }}>{reasonInfo.text}</div>}
           </div>
         )}
@@ -397,7 +401,7 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
             {item.note && item.note.trim() && (
               <div className="mt-1 ml-8 px-2 py-1 rounded-lg text-xs"
                 style={{ background: 'rgba(245,158,11,0.2)', color: '#FEF3C7', border: '1px solid rgba(252,211,77,0.35)' }}>
-                📝 {item.note}
+                <NotebookPen size={12} className="inline-block align-[-2px]" /> {item.note}
               </div>
             )}
           </div>
@@ -406,7 +410,7 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
         {order.note && (
           <div className="mt-2 px-3 py-2 rounded-xl text-xs"
             style={{ background: 'rgba(245,158,11,0.2)', color: '#FEF3C7', border: '1px solid rgba(252,211,77,0.35)' }}>
-            📋 <strong>Genel:</strong> {order.note}
+            <ClipboardList size={12} className="inline-block align-[-2px]" /> <strong>Genel:</strong> {order.note}
           </div>
         )}
 
@@ -426,20 +430,20 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
               className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1.5"
               style={{ background: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)', border: '1px solid rgba(255,255,255,0.55)',
                 boxShadow: '0 8px 18px rgba(217,119,6,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>
-              <i className="fa-solid fa-fire-burner" /> Hazırlanıyor</button>
+              <Flame size={12} /> Hazırlanıyor</button>
           )}
           {order.status === 'preparing' && (
             <button onClick={() => onUpdate(order, 'ready')}
               className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1.5"
               style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)', border: '1px solid rgba(255,255,255,0.55)',
                 boxShadow: '0 8px 18px rgba(2,132,199,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>
-              <i className="fa-solid fa-bell-concierge" /> Hazır</button>
+              <ConciergeBell size={12} /> Hazır</button>
           )}
           {order.status === 'ready' && (
             <button onClick={() => onUpdate(order, 'delivered')}
-              className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn"
+              className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1"
               style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.55)',
-                boxShadow: '0 8px 18px rgba(5,150,105,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>Teslim Edildi ✓</button>
+                boxShadow: '0 8px 18px rgba(5,150,105,0.35), inset 0 1px 1px rgba(255,255,255,0.6)' }}>Teslim Edildi <Check size={12} strokeWidth={3} /></button>
           )}
           {order.status === 'delivered' && (
             <div className="flex-1 py-2.5 rounded-full text-xs font-bold text-center"
@@ -447,9 +451,9 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
           )}
 
           <button onClick={() => onCancel(order)}
-            className="px-3.5 py-2 rounded-full text-xs font-semibold spring-btn"
+            className="px-3.5 py-2 rounded-full text-xs font-semibold spring-btn flex items-center justify-center"
             style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.5)' }}
-            title="Siparişi iptal et">❌</button>
+            title="Siparişi iptal et" aria-label="Siparişi iptal et"><X size={14} strokeWidth={3} /></button>
         </div>
       )}
     </div>
@@ -480,12 +484,12 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
             color: accentColor, marginBottom: 2 }}>
-            {callInfo.critical ? '⚠️ Acil İstek' : 'Çağrı'}
+            {callInfo.critical ? <span className="inline-flex items-center gap-1"><AlertTriangle size={12} /> Acil İstek</span> : 'Çağrı'}
           </div>
           <div className="font-serif" style={{ fontSize: 18, fontWeight: 800, color: titleColor, lineHeight: 1.2 }}>
             {callInfo.label}
           </div>
-          <div className="font-bold text-sm mt-0.5 text-white">📍 {order.table_name}</div>
+          <div className="font-bold text-sm mt-0.5 text-white flex items-center gap-1"><MapPin size={14} /> {order.table_name}</div>
         </div>
         <div style={{ flexShrink: 0 }}><OrderTimerBadge order={order} /></div>
       </div>
@@ -493,8 +497,8 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
       {order.call_type === 'other' && order.note && (
         <div style={{ padding: '10px 16px', background: 'rgba(0,0,0,0.22)', borderBottom: `1px solid ${cardBorder}` }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-            📝 Müşteri Açıklaması
+            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <NotebookPen size={12} /> Müşteri Açıklaması
           </div>
           <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.4 }}>{order.note}</div>
         </div>
@@ -504,16 +508,16 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
         <div style={{ padding: '8px 16px' }}>
           <div className="text-xs px-2 py-1 rounded-lg"
             style={{ background: 'rgba(0,0,0,0.22)', color: '#FEF3C7', border: '1px solid rgba(252,211,77,0.35)' }}>
-            📝 {order.note}
+            <NotebookPen size={12} className="inline-block align-[-2px]" /> {order.note}
           </div>
         </div>
       )}
 
       <div style={{ padding: '8px 16px', borderTop: `1px solid ${cardBorder}` }}>
         <div className="flex items-center gap-1.5 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
-          <span className="font-mono">📅 {formatDate(order.created_at)}</span>
+          <span className="font-mono inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(order.created_at)}</span>
           <span style={{ color: 'var(--text-faint)' }}>·</span>
-          <span className="font-mono">🕐 {formatTime(order.created_at)}</span>
+          <span className="font-mono inline-flex items-center gap-1"><Clock size={12} /> {formatTime(order.created_at)}</span>
           <span style={{ color: 'var(--text-faint)' }}>·</span>
           <span>{timeAgo(order.created_at)}</span>
         </div>
@@ -521,13 +525,13 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
 
       <div style={{ padding: '8px 16px 16px', display: 'flex', gap: 8 }}>
         <button onClick={() => onUpdate(order, 'delivered')}
-          className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn"
+          className="flex-1 py-2.5 rounded-full text-xs font-bold text-white spring-btn flex items-center justify-center gap-1"
           style={{ background: callInfo.critical ? 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)' : 'linear-gradient(135deg, #34D399 0%, #059669 100%)',
-            border: '1px solid rgba(255,255,255,0.55)', boxShadow: '0 8px 18px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.6)' }}>✓ İlgilendim</button>
+            border: '1px solid rgba(255,255,255,0.55)', boxShadow: '0 8px 18px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.6)' }}><Check size={12} strokeWidth={3} /> İlgilendim</button>
         <button onClick={() => onCancel(order)}
-          className="px-3.5 py-2.5 rounded-full text-xs font-semibold spring-btn"
+          className="px-3.5 py-2.5 rounded-full text-xs font-semibold spring-btn flex items-center justify-center"
           style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.5)' }}
-          title="Çağrıyı iptal et">❌</button>
+          title="Çağrıyı iptal et" aria-label="Çağrıyı iptal et"><X size={14} strokeWidth={3} /></button>
       </div>
     </div>
   );
@@ -636,8 +640,8 @@ export function OrdersPage() {
             </span>
           )}
           {updateCount > 0 && filter === 'active' && (
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold animate-pulse"
-              style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.5)' }}>🔔 {updateCount} güncelleme</span>
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold animate-pulse inline-flex items-center gap-1"
+              style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.5)' }}><Bell size={12} /> {updateCount} güncelleme</span>
           )}
         </div>
         <div className="flex gap-2">
@@ -649,9 +653,9 @@ export function OrdersPage() {
             className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'delivered' ? 'btn-accent' : 'glass-pill'}`}>
             Tamamlanan
           </button>
-          <button onClick={handleRefresh} disabled={refreshing}
+          <button onClick={handleRefresh} disabled={refreshing} aria-label="Yenile" title="Yenile"
             className="glass-pill px-4 py-2 rounded-2xl text-sm font-semibold spring-btn disabled:opacity-60">
-            <span className={refreshing ? 'inline-block animate-spin' : 'inline-block'}>🔄</span>
+            <span className={refreshing ? 'inline-block animate-spin' : 'inline-block'}><RefreshCw size={14} className="block" /></span>
           </button>
         </div>
       </div>
@@ -659,10 +663,10 @@ export function OrdersPage() {
       {filter === 'active' && callOrders.length > 0 && (
         <div className="mb-6">
           <h3 className="text-sm font-bold mb-3 uppercase tracking-wider flex items-center gap-2 px-1" style={{ color: '#FDA4AF' }}>
-            🔔 Müşteri Çağrıları ({callOrders.length})
+            <Bell size={14} /> Müşteri Çağrıları ({callOrders.length})
             {criticalCallCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white animate-pulse"
-                style={{ background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', border: '1px solid rgba(255,255,255,0.5)' }}>⚠️ {criticalCallCount} acil</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white animate-pulse inline-flex items-center gap-1"
+                style={{ background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', border: '1px solid rgba(255,255,255,0.5)' }}><AlertTriangle size={12} /> {criticalCallCount} acil</span>
             )}
           </h3>
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
@@ -684,7 +688,7 @@ export function OrdersPage() {
         {foodOrders.length === 0 && callOrders.length === 0 && !loadingDelivered && (
           <div className="glass-card col-span-full text-center py-16 rounded-3xl"
             style={{ borderStyle: 'dashed' }}>
-            <div className="text-4xl mb-3">🍽️</div>
+            <div className="mb-3 flex justify-center" style={{ color: 'var(--text-muted)' }}><UtensilsCrossed size={36} strokeWidth={1.5} /></div>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {filter === 'active' ? 'Aktif sipariş yok' : 'Tamamlanan sipariş yok'}
             </p>

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { ChevronDown, ChevronUp, FolderOpen, FolderPlus, Pencil, Plus } from 'lucide-react';
 
 export function CategoriesPage() {
   const { accessToken } = useAuth();
@@ -101,7 +102,7 @@ export function CategoriesPage() {
       {/* Ekle */}
       <div className="glass-panel rounded-3xl p-6 mb-6">
         <h2 className="text-[11px] font-bold mb-4 uppercase tracking-wider text-white/70 flex items-center gap-2">
-          <i className="fa-solid fa-folder-plus text-amber-300" /> Yeni Kategori
+          <FolderPlus size={11} className="text-amber-300" /> Yeni Kategori
         </h2>
         <div className="flex gap-3">
           <input
@@ -116,7 +117,7 @@ export function CategoriesPage() {
             onClick={addCategory}
             className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 spring-btn flex-shrink-0"
           >
-            <i className="fa-solid fa-plus" /> Ekle
+            <Plus size={14} /> Ekle
           </button>
         </div>
       </div>
@@ -161,7 +162,7 @@ export function CategoriesPage() {
                 <>
                   <button onClick={() => { setEditingId(item.id); setEditingName(item.name); }}
                     className="glass-pill px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn">
-                    <i className="fa-solid fa-pen text-[10px]" /> Düzenle
+                    <Pencil size={10} /> Düzenle
                   </button>
                   <button onClick={() => toggleActive(item)}
                     className="px-3 py-1.5 rounded-xl text-xs font-semibold spring-btn"
@@ -176,10 +177,10 @@ export function CategoriesPage() {
               <div className="flex flex-col gap-1">
                 <button disabled={index === 0} onClick={() => moveCategory(index, 'up')}
                   className="glass-pill w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
-                  aria-label="Yukarı taşı"><i className="fa-solid fa-chevron-up" /></button>
+                  aria-label="Yukarı taşı"><ChevronUp size={10} /></button>
                 <button disabled={index === sortedItems.length - 1} onClick={() => moveCategory(index, 'down')}
                   className="glass-pill w-6 h-5 rounded-md flex items-center justify-center text-[9px] disabled:opacity-30"
-                  aria-label="Aşağı taşı"><i className="fa-solid fa-chevron-down" /></button>
+                  aria-label="Aşağı taşı"><ChevronDown size={10} /></button>
               </div>
             </div>
           </div>
@@ -187,7 +188,7 @@ export function CategoriesPage() {
 
         {sortedItems.length === 0 && (
           <div className="glass-card text-center py-16 rounded-3xl border-dashed">
-            <div className="text-4xl mb-3">📂</div>
+            <div className="mb-3 flex justify-center text-white/60"><FolderOpen size={36} /></div>
             <p className="text-sm text-white/75">Henüz kategori yok</p>
             <p className="text-xs mt-1 text-white/50">Yukarıdan yeni kategori ekleyin</p>
           </div>

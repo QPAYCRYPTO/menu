@@ -10,6 +10,7 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { reportError } from '../lib/errorReporter';
+import { TriangleAlert } from 'lucide-react';
 
 type Props = {
   children: ReactNode;
@@ -81,11 +82,13 @@ export class AppErrorBoundary extends Component<Props, State> {
         >
           <div
             style={{
-              fontSize: '48px',
-              marginBottom: '16px'
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              color: 'var(--warning)'
             }}
           >
-            ⚠️
+            <TriangleAlert size={48} />
           </div>
 
           <h1

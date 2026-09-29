@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
+import { Layers, Pencil, Plus, ShoppingCart, Trash2, UtensilsCrossed, X } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -155,7 +156,7 @@ export function ProductsPage() {
 
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="relative">
-          <i className="fa-solid fa-layer-group absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 text-xs pointer-events-none" />
+          <Layers size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
           <select
             value={selectedCategoryId}
             onChange={e => onCategoryFilterChange(e.target.value)}
@@ -168,7 +169,7 @@ export function ProductsPage() {
         </div>
         <button onClick={openCreateModal}
           className="btn-accent px-5 py-2.5 rounded-2xl text-sm font-bold ml-auto flex items-center gap-2 spring-btn">
-          <i className="fa-solid fa-plus" /> Yeni Ürün
+          <Plus size={14} /> Yeni Ürün
         </button>
       </div>
 
@@ -179,7 +180,7 @@ export function ProductsPage() {
               {item.image_url ? (
                 <img src={item.thumb_url || item.image_url} alt={item.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl">🍽️</div>
+                <div className="w-full h-full flex items-center justify-center text-white/60"><UtensilsCrossed size={36} /></div>
               )}
               {!item.is_active && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -194,12 +195,12 @@ export function ProductsPage() {
               <div className="flex gap-2 mt-auto">
                 <button onClick={() => openEditModal(item)}
                   className="glass-pill flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 spring-btn">
-                  <i className="fa-solid fa-pen text-[10px]" /> Düzenle
+                  <Pencil size={10} /> Düzenle
                 </button>
                 <button onClick={() => askDeleteProduct(item)}
                   className="py-1.5 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn"
                   style={{background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)'}}>
-                  <i className="fa-solid fa-trash-can text-[10px]" /> Sil
+                  <Trash2 size={10} /> Sil
                 </button>
               </div>
             </div>
@@ -208,7 +209,7 @@ export function ProductsPage() {
 
         {items.length === 0 && (
           <div className="glass-card col-span-full text-center py-16 rounded-3xl border-dashed">
-            <div className="text-4xl mb-3">🛒</div>
+            <div className="mb-3 flex justify-center text-white/60"><ShoppingCart size={36} /></div>
             <p className="text-sm text-white/70">Henüz ürün yok</p>
           </div>
         )}
@@ -224,7 +225,7 @@ export function ProductsPage() {
               </h2>
               <button onClick={closeModal} aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
 

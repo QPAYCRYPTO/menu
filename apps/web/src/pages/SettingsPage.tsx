@@ -7,6 +7,7 @@ import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { BookUser, Camera, Eye, MessageCircle, Moon, Palette, Phone, Save, Store } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -103,7 +104,7 @@ export function SettingsPage() {
         {/* Canlı Önizleme — işletmenin kendi menü renkleri (bg_color / theme_color / dark_mode) ile */}
         <div className="glass-panel rounded-3xl p-3">
           <p className="text-[11px] font-bold uppercase tracking-wider mb-3 px-3 pt-2 text-white/70 flex items-center gap-2">
-            <i className="fa-solid fa-eye text-amber-300" /> Canlı Önizleme
+            <Eye size={11} className="text-amber-300" /> Canlı Önizleme
           </p>
           <div className="rounded-2xl p-5" style={{ background: form.bg_color, border: `2px solid ${form.theme_color}40` }}>
             <div className="flex items-center gap-4">
@@ -130,7 +131,7 @@ export function SettingsPage() {
         {/* Temel Bilgiler */}
         <div className="glass-dark rounded-3xl p-6">
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
-            <i className="fa-solid fa-store text-amber-300 text-base" /> Temel Bilgiler
+            <Store size={16} className="text-amber-300" /> Temel Bilgiler
           </h3>
           <div className="space-y-4">
             <div>
@@ -162,7 +163,7 @@ export function SettingsPage() {
         {/* Tema */}
         <div className="glass-dark rounded-3xl p-6">
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
-            <i className="fa-solid fa-palette text-amber-300 text-base" /> Tema & Görünüm
+            <Palette size={16} className="text-amber-300" /> Tema & Görünüm
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -190,7 +191,7 @@ export function SettingsPage() {
                 </div>
               </div>
               <span className="text-sm font-medium text-white flex items-center gap-2">
-                <i className="fa-solid fa-moon text-white/70 text-xs" /> Koyu Mod
+                <Moon size={12} className="text-white/70" /> Koyu Mod
               </span>
             </label>
           </div>
@@ -199,16 +200,16 @@ export function SettingsPage() {
         {/* İletişim */}
         <div className="glass-dark rounded-3xl p-6">
           <h3 className="font-serif font-bold text-lg mb-4 flex items-center gap-2">
-            <i className="fa-solid fa-address-book text-amber-300 text-base" /> İletişim Bilgileri
+            <BookUser size={16} className="text-amber-300" /> İletişim Bilgileri
           </h3>
           <div className="space-y-4">
             {[
-              { key: 'contact_phone', label: 'Telefon', placeholder: '+90 555 000 00 00', icon: '📞' },
-              { key: 'contact_whatsapp', label: 'WhatsApp', placeholder: '+90 555 000 00 00', icon: '💬' },
-              { key: 'contact_instagram', label: 'Instagram', placeholder: '@kullanici_adi', icon: '📸' },
+              { key: 'contact_phone', label: 'Telefon', placeholder: '+90 555 000 00 00', icon: Phone },
+              { key: 'contact_whatsapp', label: 'WhatsApp', placeholder: '+90 555 000 00 00', icon: MessageCircle },
+              { key: 'contact_instagram', label: 'Instagram', placeholder: '@kullanici_adi', icon: Camera },
             ].map(field => (
               <div key={field.key}>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">{field.icon} {field.label}</label>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70"><field.icon size={12} /> {field.label}</label>
                 <input
                   value={(form as any)[field.key]}
                   onChange={e => setForm(p => ({ ...p, [field.key]: e.target.value }))}
@@ -223,7 +224,7 @@ export function SettingsPage() {
         {/* Kaydet */}
         <button onClick={saveSettings}
           className="btn-accent w-full py-3.5 rounded-full text-sm font-bold tracking-wide flex items-center justify-center gap-2 spring-btn">
-          <i className="fa-solid fa-floppy-disk" /> Kaydet
+          <Save size={14} /> Kaydet
         </button>
       </div>
     </div>

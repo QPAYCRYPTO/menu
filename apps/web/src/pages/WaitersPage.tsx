@@ -23,8 +23,9 @@ import {
 } from '../api/waiterAdminApi';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import {
-  Ban, Check, Clock, KeyRound, Mail, Pencil, Phone, QrCode, Trash2, UserPlus, Users, type LucideIcon
+  Ban, Check, CircleCheck, Clock, Copy, KeyRound, Mail, MessageCircle, Pencil, Phone, QrCode, Trash2, TriangleAlert, UserPlus, Users, X, type LucideIcon
 } from 'lucide-react';
+import { withAlpha } from '../lib/color';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
@@ -60,12 +61,6 @@ function avatarColorFor(name: string): string {
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
-
-// #RRGGBB → rgba(r,g,b,a)
-function withAlpha(hex: string, alpha: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
 function IconBadge({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
@@ -281,9 +276,9 @@ export function WaitersPage() {
   function statusBadge(status: WaiterStatus) {
     const config = WAITER_STATUS[status];
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
         style={{ background: withAlpha(config.color, 0.12), color: config.color, borderColor: withAlpha(config.color, 0.25) }}>
-        ● {config.label}
+        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.color }} aria-hidden="true" />{config.label}
       </span>
     );
   }
@@ -424,7 +419,7 @@ export function WaitersPage() {
               </h2>
               <button onClick={closeForm} aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: '70vh' }}>
@@ -523,12 +518,12 @@ export function WaitersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
           <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
-              <h2 className="font-serif font-bold text-lg">
-                🔑 Şifre Belirle — {passwordModalWaiter.name}
+              <h2 className="font-serif font-bold text-lg flex items-center gap-2">
+                <KeyRound size={18} className="flex-shrink-0" /> Şifre Belirle — {passwordModalWaiter.name}
               </h2>
               <button onClick={() => setPasswordModalWaiter(null)} aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4">
@@ -542,8 +537,8 @@ export function WaitersPage() {
                   className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm"
                   autoFocus />
                 {!passwordModalWaiter.email && (
-                  <p className="text-xs mt-2" style={{ color: 'var(--warning)' }}>
-                    ⚠️ Bu garsonun email'i yok. Şifreyle giriş için önce email eklemelisiniz.
+                  <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--warning)' }}>
+                    <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" /> <span>Bu garsonun email'i yok. Şifreyle giriş için önce email eklemelisiniz.</span>
                   </p>
                 )}
               </div>
@@ -571,7 +566,7 @@ export function WaitersPage() {
               </h2>
               <button onClick={() => setTokenModalWaiter(null)} aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4">
@@ -610,12 +605,12 @@ export function WaitersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md fade-enter">
           <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
-              <h2 className="font-serif font-bold text-lg">
-                ✅ {qrResult.waiter_name} için QR hazır
+              <h2 className="font-serif font-bold text-lg flex items-center gap-2">
+                <CircleCheck size={18} className="flex-shrink-0" style={{ color: 'var(--success)' }} /> {qrResult.waiter_name} için QR hazır
               </h2>
               <button onClick={() => setQrResult(null)} aria-label="Kapat"
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0 spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
             <div className="p-6 space-y-4">
@@ -624,8 +619,8 @@ export function WaitersPage() {
               </div>
 
               <div className="p-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning)' }}>
-                <p className="text-xs" style={{ color: 'var(--warning)' }}>
-                  ⚠️ Bu QR sadece <b>{new Date(qrResult.expires_at).toLocaleString('tr-TR')}</b> tarihine kadar geçerli.
+                <p className="text-xs flex items-start gap-1.5" style={{ color: 'var(--warning)' }}>
+                  <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" /> <span>Bu QR sadece <b>{new Date(qrResult.expires_at).toLocaleString('tr-TR')}</b> tarihine kadar geçerli.</span>
                 </p>
               </div>
 
@@ -641,7 +636,7 @@ export function WaitersPage() {
                     showToast('Link kopyalandı.', 'success');
                   }}
                     className="btn-accent px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn">
-                    <i className="fa-regular fa-copy" /> Kopyala
+                    <Copy size={12} /> Kopyala
                   </button>
                 </div>
               </div>
@@ -653,7 +648,7 @@ export function WaitersPage() {
                   rel="noreferrer"
                   className="w-full py-3 rounded-2xl text-sm font-bold text-white text-center flex items-center justify-center gap-2 spring-btn border border-white/40"
                   style={{ background: 'rgba(37,211,102,0.85)', textDecoration: 'none' }}>
-                  <i className="fa-brands fa-whatsapp text-base" /> WhatsApp'tan Gönder ({qrResult.waiter_phone})
+                  <MessageCircle size={16} /> WhatsApp'tan Gönder ({qrResult.waiter_phone})
                 </a>
               )}
             </div>

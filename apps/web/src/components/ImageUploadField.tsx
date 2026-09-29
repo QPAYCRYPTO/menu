@@ -18,6 +18,7 @@
 // />
 
 import { useRef, useState } from 'react';
+import { CircleCheck, ImageIcon, RefreshCw, Trash2, Upload } from 'lucide-react';
 
 type ImageUploadFieldProps = {
   /** Mevcut görsel URL'i (yoksa boş string) */
@@ -138,18 +139,18 @@ export function ImageUploadField({
 
           <div className="flex-1 flex flex-col gap-2 min-w-0">
             <div className="text-[13px] font-semibold text-white flex items-center gap-1.5">
-              <i className="fa-solid fa-circle-check" style={{ color: 'var(--success)' }} /> Görsel yüklendi
+              <CircleCheck size={13} style={{ color: 'var(--success)' }} /> Görsel yüklendi
             </div>
             <div className="flex gap-2 flex-wrap">
               <button type="button" onClick={openFilePicker}
                 className="btn-accent px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 spring-btn">
-                <i className="fa-solid fa-arrows-rotate text-[10px]" /> Değiştir
+                <RefreshCw size={10} /> Değiştir
               </button>
               {onRemove && (
                 <button type="button" onClick={handleRemove}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn"
                   style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
-                  <i className="fa-solid fa-trash-can text-[10px]" /> Kaldır
+                  <Trash2 size={10} /> Kaldır
                 </button>
               )}
             </div>
@@ -173,10 +174,10 @@ export function ImageUploadField({
           }}>
           <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-lg text-white border border-white/40"
             style={{ background: 'var(--accent-soft)' }}>
-            <i className="fa-regular fa-image" />
+            <ImageIcon size={18} />
           </div>
-          <div className="text-sm font-semibold text-white mb-1">
-            📷 Görsel Yükle
+          <div className="text-sm font-semibold text-white mb-1 flex items-center justify-center gap-1.5">
+            <Upload size={14} /> Görsel Yükle
           </div>
           <div className="text-xs text-white/70 mb-2">
             Tıkla veya sürükleyip bırak

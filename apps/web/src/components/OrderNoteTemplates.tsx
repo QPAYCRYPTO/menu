@@ -8,6 +8,7 @@
 // Şablon tıklanınca metne "; " ile eklenir. Yıkıcı değil — biriktirir.
 
 import { useState } from 'react';
+import { X } from 'lucide-react';
 
 type Category = {
   id: string;
@@ -169,9 +170,9 @@ export function OrderNoteTemplates({
         </label>
         {value.trim() && (
           <button onClick={clearNote}
-            className="text-xs font-bold px-2 py-1 rounded-lg spring-btn"
+            className="text-xs font-bold px-2 py-1 rounded-lg spring-btn flex items-center gap-1"
             style={{ color: 'var(--danger)' }}>
-            ✕ Temizle
+            <X size={12} /> Temizle
           </button>
         )}
       </div>
