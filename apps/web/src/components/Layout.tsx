@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  Armchair, Bell, ClipboardList, CreditCard, LayoutDashboard, List, LogOut, Menu, QrCode, Settings,
+  Armchair, Bell, ChefHat, ClipboardList, CreditCard, LayoutDashboard, List, LogOut, Menu, QrCode, Settings,
   ShoppingCart, Users
 } from 'lucide-react';
 import type { BusinessSettingsResponse } from '@menu/shared';
@@ -29,11 +29,12 @@ const COLORS: Record<string, NavColor> = {
   categories: { base: '#7DD3FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(14,165,233,0.24)', bgAktif: '#0EA5E9' },
   products:   { base: '#D8B4FE', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(168,85,247,0.24)', bgAktif: '#A855F7' },
   waiters:    { base: '#FF9A5A', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(255,122,41,0.24)', bgAktif: '#FF7A29' },
+  kitchen:    { base: '#FCA5A5', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(239,68,68,0.24)', bgAktif: '#EF4444' },
   settings:   { base: '#E2E8F0', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(255,255,255,0.16)', bgAktif: '#94A3B8' },
   qr:         { base: '#A5B4FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(99,102,241,0.26)', bgAktif: '#6366F1' }
 };
 
-type ModuleKey = 'waiter';
+type ModuleKey = 'waiter' | 'kitchen';
 type ModuleFlags = Record<ModuleKey, boolean>;
 
 /** Süper adminin işletme bazında açıp kapattığı modüller. Sekme pencereye dönülünce tazelenir. */
@@ -45,7 +46,7 @@ function useModuleFlags(accessToken: string | null): ModuleFlags | null {
     let cancelled = false;
     const load = () => {
       apiRequest<BusinessSettingsResponse>('/admin/business', { token: accessToken })
-        .then(b => { if (!cancelled) setFlags({ waiter: b.waiter_module_enabled === true }); })
+        .then(b => { if (!cancelled) setFlags({ waiter: b.waiter_module_enabled === true, kitchen: b.kitchen_module_enabled === true }); })
         .catch(() => {});
     };
     load();
@@ -99,6 +100,10 @@ export function AdminLayout() {
     {
       to: '/admin/waiters', label: 'Garsonlar', colorKey: 'waiters', sub: false, module: 'waiter',
       icon: <Users size={14} />
+    },
+    {
+      to: '/admin/kitchen', label: 'Mutfak', colorKey: 'kitchen', sub: false, module: 'kitchen',
+      icon: <ChefHat size={14} />
     },
     {
       to: '/admin/settings', label: 'Ayarlar', colorKey: 'settings', sub: false,

@@ -28,6 +28,8 @@ import { TablesPage } from './pages/TablesPage';
 import { OwnerLayout } from './pages/owner/OwnerLayout';
 import { OwnerDashboardPage } from './pages/owner/OwnerDashboardPage';
 import { WaitersPage } from './pages/WaitersPage';
+import { KitchenPage } from './pages/KitchenPage';
+import { KitchenScreenPage } from './pages/KitchenScreenPage';
 import { WaiterCallsProvider } from './context/WaiterCallsContext';
 import { WaiterCallsPage } from './pages/waiter/WaiterCallsPage';
 
@@ -72,6 +74,7 @@ export function App() {
               <Route path="/reset" element={<ResetPage />} />
               <Route path="/sifre-sifirla" element={<ResetPasswordPage />} />
               <Route path="/m/:slug" element={<PublicMenuPage />} />
+              <Route path="/mutfak" element={<KitchenScreenPage />} />
               <Route path="/superadmin" element={<SuperAdminPage />} />
               <Route path="/superadmin/errors" element={<ErrorLogPage />} />
 
@@ -108,6 +111,7 @@ export function App() {
                 <Route path="tables" element={<TablesPage />} />
                 <Route path="orders" element={<OrdersPage />} />
                 <Route path="waiters" element={<WaitersPage />} />
+                <Route path="kitchen" element={<KitchenPage />} />
               </Route>
 
               {/* GARSON ROUTE'LARI */}

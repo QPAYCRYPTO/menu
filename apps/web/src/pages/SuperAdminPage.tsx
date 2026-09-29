@@ -13,7 +13,8 @@ import {
   createBusiness as apiCreateBusiness,
   toggleBusinessActive,
   resetAdminPassword as apiResetAdminPassword,
-  toggleWaiterModule as apiToggleWaiterModule
+  toggleWaiterModule as apiToggleWaiterModule,
+  toggleKitchenModule as apiToggleKitchenModule
 } from '../api/superadminApi';
 import { OwnerManagementModal } from './superadmin/OwnerManagementModal';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
@@ -140,6 +141,17 @@ export function SuperAdminPage() {
     }
   }
 
+  async function toggleKitchen(business: Business) {
+    if (!accessToken) return;
+    try {
+      await apiToggleKitchenModule(accessToken, business.id, !business.kitchen_module_enabled);
+      showToast(business.kitchen_module_enabled ? 'Mutfak modülü kapatıldı.' : 'Mutfak modülü açıldı.', 'success');
+      await loadBusinesses();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Hata.', 'error');
+    }
+  }
+
   async function resetAdminPassword() {
     if (!accessToken) return;
     if (!resetForm.businessId || !resetForm.new_password) {
@@ -256,16 +268,17 @@ export function SuperAdminPage() {
         {/* DESKTOP — Tablo görünümü */}
         <div className="hidden lg:block glass-dark rounded-3xl overflow-hidden mb-8">
           <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-white/60 border-b border-white/15"
-            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', background: 'rgba(255,255,255,0.06)' }}>
+            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: 'rgba(255,255,255,0.06)' }}>
             <div>İşletme</div><div>Slug</div><div>Admin E-posta</div>
             <div className="text-center">Owner</div><div className="text-center">Kat.</div><div className="text-center">Ürün</div>
             <div className="text-center">Garson</div>
+            <div className="text-center">Mutfak</div>
             <div className="text-right">İşlem</div>
           </div>
 
           {businesses.map(b => (
             <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm border-b border-white/10 hover:bg-white/5 transition-colors"
-              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.5fr', background: b.is_active ? undefined : 'rgba(244,63,94,0.08)' }}>
+              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: b.is_active ? undefined : 'rgba(244,63,94,0.08)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                   style={{ background: b.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
@@ -300,6 +313,15 @@ export function SuperAdminPage() {
                   style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}
                   title={b.waiter_module_enabled ? 'Garson modülü AÇIK' : 'Garson modülü KAPALI'}>
                   {b.waiter_module_enabled ? <><CircleCheck size={12} />Açık</> : <><Circle size={12} />Kapalı</>}
+                </button>
+              </div>
+
+              <div className="text-center">
+                <button onClick={() => toggleKitchen(b)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn inline-flex items-center gap-1"
+                  style={b.kitchen_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}
+                  title={b.kitchen_module_enabled ? 'Mutfak modülü AÇIK' : 'Mutfak modülü KAPALI'}>
+                  {b.kitchen_module_enabled ? <><CircleCheck size={12} />Açık</> : <><Circle size={12} />Kapalı</>}
                 </button>
               </div>
 
@@ -378,6 +400,11 @@ export function SuperAdminPage() {
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"
                   style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}>
                   {b.waiter_module_enabled ? <><CircleCheck size={12} />Garson Açık</> : <><Circle size={12} />Garson Kapalı</>}
+                </button>
+                <button onClick={() => toggleKitchen(b)}
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"
+                  style={b.kitchen_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}>
+                  {b.kitchen_module_enabled ? <><CircleCheck size={12} />Mutfak Açık</> : <><Circle size={12} />Mutfak Kapalı</>}
                 </button>
                 <button onClick={() => toggleActive(b)}
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn"

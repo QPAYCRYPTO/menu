@@ -15,6 +15,7 @@ export type Business = {
   category_count: number;
   product_count: number;
   waiter_module_enabled: boolean;
+  kitchen_module_enabled: boolean;
 };
 
 export type Owner = {
@@ -160,6 +161,23 @@ export async function toggleWaiterModule(
   enabled: boolean
 ): Promise<{ ok: boolean; enabled: boolean }> {
   const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/waiter-module`, {
+    method: 'PATCH',
+    headers: headers(token),
+    body: JSON.stringify({ enabled })
+  });
+  return handleResponse<{ ok: boolean; enabled: boolean }>(res);
+}
+
+// ─────────────────────────────────────────────────────────────
+// MUTFAK MODÜLÜ FLAG
+// ─────────────────────────────────────────────────────────────
+
+export async function toggleKitchenModule(
+  token: string,
+  businessId: string,
+  enabled: boolean
+): Promise<{ ok: boolean; enabled: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/kitchen-module`, {
     method: 'PATCH',
     headers: headers(token),
     body: JSON.stringify({ enabled })
