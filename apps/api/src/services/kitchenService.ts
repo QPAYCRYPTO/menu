@@ -114,11 +114,17 @@ export async function listKitchenOrders(businessId: string): Promise<KitchenOrde
   return result.rows.map(r => ({ ...r, order_no: r.order_no ?? 0 }));
 }
 
-/** Siparişi "hazır" yapar. Yalnızca bu işletmenin bekleyen/hazırlanan siparişi değişir. */
+/** Siparişi "hazır" yapar. Yalnızca bu işletmenin bekleyen/hazırlanan siparişi değişir.
+ *  Ürün özeti (ad + adet) garson bildirimi için döner. */
 export async function markKitchenOrderReady(
   businessId: string,
   orderId: string
-): Promise<{ id: string; table_id: string | null; table_name: string } | null> {
+): Promise<{
+  id: string;
+  table_id: string | null;
+  table_name: string;
+  items: Array<{ product_name: string; quantity: number }>;
+} | null> {
   const result = await pool.query(
     `UPDATE orders
      SET status = 'ready', updated_at = NOW()
@@ -126,5 +132,11 @@ export async function markKitchenOrderReady(
      RETURNING id, table_id, table_name`,
     [orderId, businessId]
   );
-  return result.rows[0] ?? null;
+  const order = result.rows[0];
+  if (!order) return null;
+  const items = await pool.query(
+    `SELECT product_name, quantity FROM order_items WHERE order_id = $1 ORDER BY created_at`,
+    [order.id]
+  );
+  return { ...order, items: items.rows };
 }

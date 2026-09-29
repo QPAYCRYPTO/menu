@@ -108,7 +108,8 @@ kitchenRoutes.patch('/orders/:id/ready', requireKitchenToken, async (req, res) =
       type: 'kitchen_order_ready',
       order_id: updated.id,
       table_id: updated.table_id,
-      table_name: updated.table_name
+      table_name: updated.table_name,
+      items: updated.items
     });
     await publishOrder(businessId, {
       type: 'order_status',

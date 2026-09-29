@@ -372,6 +372,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                       acknowledgeUpdate(data.order_id);
                     }
                   }
+                  // ─── MUTFAK "HAZIRLANDI" DEDİ ──────────────────
+                  else if (data.type === 'kitchen_order_ready') {
+                    if (data.order_id) {
+                      setActiveOrders(prev => prev.map(o =>
+                        o.id === data.order_id ? { ...o, status: 'ready' } : o
+                      ));
+                    }
+                  }
                   // ─── GARSON ÜRÜN EKLEDİ ────────────────────────
                   else if (data.type === 'order_items_added') {
                     playUpdateSound();

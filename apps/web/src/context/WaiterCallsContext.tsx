@@ -17,10 +17,24 @@
 // - SSE koptuktan sonra yeniden bağlanınca, sekme/telefon öne gelince ve ağ geri gelince
 //   çağrılar yeniden çekilir (kopukken kaçan olaylar telafi edilir); ayrıca 30 sn'de bir yedek yenileme
 // - takeCall(id) → POST /api/public/waiter/calls/:id/take
+// - 'kitchen_order_ready' (mutfak "Hazırlandı" dedi) → yeşil "Masa X hazır" bildirimi + kısa ses
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useWaiterAuth } from './WaiterAuthContext';
 import { listActiveCalls, takeCall as takeCallApi, type WaiterActiveCall } from '../api/waiterPublicApi';
+import { KitchenReadyToasts, type KitchenReadyToast } from '../components/KitchenReadyToasts';
+
+/** Mutfaktan hazır bildirimi ekranda bu kadar kalır (dokununca hemen kapanır) */
+const KITCHEN_READY_TOAST_MS = 10_000;
+
+/** "2× Izgara Köfte, 1× Ayran" — uzun siparişlerde ilk 4 ürün + kalan sayısı */
+function summarizeItems(items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  const parts = items
+    .filter((i): i is { product_name: string; quantity: number } => typeof i?.product_name === 'string')
+    .map(i => `${i.quantity}× ${i.product_name}`);
+  return parts.length > 4 ? `${parts.slice(0, 4).join(', ')} +${parts.length - 4} ürün` : parts.join(', ');
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -43,6 +57,10 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [liveVersion, setLiveVersion] = useState(0);
   const bumpLive = useCallback(() => setLiveVersion(v => v + 1), []);
+  const [readyToasts, setReadyToasts] = useState<KitchenReadyToast[]>([]);
+  const dismissReadyToast = useCallback((id: string) => {
+    setReadyToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -72,7 +90,26 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
       } catch {}
     }
 
-    audioRef.current = { play: playCallSound } as any;
+    // Mutfaktan hazır: çağrıdan ayırt edilsin diye tek, yumuşak ve tiz bir ton
+    function playReadySound() {
+      try {
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1046, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } catch {}
+    }
+
+    audioRef.current = { play: playCallSound, playReady: playReadySound } as any;
   }, []);
 
   // İlk yükleme
@@ -168,6 +205,18 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
           setCalls(prev => prev.filter(c => c.id !== data.order_id));
         }
 
+        // Mutfak "Hazırlandı" dedi → bildirim + ses
+        if (data.type === 'kitchen_order_ready' && data.order_id) {
+          const summary = summarizeItems(data.items);
+          const toast: KitchenReadyToast = {
+            id: `${data.order_id}-${Date.now()}`,
+            text: `🍽️ ${data.table_name || 'Masa'} hazır${summary ? ` — ${summary}` : ''}`
+          };
+          setReadyToasts(prev => [...prev.slice(-2), toast]);
+          window.setTimeout(() => dismissReadyToast(toast.id), KITCHEN_READY_TOAST_MS);
+          try { (audioRef.current as any)?.playReady?.(); } catch {}
+        }
+
         // Çağrı admin tarafından kapatıldı/iptal edildi
         if ((data.type === 'order_status' || data.type === 'order_cancelled') && data.order_id
             && data.order_type === 'call' && data.status !== 'pending') {
@@ -208,11 +257,12 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', resync);
       clearInterval(poll);
     };
-  }, [token, tabId, isAuthenticated, refresh, bumpLive]);
+  }, [token, tabId, isAuthenticated, refresh, bumpLive, dismissReadyToast]);
 
   return (
     <WaiterCallsContext.Provider value={{ calls, refresh, takeCall, loading, liveVersion }}>
       {children}
+      {isAuthenticated && <KitchenReadyToasts toasts={readyToasts} onDismiss={dismissReadyToast} />}
     </WaiterCallsContext.Provider>
   );
 }
