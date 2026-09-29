@@ -16,6 +16,7 @@ export type WaiterActionType =
   | 'tables_merged'          // Masa birleştirdi
   | 'call_created'           // YENİ: Müşteri çağrı oluşturdu
   | 'call_answered'          // Çağrıya cevap verdi
+  | 'order_delivered'        // Mutfaktan hazır siparişi masaya teslim etti
   | 'break_start'
   | 'break_end'
   | 'shift_start'

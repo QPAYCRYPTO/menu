@@ -23,6 +23,7 @@ import {
 import {
   resolveActiveSession,
   decrementSessionTotal,
+  incrementSessionTotal,
   findActiveSession,
   followMergeChain
 } from '../services/sessionService.js';
@@ -452,6 +453,151 @@ waiterPublicRoutes.post('/calls/:call_id/take', requireWaiterAuth, async (req, r
       message: 'Çağrı alındı.',
       call_id: callId
     });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// HAZIR SİPARİŞLER — mutfak (veya admin) "hazır" dedi, garson masaya teslim eder
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Teslim bekleyen (status='ready') siparişler — çağrılar gibi tüm garsonların
+ * paylaştığı kuyruk. Garson "Teslim Edildi" deyince listeden düşer.
+ */
+waiterPublicRoutes.get('/ready-orders', requireWaiterAuth, async (req, res) => {
+  const businessId = req.waiter!.business_id;
+
+  const result = await pool.query(
+    `SELECT
+       o.id, o.table_id, o.table_name, o.note, o.created_at,
+       o.updated_at AS ready_at,
+       COALESCE(
+         json_agg(
+           json_build_object('product_name', oi.product_name, 'quantity', oi.quantity, 'note', oi.note)
+           ORDER BY oi.created_at
+         ) FILTER (WHERE oi.id IS NOT NULL),
+         '[]'
+       ) AS items
+     FROM orders o
+     LEFT JOIN order_items oi ON oi.order_id = o.id
+     WHERE o.business_id = $1
+       AND o.type = 'order'
+       AND o.status = 'ready'
+     GROUP BY o.id
+     ORDER BY o.updated_at ASC`,
+    [businessId]
+  );
+
+  res.status(200).json(result.rows);
+});
+
+const deliverOrderParams = z.object({ order_id: z.string().uuid() });
+
+/**
+ * Garson hazır siparişi masaya teslim etti → status='delivered'.
+ * Admin'in teslim akışıyla aynı: masa oturumunun tutarı bu anda artar.
+ * SSE 'order_status' (delivered) ile admin ve diğer garsonlara duyurulur.
+ */
+waiterPublicRoutes.post('/orders/:order_id/deliver', requireWaiterAuth, async (req, res) => {
+  const parsed = deliverOrderParams.safeParse(req.params);
+  if (!parsed.success) {
+    throw new AppError('Geçersiz sipariş id.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+
+  const waiter = req.waiter!;
+  const businessId = waiter.business_id;
+  const orderId = parsed.data.order_id;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const orderResult = await client.query(
+      `SELECT id, table_id, table_name, status, type, session_id
+       FROM orders
+       WHERE id = $1 AND business_id = $2
+       FOR UPDATE`,
+      [orderId, businessId]
+    );
+
+    if (orderResult.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ message: 'Sipariş bulunamadı.' });
+      return;
+    }
+
+    const order = orderResult.rows[0];
+
+    if (order.type !== 'order') {
+      await client.query('ROLLBACK');
+      res.status(400).json({ message: 'Bu kayıt bir sipariş değil.' });
+      return;
+    }
+
+    if (order.status !== 'ready') {
+      await client.query('ROLLBACK');
+      res.status(409).json({
+        message: order.status === 'delivered'
+          ? 'Bu sipariş zaten teslim edildi.'
+          : 'Sipariş henüz hazır değil veya iptal edildi.'
+      });
+      return;
+    }
+
+    await client.query(
+      `UPDATE orders
+       SET status = 'delivered', delivered_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND business_id = $2`,
+      [orderId, businessId]
+    );
+
+    // Admin PUT /orders/:id ile aynı kural: teslim anında oturum tutarına eklenir
+    const totalResult = await client.query(
+      `SELECT COALESCE(SUM(quantity * price_int), 0)::int AS total
+       FROM order_items WHERE order_id = $1`,
+      [orderId]
+    );
+    const orderTotal: number = totalResult.rows[0].total;
+    if (order.session_id && orderTotal > 0) {
+      await incrementSessionTotal(order.session_id, orderTotal, client);
+    }
+
+    await logWaiterActivity({
+      businessId,
+      waiterId: waiter.id,
+      waiterName: waiter.name,
+      action: 'order_delivered',
+      targetType: 'order',
+      targetId: orderId,
+      targetName: order.table_name,
+      metadata: { table_name: order.table_name, total_int: orderTotal },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    }, client);
+
+    await client.query('COMMIT');
+
+    try {
+      await publishOrder(businessId, {
+        type: 'order_status',
+        order_id: orderId,
+        order_type: 'order',
+        status: 'delivered',
+        table_id: order.table_id,
+        table_name: order.table_name,
+        delivered_by_waiter_id: waiter.id,
+        delivered_by_waiter_name: waiter.name
+      });
+    } catch {
+      // yayın hatası isteği etkilemesin
+    }
+
+    res.status(200).json({ message: 'Sipariş teslim edildi.', order_id: orderId });
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
