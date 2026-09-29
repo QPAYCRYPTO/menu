@@ -6,7 +6,8 @@
 //   POST /token                    → yeni token üret, eskisini geçersiz kıl
 // Mutfak ekranı (link token'ı: ?t=<token> veya X-Kitchen-Token başlığı):
 //   GET   /orders                  → bekleyen + hazırlanan siparişler
-//   PATCH /orders/:id/ready        → "Hazırlandı" (garson/admin ekranlarına canlı olay gider)
+//   PATCH /orders/:id/start        → "Hazırlanıyor" (bekleyen → preparing; admin/garson ekranlarına canlı olay gider)
+//   PATCH /orders/:id/ready        → "Hazır" (garson/admin ekranlarına canlı olay gider)
 //   GET   /stream                  → SSE: işletmenin canlı olay kanalı (yalnızca mutfağı ilgilendiren olaylar)
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import { z } from 'zod';
@@ -16,6 +17,7 @@ import {
   getActiveKitchenToken,
   isKitchenModuleEnabled,
   listKitchenOrders,
+  markKitchenOrderPreparing,
   markKitchenOrderReady,
   resolveKitchenToken,
   rotateKitchenToken
@@ -87,6 +89,36 @@ kitchenRoutes.get('/orders', requireKitchenToken, async (_req, res) => {
   const { businessId, businessName } = kitchenOf(res);
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).json({ business_name: businessName, orders: await listKitchenOrders(businessId) });
+});
+
+kitchenRoutes.patch('/orders/:id/start', requireKitchenToken, async (req, res) => {
+  const idParsed = z.string().uuid().safeParse(req.params.id);
+  if (!idParsed.success) {
+    res.status(400).json({ message: 'Geçersiz sipariş id.' });
+    return;
+  }
+  const { businessId } = kitchenOf(res);
+  const updated = await markKitchenOrderPreparing(businessId, idParsed.data);
+  if (!updated) {
+    res.status(409).json({ message: 'Sipariş bulunamadı veya zaten hazırlanıyor.', code: 'ORDER_NOT_PENDING' });
+    return;
+  }
+
+  try {
+    // Admin/garson/müşteri ekranları: genel durum olayı (mutfak ekranları da bununla tazelenir)
+    await publishOrder(businessId, {
+      type: 'order_status',
+      order_id: updated.id,
+      order_type: 'order',
+      status: 'preparing',
+      table_id: updated.table_id,
+      table_name: updated.table_name
+    });
+  } catch {
+    // yayın hatası isteği etkilemesin
+  }
+
+  res.status(200).json({ ok: true, order_id: updated.id, status: 'preparing' });
 });
 
 kitchenRoutes.patch('/orders/:id/ready', requireKitchenToken, async (req, res) => {

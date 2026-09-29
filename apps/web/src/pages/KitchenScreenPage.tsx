@@ -1,12 +1,12 @@
 // apps/web/src/pages/KitchenScreenPage.tsx
 // Mutfak ekranı — /mutfak?t=<token>. Şifre yok; link token'ı yetkidir.
-// Bekleyen + hazırlanan siparişleri gösterir, "Hazırlandı" ile garsona canlı bildirim gider.
+// Akış: Bekliyor → "Hazırlanıyor" düğmesi → Hazırlanıyor → "Hazır" düğmesi (garsona canlı bildirim, kart ekrandan kalkar).
 // Canlı akış (SSE) + yeni siparişte ses; bağlantı koparsa "Çevrimdışı" rozeti, dönünce yeniden yükler.
 // Atölye tasarımı: gece/gündüz temasına uyar (bg-page / bg-surface / text-ink), başlıkta güneş/ay düğmesi.
 // Durum rozetleri diğer ekranlarla aynı: Bekliyor amber (--state-warn), Hazırlanıyor mavi (--state-info).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCheck, ChefHat, Clock, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
+import { ArrowRight, Check, ChefHat, Clock, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useThemedPage } from '../lib/theme';
 
@@ -194,23 +194,30 @@ export function KitchenScreenPage() {
     ctx?.resume().then(() => setSoundOn(ctx.state === 'running')).catch(() => {});
   }
 
-  async function markReady(order: KitchenOrder) {
+  /** Bekliyor → Hazırlanıyor (start) ya da Hazırlanıyor → Hazır (ready) */
+  async function advance(order: KitchenOrder) {
+    const action = order.status === 'pending' ? 'start' : 'ready';
     setBusyIds(prev => new Set(prev).add(order.id));
-    // İyimser: kart hemen kalkar
-    setOrders(prev => prev.filter(o => o.id !== order.id));
+    // İyimser: "başla"da kart hemen maviye döner, "hazır"da kart hemen kalkar
+    if (action === 'start') {
+      setOrders(prev => prev.map(o => (o.id === order.id ? { ...o, status: 'preparing' } : o)));
+    } else {
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+    }
     try {
-      const res = await fetch(`${API_BASE_URL}/kitchen/orders/${order.id}/ready?t=${encodeURIComponent(token)}`, { method: 'PATCH' });
+      const res = await fetch(`${API_BASE_URL}/kitchen/orders/${order.id}/${action}?t=${encodeURIComponent(token)}`, { method: 'PATCH' });
       if (res.status === 401) {
         setState('invalid');
       } else if (!res.ok && res.status !== 409) {
         throw new Error(String(res.status));
       }
-      // 409: başka ekrandan zaten hazır yapılmış → listeyi tazele
+      // 409: başka ekrandan zaten ilerletilmiş → listeyi tazele
       if (res.status === 409) load();
     } catch {
-      setOrders(prev => (prev.some(o => o.id === order.id) ? prev : [...prev, order].sort(
+      // Geri al: kartı eski haliyle geri koy
+      setOrders(prev => [...prev.filter(o => o.id !== order.id), order].sort(
         (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      )));
+      ));
       setOffline(true);
       setNotice(`${order.table_name} işaretlenemedi — bağlantı yok. Tekrar deneyin.`);
       window.setTimeout(() => setNotice(''), 5000);
@@ -274,7 +281,7 @@ export function KitchenScreenPage() {
             <span className="h-12 px-4 rounded-2xl bg-state-danger text-page text-lg font-black flex items-center gap-2" role="status">
               <WifiOff size={22} /> Çevrimdışı
               {lastSync && (
-                <span className="text-sm font-semibold text-red-100">
+                <span className="text-sm font-semibold opacity-80">
                   · son {new Date(lastSync).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
@@ -304,10 +311,15 @@ export function KitchenScreenPage() {
             {orders.map(order => {
               const mins = minutesSince(order.created_at, now);
               const late = mins >= LATE_MINUTES;
+              const preparing = order.status === 'preparing';
               return (
                 <article key={order.id}
                   className="rounded-3xl border-2 bg-surface flex flex-col overflow-hidden shadow-[var(--shadow)]"
-                  style={{ borderColor: late ? 'var(--state-danger)' : order.status === 'preparing' ? 'var(--state-info)' : 'var(--line)' }}>
+                  // Sol şerit durumu gösterir (Bekliyor amber, Hazırlanıyor mavi); geciken kartın çerçevesi kırmızı
+                  style={{
+                    borderColor: late ? 'var(--state-danger)' : 'var(--line)',
+                    borderLeft: `10px solid ${preparing ? 'var(--state-info)' : 'var(--state-warn)'}`
+                  }}>
                   <div className={`px-4 py-3 flex items-start justify-between gap-3 border-b border-line ${late ? 'bg-state-danger-bg' : 'bg-surface-2'}`}>
                     <div className="min-w-0">
                       <div className="font-serif text-4xl font-bold leading-none truncate">{order.table_name}</div>
@@ -349,10 +361,17 @@ export function KitchenScreenPage() {
                   </ul>
 
                   <div className="p-3 pt-0">
-                    <button onClick={() => markReady(order)} disabled={busyIds.has(order.id)}
-                      className="w-full h-16 rounded-2xl bg-brand text-on-brand hover:opacity-90 active:opacity-80 text-2xl font-black flex items-center justify-center gap-2 disabled:opacity-50 spring-btn">
-                      <CheckCheck size={30} /> Hazırlandı
-                    </button>
+                    {preparing ? (
+                      <button onClick={() => advance(order)} disabled={busyIds.has(order.id)}
+                        className="w-full h-16 rounded-2xl bg-state-ok text-page hover:opacity-90 active:opacity-80 text-2xl font-black flex items-center justify-center gap-2 disabled:opacity-50 spring-btn">
+                        Hazır <Check size={30} strokeWidth={3} />
+                      </button>
+                    ) : (
+                      <button onClick={() => advance(order)} disabled={busyIds.has(order.id)}
+                        className="w-full h-16 rounded-2xl bg-state-warn text-page hover:opacity-90 active:opacity-80 text-2xl font-black flex items-center justify-center gap-2 disabled:opacity-50 spring-btn">
+                        Hazırlanıyor <ArrowRight size={30} strokeWidth={3} />
+                      </button>
+                    )}
                   </div>
                 </article>
               );
