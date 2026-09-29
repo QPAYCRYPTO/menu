@@ -18,10 +18,19 @@
 //   çağrılar yeniden çekilir (kopukken kaçan olaylar telafi edilir); ayrıca 30 sn'de bir yedek yenileme
 // - takeCall(id) → POST /api/public/waiter/calls/:id/take
 // - 'kitchen_order_ready' (mutfak "Hazırlandı" dedi) → yeşil "Masa X hazır" bildirimi + kısa ses
+// - readyOrders: teslim bekleyen hazır siparişler — garson "Teslim Edildi" diyene kadar
+//   Çağrılar sekmesinde kalıcı durur (deliverOrder → POST /orders/:id/deliver)
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useWaiterAuth } from './WaiterAuthContext';
-import { listActiveCalls, takeCall as takeCallApi, type WaiterActiveCall } from '../api/waiterPublicApi';
+import {
+  deliverOrder as deliverOrderApi,
+  listActiveCalls,
+  listReadyOrders,
+  takeCall as takeCallApi,
+  type WaiterActiveCall,
+  type WaiterReadyOrder
+} from '../api/waiterPublicApi';
 import { KitchenReadyToasts, type KitchenReadyToast } from '../components/KitchenReadyToasts';
 
 /** Mutfaktan hazır bildirimi ekranda bu kadar kalır (dokununca hemen kapanır) */
@@ -42,6 +51,9 @@ type WaiterCallsContextValue = {
   calls: WaiterActiveCall[];
   refresh: () => Promise<void>;
   takeCall: (callId: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Mutfaktan hazır, teslim bekleyen siparişler (kalıcı; teslim edilince düşer) */
+  readyOrders: WaiterReadyOrder[];
+  deliverOrder: (orderId: string) => Promise<{ ok: boolean; error?: string }>;
   loading: boolean;
   /** Her canlı olayda / yeniden senkronda artar — ekranlar useLiveRefresh ile dinler */
   liveVersion: number;
@@ -54,6 +66,7 @@ const WaiterCallsContext = createContext<WaiterCallsContextValue | null>(null);
 export function WaiterCallsProvider({ children }: { children: ReactNode }) {
   const { token, tabId, isAuthenticated } = useWaiterAuth();
   const [calls, setCalls] = useState<WaiterActiveCall[]>([]);
+  const [readyOrders, setReadyOrders] = useState<WaiterReadyOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [liveVersion, setLiveVersion] = useState(0);
   const bumpLive = useCallback(() => setLiveVersion(v => v + 1), []);
@@ -117,8 +130,12 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
     if (!token || !tabId || !isAuthenticated) return;
     setLoading(true);
     try {
-      const data = await listActiveCalls(token, tabId);
+      const [data, ready] = await Promise.all([
+        listActiveCalls(token, tabId),
+        listReadyOrders(token, tabId).catch(() => null)
+      ]);
       setCalls(data);
+      if (ready) setReadyOrders(ready);
     } catch (err) {
       console.error('listActiveCalls failed:', err);
     } finally {
@@ -144,6 +161,31 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
     }
   }, [token, tabId]);
 
+  // Yalnızca hazır siparişleri tazele (sipariş durum olaylarında)
+  const refreshReady = useCallback(async () => {
+    if (!token || !tabId || !isAuthenticated) return;
+    try {
+      setReadyOrders(await listReadyOrders(token, tabId));
+    } catch {
+      // bir sonraki olay / yedek yenileme telafi eder
+    }
+  }, [token, tabId, isAuthenticated]);
+
+  // Hazır siparişi teslim et
+  const deliverOrder = useCallback(async (orderId: string): Promise<{ ok: boolean; error?: string }> => {
+    if (!token || !tabId) return { ok: false, error: 'Token yok' };
+    try {
+      await deliverOrderApi(token, tabId, orderId);
+      setReadyOrders(prev => prev.filter(o => o.id !== orderId));
+      return { ok: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Teslim edilemedi.';
+      // Başka garson teslim ettiyse / iptal olduysa listeyi tazele
+      refreshReady();
+      return { ok: false, error: msg };
+    }
+  }, [token, tabId, refreshReady]);
+
   // SSE bağlantısı
   useEffect(() => {
     if (!token || !tabId || !isAuthenticated) {
@@ -152,6 +194,7 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
         eventSourceRef.current = null;
       }
       setCalls([]);
+      setReadyOrders([]);
       return;
     }
 
@@ -213,8 +256,17 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
             text: `🍽️ ${data.table_name || 'Masa'} hazır${summary ? ` — ${summary}` : ''}`
           };
           setReadyToasts(prev => [...prev.slice(-2), toast]);
+          refreshReady();
           window.setTimeout(() => dismissReadyToast(toast.id), KITCHEN_READY_TOAST_MS);
           try { (audioRef.current as any)?.playReady?.(); } catch {}
+        }
+
+        // Sipariş durumu değişti (admin hazır/teslim yaptı, başka garson teslim etti, iptal) → hazır listesi
+        if ((data.type === 'order_status' && data.order_type === 'order') || data.type === 'order_cancelled') {
+          if (data.order_id && data.status !== 'ready') {
+            setReadyOrders(prev => prev.filter(o => o.id !== data.order_id));
+          }
+          if (data.type === 'order_status' && data.status === 'ready') refreshReady();
         }
 
         // Çağrı admin tarafından kapatıldı/iptal edildi
@@ -257,10 +309,10 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', resync);
       clearInterval(poll);
     };
-  }, [token, tabId, isAuthenticated, refresh, bumpLive, dismissReadyToast]);
+  }, [token, tabId, isAuthenticated, refresh, refreshReady, bumpLive, dismissReadyToast]);
 
   return (
-    <WaiterCallsContext.Provider value={{ calls, refresh, takeCall, loading, liveVersion }}>
+    <WaiterCallsContext.Provider value={{ calls, refresh, takeCall, readyOrders, deliverOrder, loading, liveVersion }}>
       {children}
       {isAuthenticated && <KitchenReadyToasts toasts={readyToasts} onDismiss={dismissReadyToast} />}
     </WaiterCallsContext.Provider>

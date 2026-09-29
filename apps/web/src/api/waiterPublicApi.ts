@@ -79,6 +79,17 @@ export type WaiterActiveCall = {
   status: string;
 };
 
+/** Mutfaktan hazır, masaya teslim bekleyen sipariş */
+export type WaiterReadyOrder = {
+  id: string;
+  table_id: string | null;
+  table_name: string;
+  note: string | null;
+  created_at: string;
+  ready_at: string;
+  items: Array<{ product_name: string; quantity: number; note: string | null }>;
+};
+
 export type WaiterTableDetail = {
   table: { id: string; name: string; sort_order: number };
   session: { id: string; opened_at: string; total_int: number } | null;
@@ -285,6 +296,21 @@ export async function listActiveCalls(token: string, tabId: string): Promise<Wai
 
 export async function takeCall(token: string, tabId: string, callId: string): Promise<{ message: string; call_id: string }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/calls/${callId}/take`, {
+    method: 'POST',
+    headers: waiterHeaders(token, tabId)
+  });
+  return handleResponse(res);
+}
+
+export async function listReadyOrders(token: string, tabId: string): Promise<WaiterReadyOrder[]> {
+  const res = await fetch(`${API_BASE_URL}/public/waiter/ready-orders`, {
+    headers: waiterHeaders(token, tabId)
+  });
+  return handleResponse<WaiterReadyOrder[]>(res);
+}
+
+export async function deliverOrder(token: string, tabId: string, orderId: string): Promise<{ message: string; order_id: string }> {
+  const res = await fetch(`${API_BASE_URL}/public/waiter/orders/${orderId}/deliver`, {
     method: 'POST',
     headers: waiterHeaders(token, tabId)
   });

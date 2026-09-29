@@ -372,6 +372,18 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                       acknowledgeUpdate(data.order_id);
                     }
                   }
+                  // ─── SİPARİŞ DURUMU DEĞİŞTİ (ör. garson teslim etti) ─
+                  else if (data.type === 'order_status' && data.order_type === 'order') {
+                    if (data.order_id) {
+                      if (data.status === 'delivered') {
+                        setActiveOrders(prev => prev.filter(o => o.id !== data.order_id));
+                      } else if (data.status) {
+                        setActiveOrders(prev => prev.map(o =>
+                          o.id === data.order_id ? { ...o, status: data.status } : o
+                        ));
+                      }
+                    }
+                  }
                   // ─── MUTFAK "HAZIRLANDI" DEDİ ──────────────────
                   else if (data.type === 'kitchen_order_ready') {
                     if (data.order_id) {

@@ -9,7 +9,7 @@ import { Bell, LogOut, User, UtensilsCrossed } from 'lucide-react';
 
 export function WaiterLayout() {
   const { waiter, isAuthenticated, isChecking, logout } = useWaiterAuth();
-  const { calls } = useWaiterCalls();
+  const { calls, readyOrders } = useWaiterCalls();
   const location = useLocation();
 
   if (isChecking) {
@@ -27,7 +27,8 @@ export function WaiterLayout() {
     return <Navigate to="/garson/giris" replace />;
   }
 
-  const callCount = calls.length;
+  // Rozet: bekleyen çağrılar + teslim bekleyen hazır siparişler
+  const callCount = calls.length + readyOrders.length;
 
   const navItems = [
     { to: '/garson', label: 'Masalar', icon: UtensilsCrossed, exact: true, badge: 0 },

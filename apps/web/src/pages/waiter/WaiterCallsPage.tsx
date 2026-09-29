@@ -4,13 +4,14 @@
 // - Tarih + saat + canlı sayaç (hh:mm:ss formatında)
 // - "kaç saniye/dakika önce" bilgisi
 // - Header rozeti: kaç çağrı + kaç acil
+// - "Sipariş Hazır" kartları: mutfak hazır dedi → garson "Teslim Edildi" diyene kadar en üstte kalır
 
 import { useEffect, useState } from 'react';
 import { useWaiterCalls } from '../../context/WaiterCallsContext';
 import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
-import type { WaiterActiveCall } from '../../api/waiterPublicApi';
-import { AlertTriangle, BellOff, Bell, Calendar, Check, Clock, MapPin, NotebookPen, RefreshCw, Timer } from 'lucide-react';
+import type { WaiterActiveCall, WaiterReadyOrder } from '../../api/waiterPublicApi';
+import { AlertTriangle, BellOff, Bell, Calendar, Check, CheckCheck, ChefHat, Clock, MapPin, NotebookPen, RefreshCw, Timer } from 'lucide-react';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('tr-TR', {
@@ -65,6 +66,84 @@ function LiveTimerBadge({ dateStr }: { dateStr: string }) {
 }
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
+
+/** Mutfaktan hazır sipariş — teslim edilene kadar kalıcı */
+function ReadyOrderCard({ order, onDeliver }: {
+  order: WaiterReadyOrder;
+  onDeliver: (orderId: string) => Promise<void>;
+}) {
+  const [delivering, setDelivering] = useState(false);
+  const divider = 'rgba(255,255,255,0.14)';
+
+  async function handleDeliver() {
+    if (delivering) return;
+    setDelivering(true);
+    try {
+      await onDeliver(order.id);
+    } finally {
+      setDelivering(false);
+    }
+  }
+
+  return (
+    <div className="glass-dark rounded-3xl overflow-hidden mb-3 fade-enter"
+      style={{ borderLeft: '5px solid #34D399', background: 'rgba(6,46,34,0.7)' }}>
+      <div style={{
+        padding: '14px 16px', background: 'var(--success-bg)', borderBottom: `1px solid ${divider}`,
+        display: 'flex', alignItems: 'center', gap: 14
+      }}>
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-white"
+          style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.55)' }}>
+          <ChefHat size={28} aria-hidden />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--success)', marginBottom: 2 }}>
+            Mutfaktan hazır
+          </div>
+          <div className="font-serif font-bold text-white flex items-center gap-1" style={{ fontSize: 18, lineHeight: 1.2 }}>
+            <MapPin size={16} aria-hidden /> {order.table_name}
+          </div>
+          <div className="text-xs mt-0.5 text-white/70">Sipariş hazır — masaya götür</div>
+        </div>
+        <div style={{ flexShrink: 0 }}>
+          <LiveTimerBadge dateStr={order.ready_at} />
+        </div>
+      </div>
+
+      <ul style={{ padding: '10px 16px' }} className="space-y-1.5">
+        {order.items.map((item, idx) => (
+          <li key={idx} className="text-sm text-white">
+            <span className="font-extrabold text-emerald-300 mr-1.5">{item.quantity}×</span>
+            <span className="font-semibold">{item.product_name}</span>
+            {item.note && item.note.trim() && (
+              <span className="block text-xs text-amber-200 ml-6 mt-0.5">↳ {item.note}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {order.note && order.note.trim() && (
+        <div style={{ padding: '0 16px 8px' }}>
+          <div className="glass-pill text-xs px-2.5 py-1.5 rounded-xl font-semibold flex items-center gap-1.5">
+            <NotebookPen size={12} className="shrink-0" aria-hidden /> {order.note}
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: '8px 16px 16px', borderTop: `1px solid ${divider}` }}>
+        <button onClick={handleDeliver} disabled={delivering}
+          className="w-full py-3 rounded-full text-sm font-bold text-white spring-btn disabled:opacity-60 flex items-center justify-center gap-1.5"
+          style={{
+            background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)',
+            border: '1px solid rgba(255,255,255,0.55)',
+            boxShadow: '0 8px 20px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.7)'
+          }}>
+          {delivering ? 'İşleniyor...' : <><CheckCheck size={16} aria-hidden /> Teslim Edildi</>}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function CallCard({ call, onTake }: {
   call: WaiterActiveCall;
@@ -190,7 +269,7 @@ function CallCard({ call, onTake }: {
 }
 
 export function WaiterCallsPage() {
-  const { calls, takeCall, refresh, loading } = useWaiterCalls();
+  const { calls, takeCall, readyOrders, deliverOrder, refresh, loading } = useWaiterCalls();
   const [toast, setToast] = useState<ToastState>(null);
 
   function showToast(message: string, type: 'error' | 'success') {
@@ -204,6 +283,15 @@ export function WaiterCallsPage() {
       showToast('Çağrı alındı, masaya gidebilirsin.', 'success');
     } else {
       showToast(result.error || 'Çağrı alınamadı.', 'error');
+    }
+  }
+
+  async function handleDeliver(orderId: string) {
+    const result = await deliverOrder(orderId);
+    if (result.ok) {
+      showToast('Sipariş teslim edildi.', 'success');
+    } else {
+      showToast(result.error || 'Teslim edilemedi.', 'error');
     }
   }
 
@@ -232,6 +320,12 @@ export function WaiterCallsPage() {
               {calls.length} yeni
             </span>
           )}
+          {readyOrders.length > 0 && (
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1"
+              style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.45)' }}>
+              <ChefHat size={11} aria-hidden /> {readyOrders.length} hazır
+            </span>
+          )}
           {criticalCount > 0 && (
             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold text-white animate-pulse inline-flex items-center gap-1"
               style={{ background: 'linear-gradient(135deg, #FB7185, #E11D48)', border: '1px solid rgba(255,255,255,0.6)' }}>
@@ -245,7 +339,15 @@ export function WaiterCallsPage() {
         </button>
       </div>
 
-      {calls.length === 0 ? (
+      {readyOrders.length > 0 && (
+        <div className="mb-2">
+          {readyOrders.map(order => (
+            <ReadyOrderCard key={order.id} order={order} onDeliver={handleDeliver} />
+          ))}
+        </div>
+      )}
+
+      {calls.length === 0 && readyOrders.length === 0 ? (
         <div className="glass-card text-center py-14 px-4 rounded-3xl">
           <div className="mb-3 flex justify-center text-white/70"><BellOff size={44} aria-hidden /></div>
           <div className="font-serif font-bold mb-1">Aktif çağrı yok</div>
