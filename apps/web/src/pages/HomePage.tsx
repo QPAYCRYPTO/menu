@@ -2,6 +2,23 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PublicHeader } from '../components/PublicHeader';
+import {
+  Search,
+  MessageCircle,
+  ArrowRight,
+  QrCode,
+  ClipboardList,
+  Zap,
+  ChartLine,
+  BellRing,
+  CircleCheckBig,
+  Star,
+  MonitorSmartphone,
+  Infinity as InfinityIcon,
+  MessageSquare,
+  Plus,
+  Wheat,
+} from 'lucide-react';
 
 // WhatsApp numarası — değiştir!
 const WHATSAPP_NUMBER = '905325646231';
@@ -64,7 +81,7 @@ export function HomePage() {
               window.location.href = WA_LINK(input || 'AtlasQR hakkında bilgi almak istiyorum');
             }}
           >
-            <i className="fa-solid fa-magnifying-glass shrink-0" style={{ color: 'var(--text-muted)', fontSize: 18 }} />
+            <Search className="shrink-0" size={18} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
             <input
               type="text"
               name="q"
@@ -110,9 +127,7 @@ export function HomePage() {
                 className="btn-accent spring-btn inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold"
                 style={{ textDecoration: 'none' }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.1 4.9 4.3 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.4c1.4.8 3.1 1.2 4.8 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
-                </svg>
+                <MessageCircle size={18} aria-hidden="true" />
                 WhatsApp'tan Yaz
               </a>
             </div>
@@ -155,7 +170,7 @@ export function HomePage() {
                     {s.desc}
                   </div>
                 </div>
-                <i className="fa-solid fa-arrow-right" style={{ color: 'var(--text-faint)', fontSize: 16 }} />
+                <ArrowRight size={16} style={{ color: 'var(--text-faint)' }} aria-hidden="true" />
               </a>
             ))}
           </div>
@@ -324,9 +339,7 @@ export function HomePage() {
                 className="btn-accent spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
                 style={{ textDecoration: 'none', fontSize: 16 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.1 4.9 4.3 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.4c1.4.8 3.1 1.2 4.8 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
-                </svg>
+                <MessageCircle size={20} aria-hidden="true" />
                 WhatsApp'tan Yaz
               </a>
               <Link
@@ -350,88 +363,38 @@ export function HomePage() {
 // ═══════ Helper Components ═══════
 
 function ServiceIcon({ name }: { name: string }) {
-  const props = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: '#FF8C38', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const props = { size: 24, color: '#FF8C38', strokeWidth: 1.8, 'aria-hidden': true };
   switch (name) {
     case 'qr':
-      return (
-        <svg {...props}>
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-        </svg>
-      );
+      return <QrCode {...props} />;
     case 'table':
-      return (
-        <svg {...props}>
-          <path d="M9 11H3v10h6V11zm6-7h-6v17h6V4zm6 4h-6v13h6V8z" />
-        </svg>
-      );
+      return <ClipboardList {...props} />;
     case 'flow':
-      return (
-        <svg {...props}>
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-        </svg>
-      );
+      return <Zap {...props} />;
     case 'chart':
-      return (
-        <svg {...props}>
-          <path d="M3 3v18h18M7 14l4-4 4 4 6-6" />
-        </svg>
-      );
+      return <ChartLine {...props} />;
     case 'bell':
-      return (
-        <svg {...props}>
-          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
-        </svg>
-      );
+      return <BellRing {...props} />;
     default:
       return null;
   }
 }
 
 function FeatureIcon({ name }: { name: string }) {
-  const props = { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', stroke: '#FF8C38', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  const props = { size: 28, color: '#FF8C38', strokeWidth: 1.8, 'aria-hidden': true };
   switch (name) {
     case 'check':
-      return (
-        <svg {...props}>
-          <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-          <path d="M22 4L12 14.01l-3-3" />
-        </svg>
-      );
+      return <CircleCheckBig {...props} />;
     case 'flow':
-      return (
-        <svg {...props}>
-          <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </svg>
-      );
+      return <Zap {...props} />;
     case 'star':
-      return (
-        <svg {...props}>
-          <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" />
-        </svg>
-      );
+      return <Star {...props} />;
     case 'device':
-      return (
-        <svg {...props}>
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <path d="M8 21h8M12 17v4" />
-        </svg>
-      );
+      return <MonitorSmartphone {...props} />;
     case 'infinite':
-      return (
-        <svg {...props}>
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-        </svg>
-      );
+      return <InfinityIcon {...props} />;
     case 'support':
-      return (
-        <svg {...props}>
-          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-        </svg>
-      );
+      return <MessageSquare {...props} />;
     default:
       return null;
   }
@@ -457,7 +420,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
           className="text-2xl shrink-0 transition-transform"
           style={{ color: 'var(--accent)', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
         >
-          +
+          <Plus size={24} strokeWidth={1.5} aria-hidden="true" />
         </span>
       </button>
       {open && (
@@ -483,7 +446,7 @@ export function Footer() {
                 className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-lg"
                 style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)', border: '1px solid rgba(255,255,255,0.6)' }}
               >
-                <i className="fa-solid fa-wheat-awn" />
+                <Wheat size={18} aria-hidden="true" />
               </div>
               <div>
                 <div className="font-serif font-bold text-white text-lg">

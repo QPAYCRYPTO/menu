@@ -1,6 +1,7 @@
 // apps/web/src/components/PublicHeader.tsx
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { Wheat, LogIn, Menu, X, ArrowRight } from 'lucide-react';
 
 type NavLink = {
   to: string;
@@ -32,7 +33,7 @@ export function PublicHeader() {
               className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-white text-lg"
               style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)', border: '1px solid rgba(255,255,255,0.6)' }}
             >
-              <i className="fa-solid fa-wheat-awn" />
+              <Wheat size={18} aria-hidden="true" />
             </div>
             <div className="flex flex-col leading-tight">
               <span className="font-serif font-bold text-white text-lg tracking-wide">
@@ -91,7 +92,7 @@ export function PublicHeader() {
               className="btn-accent spring-btn ml-3 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2"
               style={{ textDecoration: 'none' }}
             >
-              <i className="fa-solid fa-right-to-bracket" />
+              <LogIn size={16} aria-hidden="true" />
               Kullanıcı Girişi
             </Link>
           </nav>
@@ -102,7 +103,7 @@ export function PublicHeader() {
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Menu"
           >
-            <i className={`fa-solid ${mobileOpen ? 'fa-xmark' : 'fa-bars'}`} />
+            {mobileOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
           </button>
         </div>
 
@@ -147,7 +148,7 @@ export function PublicHeader() {
                 className="btn-accent block px-4 py-3 rounded-full text-sm font-bold mt-2"
                 style={{ textAlign: 'center', textDecoration: 'none' }}
               >
-                Kullanıcı Girişi →
+                Kullanıcı Girişi <ArrowRight size={14} className="inline-block align-[-2px]" aria-hidden="true" />
               </Link>
             </nav>
           </div>

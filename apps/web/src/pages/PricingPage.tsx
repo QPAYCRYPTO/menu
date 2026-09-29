@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { PublicHeader } from '../components/PublicHeader';
 import { Footer } from './HomePage';
+import { Check, MessageCircle, Plus } from 'lucide-react';
 
 const WHATSAPP_NUMBER = '905325646231';
 const WA_LINK = (text: string) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
@@ -171,7 +172,7 @@ export function PricingPage() {
                   className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
                   style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255, 122, 41, 0.45)' }}
                 >
-                  <i className="fa-solid fa-check" style={{ color: '#FF8C38', fontSize: 20 }} />
+                  <Check size={20} color="#FF8C38" strokeWidth={2.5} aria-hidden="true" />
                 </div>
                 <h3 className="font-serif font-semibold mb-2" style={{ fontSize: 22, letterSpacing: '-0.3px' }}>
                   {f.title}
@@ -250,9 +251,7 @@ export function PricingPage() {
             className="btn-accent spring-btn inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold"
             style={{ textDecoration: 'none', fontSize: 16 }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7.1-.3-.2-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.7 1.2 2.9.1.2 2 3.1 4.9 4.3 2.9 1.2 2.9.8 3.4.8.5 0 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.3-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.4c1.4.8 3.1 1.2 4.8 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
-            </svg>
+            <MessageCircle size={20} aria-hidden="true" />
             WhatsApp'tan Yaz
           </a>
         </div>
@@ -371,7 +370,7 @@ function PlanCard({ name, tagline, price, period, extra, savings, original, feat
                 color: featured ? '#fff' : '#FFB27A',
               }}
             >
-              ✓
+              <Check size={12} strokeWidth={3} aria-hidden="true" />
             </span>
             <span>{f}</span>
           </li>
@@ -412,7 +411,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
           className="text-2xl shrink-0 transition-transform"
           style={{ color: 'var(--accent)', transform: open ? 'rotate(45deg)' : 'rotate(0)', fontWeight: 300 }}
         >
-          +
+          <Plus size={24} strokeWidth={1.5} aria-hidden="true" />
         </span>
       </button>
       {open && (
