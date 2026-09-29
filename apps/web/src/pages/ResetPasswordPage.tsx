@@ -1,8 +1,8 @@
 // apps/web/src/pages/ResetPasswordPage.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
-import { TriangleAlert, Lock, Eye, EyeOff, CircleCheck, ArrowLeft } from 'lucide-react';
+import { TriangleAlert, Lock, Eye, EyeOff, CircleCheck, ArrowLeft, LoaderCircle } from 'lucide-react';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -15,6 +15,18 @@ export function ResetPasswordPage() {
   const [showPass, setShowPass] = useState(false);
   const [showPass2, setShowPass2] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Link açılınca geçerliliği sorulur: kullanılmış / süresi dolmuş linkte form hiç gösterilmez
+  const [linkState, setLinkState] = useState<'checking' | 'valid' | 'invalid'>(token ? 'checking' : 'invalid');
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    apiRequest<{ valid: boolean }>('/auth/reset-token/validate', { method: 'POST', body: { token }, retryOn401: false })
+      .then(r => { if (!cancelled) setLinkState(r.valid ? 'valid' : 'invalid'); })
+      // Doğrulama isteği başarısızsa (ağ vb.) formu göster; gönderimde sunucu yine kontrol eder
+      .catch(() => { if (!cancelled) setLinkState('valid'); });
+    return () => { cancelled = true; };
+  }, [token]);
 
   const passwordsMatch = password.length > 0 && password2.length > 0 && password === password2;
   const passwordsMismatch = password.length > 0 && password2.length > 0 && password !== password2;
@@ -28,15 +40,31 @@ export function ResetPasswordPage() {
       setLoading(true);
       await apiRequest('/auth/reset-password', { method: 'POST', body: { token, new_password: password }, retryOn401: false });
       setMessage('Şifreniz başarıyla güncellendi! Giriş sayfasına yönlendiriliyorsunuz...');
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate('/login', { replace: true }), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu.');
+      const msg = err instanceof Error ? err.message : 'Bir hata oluştu.';
+      // Bu arada link kullanılmış / süresi dolmuşsa geçersiz link ekranına geç
+      if (/geçersiz veya süresi dolmuş/i.test(msg)) {
+        setLinkState('invalid');
+        return;
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
   }
 
-  if (!token) {
+  if (linkState === 'checking') {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white px-4">
+        <div className="glass-panel rounded-3xl px-7 py-6 flex items-center gap-3 text-sm font-semibold text-white/80 fade-enter">
+          <LoaderCircle size={18} className="animate-spin" /> Bağlantı kontrol ediliyor…
+        </div>
+      </div>
+    );
+  }
+
+  if (linkState === 'invalid') {
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden text-white px-4 py-12">
         <div className="w-full max-w-sm relative z-10 fade-enter">
@@ -46,9 +74,15 @@ export function ResetPasswordPage() {
               <TriangleAlert size={30} style={{ color: 'var(--danger)' }} />
             </div>
             <h1 className="font-serif font-bold text-xl mb-2 text-white">Geçersiz Link</h1>
-            <p className="text-sm mb-6 text-white/75">Şifre sıfırlama linki geçersiz veya süresi dolmuş.</p>
-            <button onClick={() => navigate('/login')} className="btn-accent w-full py-2.5 rounded-2xl text-sm font-bold spring-btn">
+            <p className="text-sm mb-6 text-white/75">
+              Bu şifre sıfırlama linki daha önce kullanılmış ya da süresi dolmuş. Her link yalnızca bir kez ve 30 dakika içinde kullanılabilir.
+            </p>
+            <button onClick={() => navigate('/login', { replace: true })} className="btn-accent w-full py-2.5 rounded-2xl text-sm font-bold spring-btn">
               Giriş Sayfasına Dön
+            </button>
+            <button onClick={() => navigate('/reset', { replace: true })}
+              className="w-full mt-3 text-xs font-semibold text-amber-300 hover:text-amber-200" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              Yeni sıfırlama linki iste
             </button>
           </div>
         </div>

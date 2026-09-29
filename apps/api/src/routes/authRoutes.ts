@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { loginSchema, refreshSchema, requestResetSchema, resetPasswordSchema } from '@menu/shared';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import { loginRateLimit, requestResetRateLimit } from '../middleware/rateLimit.js';
-import { createPasswordResetToken, login, refresh, resetPassword } from '../services/authService.js';
+import { createPasswordResetToken, isPasswordResetTokenValid, login, refresh, resetPassword } from '../services/authService.js';
 import { sendPasswordResetMail } from '../services/mailService.js';
 
 export const authRoutes = Router();
@@ -62,6 +62,16 @@ authRoutes.post('/request-reset', requestResetRateLimit, async (req, res) => {
   }
 
   res.status(200).json({ message: 'İstek alındı.' });
+});
+
+// Şifre sıfırlama sayfası açılınca linkin hâlâ geçerli olup olmadığını sorar
+authRoutes.post('/reset-token/validate', async (req, res) => {
+  const token = typeof req.body?.token === 'string' ? req.body.token : '';
+  if (token.length < 20 || token.length > 200) {
+    res.status(200).json({ valid: false });
+    return;
+  }
+  res.status(200).json({ valid: await isPasswordResetTokenValid(token) });
 });
 
 authRoutes.post('/reset-password', async (req, res) => {

@@ -142,6 +142,16 @@ export async function createPasswordResetToken(email: string): Promise<string | 
   return token;
 }
 
+// Link açılınca: token hâlâ kullanılabilir mi? (kullanılmış / süresi dolmuş link formu göstermesin)
+export async function isPasswordResetTokenValid(token: string): Promise<boolean> {
+  const result = await pool.query(
+    `SELECT 1 FROM password_resets
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()`,
+    [hashToken(token)]
+  );
+  return result.rowCount === 1;
+}
+
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
   const tokenHash = hashToken(token);
   const client = await pool.connect();
