@@ -20,9 +20,10 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { useBusinessTheme } from '../lib/businessTheme';
 import { useThemedPage } from '../lib/theme';
 import {
-  Armchair, Bell, Check, CheckCircle2, ChevronRight, ClipboardList, Clock, Info, Minus, NotebookPen, Phone, Plus, Receipt,
-  Search, Send, ShoppingBasket, ShoppingCart, UtensilsCrossed, Wheat, X
+  Armchair, Bell, Camera, Check, CheckCircle2, ChevronRight, ClipboardList, Clock, Copy, Info, Mail, MapPin, MessageCircle, Minus,
+  NotebookPen, Phone, Plus, Receipt, Search, Send, ShoppingBasket, ShoppingCart, UtensilsCrossed, Wheat, Wifi, X
 } from 'lucide-react';
+import { copyText } from '../lib/clipboard';
 import { CALL_TYPES, type CallTypeCode } from '../lib/callTypes';
 import { readableTextOn, withAlpha } from '../lib/color';
 
@@ -69,15 +70,93 @@ function formatPrice(priceInt: number): string {
   return `${(priceInt / 100).toFixed(2)} TL`;
 }
 
-function buildContactLink(menu: PublicMenuResponse | null): string {
-  if (!menu) return '#';
-  const whatsapp = (menu.business as any).contact_whatsapp?.trim();
-  if (whatsapp) return `https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`;
-  const phone = (menu.business as any).contact_phone?.trim();
-  if (phone) return `tel:${phone}`;
-  const email = (menu.business as any).contact_email?.trim();
-  if (email) return `mailto:${email}`;
-  return '#';
+/** WhatsApp numarası → wa.me rakamları. Ülke kodu yoksa Türkiye (90) varsayılır: 0555… / 555… → 90555… */
+function whatsappDigits(raw: string): string {
+  const digits = raw.replace(/[^\d]/g, '');
+  if (raw.trim().startsWith('+')) return digits;
+  if (digits.length === 11 && digits.startsWith('0')) return `9${digits}`;
+  if (digits.length === 10 && digits.startsWith('5')) return `90${digits}`;
+  return digits;
+}
+
+/** "@kullanici", "kullanici" ya da tam link → { url, handle } */
+function instagramLink(raw: string): { url: string; handle: string } | null {
+  const value = raw.trim();
+  if (!value) return null;
+  const handle = value
+    .replace(/^https?:\/\//i, '')
+    .replace(/^(www\.)?instagram\.com\//i, '')
+    .replace(/^@/, '')
+    .split(/[/?#]/)[0];
+  if (!handle) return null;
+  return { url: `https://instagram.com/${encodeURIComponent(handle)}`, handle };
+}
+
+/** Menünün altındaki işletme bilgisi: Wi-Fi (şifre kopyalanır) + iletişim bağlantıları. Hiçbiri yoksa çizilmez. */
+function BusinessInfoCard({ business }: { business: PublicMenuResponse['business'] }) {
+  const [copied, setCopied] = useState(false);
+  const wifiName = business.wifi_name?.trim();
+  const wifiPassword = business.wifi_password ?? '';
+  const phone = business.contact_phone?.trim();
+  const whatsapp = business.contact_whatsapp?.trim();
+  const email = business.contact_email?.trim();
+  const address = business.address?.trim();
+  const instagram = instagramLink(business.contact_instagram ?? '');
+
+  const links: { href: string; label: string; icon: typeof Phone; external?: boolean }[] = [];
+  if (phone) links.push({ href: `tel:${phone.replace(/\s/g, '')}`, label: 'Ara', icon: Phone });
+  if (whatsapp) links.push({ href: `https://wa.me/${whatsappDigits(whatsapp)}`, label: 'WhatsApp', icon: MessageCircle, external: true });
+  if (instagram) links.push({ href: instagram.url, label: `@${instagram.handle}`, icon: Camera, external: true });
+  if (email) links.push({ href: `mailto:${email}`, label: 'E-posta', icon: Mail });
+  if (address) links.push({
+    href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+    label: 'Yol tarifi', icon: MapPin, external: true
+  });
+
+  if (!wifiName && links.length === 0) return null;
+
+  async function copyWifi() {
+    if (await copyText(wifiPassword)) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <section className="ui-card rounded-3xl p-4 mt-6 md:max-w-xl md:mx-auto space-y-4" aria-label="İşletme bilgileri">
+      {wifiName && (
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-surface-2 border border-line text-accent flex items-center justify-center shrink-0">
+            <Wifi size={18} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-bold tracking-wider text-ink-muted">Wi-Fi</div>
+            <div className="font-bold truncate">{wifiName}</div>
+            <div className="text-xs text-ink-muted truncate">{wifiPassword ? <>Şifre: <span className="font-mono text-ink">{wifiPassword}</span></> : 'Şifresiz ağ'}</div>
+          </div>
+          {wifiPassword && (
+            <button onClick={copyWifi} className="ui-chip px-3 py-2 rounded-full text-xs font-bold inline-flex items-center gap-1.5 spring-btn shrink-0">
+              {copied ? <><Check size={13} className="text-state-ok" /> Kopyalandı</> : <><Copy size={13} /> Kopyala</>}
+            </button>
+          )}
+        </div>
+      )}
+      {links.length > 0 && (
+        <div className={wifiName ? 'pt-4 border-t border-line' : ''}>
+          {address && <p className="text-xs text-ink-muted mb-3 flex items-start gap-1.5"><MapPin size={13} className="shrink-0 mt-px" />{address}</p>}
+          <div className="flex flex-wrap gap-2">
+            {links.map(link => (
+              <a key={link.label} href={link.href}
+                {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="ui-chip px-3.5 py-2 rounded-full text-xs font-bold inline-flex items-center gap-1.5 spring-btn max-w-full">
+                <link.icon size={13} className="shrink-0" /> <span className="truncate">{link.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 export function PublicMenuPage() {
@@ -170,7 +249,6 @@ export function PublicMenuPage() {
     );
   }, [menu, activeCategory, searchQuery]);
 
-  const contactLink = buildContactLink(menu);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price_int * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -566,11 +644,10 @@ export function PublicMenuPage() {
           </div>
         )}
 
+        {mainTab === 'menu' && <BusinessInfoCard business={menu.business} />}
+
         {!tableId && (
-          <div className="text-center px-4 pt-8 pb-2">
-            <a href={contactLink} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold mb-4 spring-btn">
-              <Phone size={14} /> İletişim
-            </a>
+          <div className="text-center px-4 pt-6 pb-2">
             <p className="text-xs text-ink-muted">
               Powered by <span className="font-bold text-accent">{BRAND_NAME}</span>
             </p>

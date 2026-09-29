@@ -19,6 +19,8 @@ type AuthContextValue = {
   businessId: string | null;
   businessName: string | null;
   login: (email: string, password: string) => Promise<UserRole>;
+  /** Şifre değişikliği sonrası sunucunun verdiği yeni token çiftiyle oturumu sürdür */
+  setSessionTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 };
@@ -127,6 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setBusinessId(response.business_id ?? null);
         setBusinessName(response.business_name ?? null);
         return response.role as UserRole;
+      },
+      setSessionTokens: (nextAccess: string, nextRefresh: string) => {
+        setAccessToken(nextAccess);
+        setRefreshToken(nextRefresh);
       },
       logout: () => {
         setAccessToken(null);
