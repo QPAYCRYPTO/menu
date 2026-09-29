@@ -15,13 +15,17 @@ import {
   formatPrepTime,
   cancelReasonLabel
 } from '../../api/ownerApi';
+import {
+  Wallet, Package, TriangleAlert, CalendarDays, ArrowRight, TrendingUp, Clock,
+  Armchair, Banknote, CircleX, PartyPopper, type LucideIcon
+} from 'lucide-react';
 
 type TabKey = 'sales' | 'products' | 'cancellations';
 
-const TAB_LABELS: Record<TabKey, { label: string; icon: string }> = {
-  sales: { label: 'Satış', icon: '💰' },
-  products: { label: 'Ürün', icon: '📦' },
-  cancellations: { label: 'İptal & Risk', icon: '⚠️' }
+const TAB_LABELS: Record<TabKey, { label: string; icon: LucideIcon }> = {
+  sales: { label: 'Satış', icon: Wallet },
+  products: { label: 'Ürün', icon: Package },
+  cancellations: { label: 'İptal & Risk', icon: TriangleAlert }
 };
 
 // Koyu cam üzerinde okunur grafik stilleri
@@ -77,8 +81,8 @@ function DateRangeBar({ preset, customFrom, customTo, onPresetChange, onCustomCh
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-white/70">
-            <i className="fa-regular fa-calendar mr-1" />Özel:
+          <span className="text-xs font-semibold text-white/70 inline-flex items-center">
+            <CalendarDays size={12} className="mr-1" />Özel:
           </span>
           <input
             type="date"
@@ -88,7 +92,7 @@ function DateRangeBar({ preset, customFrom, customTo, onPresetChange, onCustomCh
             className="glass-input px-2 py-1 rounded-xl text-xs"
             style={preset === 'custom' ? { borderColor: 'var(--accent)' } : undefined}
           />
-          <span className="text-xs text-white/50">→</span>
+          <ArrowRight size={12} className="text-white/50" />
           <input
             type="date"
             value={customTo}
@@ -195,8 +199,8 @@ function SalesTab({ data }: { data: ReportOverview }) {
     <div className="space-y-5">
       {/* Günlük Trend */}
       <div className="glass-dark rounded-3xl p-4 sm:p-5">
-        <h3 className="font-serif font-bold text-base mb-4 text-white">
-          📈 Günlük Ciro Trendi
+        <h3 className="font-serif font-bold text-base mb-4 text-white flex items-center gap-2">
+          <TrendingUp size={16} />Günlük Ciro Trendi
         </h3>
         {dailyData.length === 0 ? (
           <div className="text-center py-12 text-sm text-white/60">
@@ -227,8 +231,8 @@ function SalesTab({ data }: { data: ReportOverview }) {
 
       {/* Saatlik Yoğunluk */}
       <div className="glass-dark rounded-3xl p-4 sm:p-5">
-        <h3 className="font-serif font-bold text-base mb-4 text-white">
-          🕐 Saatlik Sipariş Yoğunluğu
+        <h3 className="font-serif font-bold text-base mb-4 text-white flex items-center gap-2">
+          <Clock size={16} />Saatlik Sipariş Yoğunluğu
         </h3>
         <div style={{ width: '100%', height: 280 }}>
           <ResponsiveContainer>
@@ -251,8 +255,8 @@ function SalesTab({ data }: { data: ReportOverview }) {
 
       {/* Masa Performansı */}
       <div className="glass-dark rounded-3xl p-4 sm:p-5">
-        <h3 className="font-serif font-bold text-base mb-4 text-white">
-          🪑 Masa Performansı (Top 20)
+        <h3 className="font-serif font-bold text-base mb-4 text-white flex items-center gap-2">
+          <Armchair size={16} />Masa Performansı (Top 20)
         </h3>
         {data.tables.length === 0 ? (
           <div className="text-center py-8 text-sm text-white/60">
@@ -301,8 +305,8 @@ function ProductsTab({ data }: { data: ReportOverview }) {
   return (
     <div className="glass-dark rounded-3xl p-4 sm:p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="font-serif font-bold text-base text-white">
-          📦 Top 10 Ürün
+        <h3 className="font-serif font-bold text-base text-white flex items-center gap-2">
+          <Package size={16} />Top 10 Ürün
         </h3>
         <div className="flex gap-1 p-1 rounded-2xl bg-black/30 border border-white/20">
           <button
@@ -372,7 +376,7 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
           style={{ background: 'var(--danger-bg)', border: '1.5px solid rgba(251,113,133,0.55)', boxShadow: 'var(--glass-shadow-sm)' }}
         >
           <div className="flex items-start gap-3">
-            <span className="text-2xl">💸</span>
+            <Banknote size={24} className="flex-shrink-0" style={{ color: 'var(--danger)' }} />
             <div className="flex-1">
               <div className="font-extrabold text-sm tracking-wide" style={{ color: 'var(--danger)' }}>
                 KASA AÇIĞI ALARMI
@@ -391,8 +395,8 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
       {/* İptal Sebep Dağılımı */}
       <div className="glass-dark rounded-3xl p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h3 className="font-serif font-bold text-base text-white">
-            ❌ İptal Sebep Dağılımı
+          <h3 className="font-serif font-bold text-base text-white flex items-center gap-2">
+            <CircleX size={16} />İptal Sebep Dağılımı
           </h3>
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
             style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.4)' }}>
@@ -401,8 +405,8 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
         </div>
 
         {cancellations.length === 0 ? (
-          <div className="text-center py-8 text-sm text-white/60">
-            Bu aralıkta iptal edilen sipariş yok 🎉
+          <div className="text-center py-8 text-sm text-white/60 flex items-center justify-center gap-1.5">
+            Bu aralıkta iptal edilen sipariş yok <PartyPopper size={14} />
           </div>
         ) : (
           <div className="space-y-2">
@@ -419,8 +423,8 @@ function CancellationsTab({ data }: { data: ReportOverview }) {
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-sm text-white">
-                      {isCashLoss && '💸 '}
+                    <div className="font-semibold text-sm text-white flex items-center gap-1.5">
+                      {isCashLoss && <Banknote size={14} style={{ color: 'var(--danger)' }} />}
                       {cancelReasonLabel(c.reason_code)}
                     </div>
                     <div className="flex items-center gap-2">
@@ -538,7 +542,7 @@ export function OwnerDashboardPage() {
           className="rounded-2xl p-4 mb-5 text-sm font-medium backdrop-blur-xl"
           style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.45)' }}
         >
-          ⚠️ {error}
+          <TriangleAlert size={14} className="inline-block align-[-2px] mr-1" />{error}
           <button
             onClick={loadReport}
             className="ml-3 px-3 py-1 rounded-xl text-xs font-semibold spring-btn glass-pill"
@@ -573,9 +577,9 @@ export function OwnerDashboardPage() {
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold spring-btn ${active ? 'btn-accent' : 'text-white/70 hover:text-white'}`}
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold spring-btn inline-flex items-center justify-center gap-1.5 ${active ? 'btn-accent' : 'text-white/70 hover:text-white'}`}
                 >
-                  {tab.icon} {tab.label}
+                  <tab.icon size={12} />{tab.label}
                 </button>
               );
             })}

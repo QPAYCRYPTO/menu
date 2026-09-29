@@ -12,6 +12,7 @@ import {
   deleteOwner,
   resetOwnerPassword
 } from '../../api/superadminApi';
+import { User, X, Eye, EyeOff, KeyRound, Trash2 } from 'lucide-react';
 
 type Props = {
   business: Business;
@@ -120,8 +121,8 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-white/15">
           <div>
-            <h2 className="font-serif font-bold text-lg text-white">
-              👤 Owner Yönetimi
+            <h2 className="font-serif font-bold text-lg text-white flex items-center gap-2">
+              <User size={18} />Owner Yönetimi
             </h2>
             <p className="text-xs mt-0.5 text-white/65">
               {business.name} — {activeCount} aktif owner
@@ -132,7 +133,7 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
             className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn"
             aria-label="Kapat"
           >
-            <i className="fa-solid fa-xmark" />
+            <X size={12} />
           </button>
         </div>
 
@@ -176,9 +177,11 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                      className="flex items-center text-white/70 hover:text-white"
                       style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}
                     >
-                      {showNewPassword ? '🙈' : '👁️'}
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
@@ -208,7 +211,7 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
             </div>
           ) : owners.length === 0 ? (
             <div className="text-center py-8 rounded-2xl border border-dashed border-white/25" style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <div className="text-3xl mb-2">👤</div>
+              <div className="mb-2 flex justify-center"><User size={30} className="text-white/70" /></div>
               <p className="text-sm text-white/70">Henüz owner yok</p>
               <p className="text-xs mt-1 text-white/50">"+ Yeni Owner Ekle" ile başlayın</p>
             </div>
@@ -234,7 +237,7 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
                       <div style={{ minWidth: 0 }}>
                         <div className="font-semibold text-sm truncate text-white">{owner.email}</div>
                         <div className="text-xs" style={{ color: owner.is_active ? 'var(--success)' : 'var(--danger)' }}>
-                          {owner.is_active ? '● Aktif' : '● Pasif'} · {new Date(owner.created_at).toLocaleDateString('tr-TR')}
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 align-middle" />{owner.is_active ? 'Aktif' : 'Pasif'} · {new Date(owner.created_at).toLocaleDateString('tr-TR')}
                         </div>
                       </div>
                     </div>
@@ -244,8 +247,9 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
                         className="px-2.5 py-1.5 rounded-lg text-xs font-semibold spring-btn"
                         style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.4)' }}
                         title="Şifre sıfırla"
+                        aria-label="Şifre sıfırla"
                       >
-                        🔑
+                        <KeyRound size={12} />
                       </button>
                       <button
                         onClick={() => handleToggleActive(owner)}
@@ -261,8 +265,9 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
                         className="px-2.5 py-1.5 rounded-lg text-xs font-semibold spring-btn"
                         style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' }}
                         title="Sil"
+                        aria-label="Sil"
                       >
-                        🗑️
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
@@ -287,9 +292,11 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
                           <button
                             type="button"
                             onClick={() => setShowResetPassword(!showResetPassword)}
+                            aria-label={showResetPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                            className="flex items-center text-white/70 hover:text-white"
                             style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 16 }}
                           >
-                            {showResetPassword ? '🙈' : '👁️'}
+                            {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                         <button

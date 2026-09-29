@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
+import { TriangleAlert, Lock, Eye, EyeOff, CircleCheck, ArrowLeft } from 'lucide-react';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -42,7 +43,7 @@ export function ResetPasswordPage() {
           <div className="glass-panel rounded-3xl p-7 sm:p-8 text-center">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
               style={{ background: 'var(--danger-bg)', border: '1px solid rgba(251,113,133,0.4)' }}>
-              <span className="text-3xl">⚠️</span>
+              <TriangleAlert size={30} style={{ color: 'var(--danger)' }} />
             </div>
             <h1 className="font-serif font-bold text-xl mb-2 text-white">Geçersiz Link</h1>
             <p className="text-sm mb-6 text-white/75">Şifre sıfırlama linki geçersiz veya süresi dolmuş.</p>
@@ -62,7 +63,7 @@ export function ResetPasswordPage() {
         <div className="text-center mb-7">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-2xl text-white border border-white/60"
             style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
-            <i className="fa-solid fa-lock" />
+            <Lock size={24} />
           </div>
           <h1 className="font-serif text-3xl font-bold text-white tracking-wide">
             Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
@@ -97,16 +98,16 @@ export function ResetPasswordPage() {
                   className="glass-input w-full px-4 py-2.5 rounded-2xl text-sm font-medium"
                   style={{ paddingRight: 44, boxSizing: 'border-box' }}
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)}
+                <button type="button" onClick={() => setShowPass(!showPass)} aria-label={showPass ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-white/70 hover:text-white"
                   style={{position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18}}>
-                  {showPass ? '🙈' : '👁️'}
+                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {password.length > 0 && password.length < 8 && (
-                <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ En az 8 karakter olmalıdır</p>
+                <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />En az 8 karakter olmalıdır</p>
               )}
               {password.length >= 8 && (
-                <p className="text-xs mt-1 font-medium" style={{ color: 'var(--success)' }}>✅ Şifre uzunluğu yeterli</p>
+                <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--success)' }}><CircleCheck size={12} />Şifre uzunluğu yeterli</p>
               )}
             </div>
 
@@ -125,13 +126,13 @@ export function ResetPasswordPage() {
                     paddingRight: 44, boxSizing: 'border-box'
                   }}
                 />
-                <button type="button" onClick={() => setShowPass2(!showPass2)}
+                <button type="button" onClick={() => setShowPass2(!showPass2)} aria-label={showPass2 ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-white/70 hover:text-white"
                   style={{position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18}}>
-                  {showPass2 ? '🙈' : '👁️'}
+                  {showPass2 ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {passwordsMatch && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--success)' }}>✅ Şifreler eşleşiyor</p>}
-              {passwordsMismatch && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ Şifreler eşleşmiyor</p>}
+              {passwordsMatch && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--success)' }}><CircleCheck size={12} />Şifreler eşleşiyor</p>}
+              {passwordsMismatch && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />Şifreler eşleşmiyor</p>}
             </div>
 
             <button type="submit" disabled={loading || !passwordsMatch}
@@ -141,8 +142,8 @@ export function ResetPasswordPage() {
           </form>
 
           <div className="text-center mt-4">
-            <button onClick={() => navigate('/login')} className="text-xs font-semibold text-amber-300 hover:text-amber-200" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-              ← Giriş sayfasına dön
+            <button onClick={() => navigate('/login')} className="text-xs font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <ArrowLeft size={12} />Giriş sayfasına dön
             </button>
           </div>
         </div>

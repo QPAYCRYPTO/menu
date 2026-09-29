@@ -19,16 +19,19 @@ import {
   type ErrorListFilter
 } from '../../api/errorLogApi';
 import { Toast, showToast as showToastHelper, type ToastState } from '../../components/Toast';
+import {
+  ArrowLeft, TriangleAlert, RefreshCw, Search, CircleCheck, Building2, ChevronLeft, ChevronRight, X, Ban
+} from 'lucide-react';
 
 const SEVERITY_OPTIONS: ErrorSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 const SOURCE_OPTIONS: ErrorSource[] = ['backend', 'frontend', 'external', 'database'];
 const STATUS_OPTIONS: ErrorStatus[] = ['new', 'investigating', 'resolved', 'ignored'];
 
 const SEVERITY_COLOR: Record<ErrorSeverity, { bg: string; fg: string; label: string }> = {
-  CRITICAL: { bg: 'var(--danger-bg)',        fg: 'var(--danger)',          label: '🔴 Kritik' },
-  HIGH:     { bg: 'rgba(255,122,41,0.24)',   fg: '#FDBA74',                label: '🟠 Yüksek' },
-  MEDIUM:   { bg: 'var(--warning-bg)',       fg: 'var(--warning)',         label: '🟡 Orta' },
-  LOW:      { bg: 'var(--info-bg)',          fg: 'var(--info)',            label: '🔵 Düşük' }
+  CRITICAL: { bg: 'var(--danger-bg)',        fg: 'var(--danger)',          label: 'Kritik' },
+  HIGH:     { bg: 'rgba(255,122,41,0.24)',   fg: '#FDBA74',                label: 'Yüksek' },
+  MEDIUM:   { bg: 'var(--warning-bg)',       fg: 'var(--warning)',         label: 'Orta' },
+  LOW:      { bg: 'var(--info-bg)',          fg: 'var(--info)',            label: 'Düşük' }
 };
 
 const STATUS_COLOR: Record<ErrorStatus, { bg: string; fg: string; label: string }> = {
@@ -188,12 +191,12 @@ export function ErrorLogPage() {
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <button onClick={() => navigate('/superadmin')}
                 className="glass-pill w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 spring-btn"
-                title="Geri">
-                <i className="fa-solid fa-arrow-left text-sm" />
+                title="Geri" aria-label="Geri">
+                <ArrowLeft size={14} />
               </button>
               <div className="w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/40"
                 style={{ background: 'var(--danger-bg)' }}>
-                <span className="text-base md:text-lg">⚠️</span>
+                <TriangleAlert className="w-4 h-4 md:w-[18px] md:h-[18px]" style={{ color: 'var(--danger)' }} />
               </div>
               <div className="min-w-0">
                 <h1 className="font-serif font-bold text-sm md:text-base truncate text-white">
@@ -206,12 +209,12 @@ export function ErrorLogPage() {
             </div>
 
             <div className="flex gap-2 flex-shrink-0">
-              <button onClick={load} className="glass-pill px-3 py-2 rounded-xl text-sm font-semibold spring-btn">
-                🔄
+              <button onClick={load} className="glass-pill px-3 py-2 rounded-xl text-sm font-semibold spring-btn flex items-center" aria-label="Yenile" title="Yenile">
+                <RefreshCw size={14} />
               </button>
               <button onClick={() => setShowFilters(!showFilters)}
-                className={`px-3 py-2 rounded-xl text-sm font-semibold spring-btn ${showFilters ? 'btn-accent' : 'glass-pill'}`}>
-                🔎 Filtre
+                className={`px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5 ${showFilters ? 'btn-accent' : 'glass-pill'}`}>
+                <Search size={14} />Filtre
               </button>
             </div>
           </div>
@@ -286,7 +289,7 @@ export function ErrorLogPage() {
                         color: active ? SEVERITY_COLOR[s].fg : 'rgba(255,255,255,0.7)',
                         border: active ? `1.5px solid ${SEVERITY_COLOR[s].fg}` : '1.5px solid rgba(255,255,255,0.18)'
                       }}>
-                      {SEVERITY_COLOR[s].label}
+                      <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: SEVERITY_COLOR[s].fg }} />{SEVERITY_COLOR[s].label}
                     </button>
                   );
                 })}
@@ -354,7 +357,7 @@ export function ErrorLogPage() {
 
           {!loading && rows.length === 0 && (
             <div className="text-center py-16">
-              <div className="text-4xl mb-3">✅</div>
+              <div className="mb-3 flex justify-center"><CircleCheck size={36} style={{ color: 'var(--success)' }} /></div>
               <p className="text-sm font-semibold" style={{ color: 'var(--success)' }}>Hata kaydı bulunamadı</p>
               <p className="text-xs mt-1 text-white/60">Filtreleri temizleyebilir veya başka kriter deneyebilirsin</p>
             </div>
@@ -367,7 +370,7 @@ export function ErrorLogPage() {
               <div>
                 <span className="px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap"
                   style={{ background: SEVERITY_COLOR[row.severity].bg, color: SEVERITY_COLOR[row.severity].fg }}>
-                  {SEVERITY_COLOR[row.severity].label}
+                  <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: SEVERITY_COLOR[row.severity].fg }} />{SEVERITY_COLOR[row.severity].label}
                 </span>
               </div>
               <div className="text-xs text-white/65">{SOURCE_LABEL[row.source]}</div>
@@ -377,7 +380,7 @@ export function ErrorLogPage() {
               <div className="min-w-0">
                 {row.business_name ? (
                   <div className="text-xs font-semibold truncate text-white" title={row.business_name}>
-                    🏢 {row.business_name}
+                    <Building2 size={12} className="inline-block align-[-2px] mr-1" />{row.business_name}
                   </div>
                 ) : (
                   <div className="text-xs text-white/45">—</div>
@@ -420,7 +423,7 @@ export function ErrorLogPage() {
 
           {!loading && rows.length === 0 && (
             <div className="glass-card text-center py-16 rounded-3xl">
-              <div className="text-4xl mb-3">✅</div>
+              <div className="mb-3 flex justify-center"><CircleCheck size={36} style={{ color: 'var(--success)' }} /></div>
               <p className="text-sm font-semibold" style={{ color: 'var(--success)' }}>Hata kaydı bulunamadı</p>
             </div>
           )}
@@ -433,7 +436,7 @@ export function ErrorLogPage() {
                 <div className="flex gap-2 flex-wrap">
                   <span className="px-2 py-1 rounded-lg text-xs font-bold"
                     style={{ background: SEVERITY_COLOR[row.severity].bg, color: SEVERITY_COLOR[row.severity].fg }}>
-                    {SEVERITY_COLOR[row.severity].label}
+                    <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: SEVERITY_COLOR[row.severity].fg }} />{SEVERITY_COLOR[row.severity].label}
                   </span>
                   <span className="px-2 py-1 rounded-lg text-xs font-bold"
                     style={{ background: STATUS_COLOR[row.status].bg, color: STATUS_COLOR[row.status].fg }}>
@@ -449,8 +452,8 @@ export function ErrorLogPage() {
                 {row.message.length > 120 ? row.message.slice(0, 120) + '...' : row.message}
               </div>
               {row.business_name && (
-                <div className="text-xs font-semibold mb-1 text-amber-300">
-                  🏢 {row.business_name}
+                <div className="text-xs font-semibold mb-1 text-amber-300 flex items-center gap-1">
+                  <Building2 size={12} />{row.business_name}
                 </div>
               )}
               <div className="flex items-center gap-2 text-xs flex-wrap text-white/65">
@@ -467,15 +470,15 @@ export function ErrorLogPage() {
         {totalPages > 1 && (
           <div className="glass-panel flex items-center justify-between mt-4 rounded-3xl p-3">
             <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
-              className="btn-accent px-3 py-2 rounded-xl text-sm font-semibold spring-btn">
-              ← Önceki
+              className="btn-accent px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1">
+              <ChevronLeft size={14} />Önceki
             </button>
             <span className="text-sm font-semibold text-white/75">
               Sayfa {page + 1} / {totalPages}
             </span>
             <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
-              className="btn-accent px-3 py-2 rounded-xl text-sm font-semibold spring-btn">
-              Sonraki →
+              className="btn-accent px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1">
+              Sonraki<ChevronRight size={14} />
             </button>
           </div>
         )}
@@ -489,7 +492,7 @@ export function ErrorLogPage() {
               <div className="flex items-center gap-2 min-w-0">
                 <span className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0"
                   style={{ background: SEVERITY_COLOR[detailRow.severity].bg, color: SEVERITY_COLOR[detailRow.severity].fg }}>
-                  {SEVERITY_COLOR[detailRow.severity].label}
+                  <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: SEVERITY_COLOR[detailRow.severity].fg }} />{SEVERITY_COLOR[detailRow.severity].label}
                 </span>
                 <h2 className="font-serif font-bold text-lg truncate text-white">
                   Hata Detayı
@@ -497,7 +500,7 @@ export function ErrorLogPage() {
               </div>
               <button onClick={() => setDetailRow(null)}
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs spring-btn" aria-label="Kapat">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
 
@@ -534,7 +537,7 @@ export function ErrorLogPage() {
                 {detailRow.business_name && (
                   <div className="rounded-2xl p-3 col-span-2"
                     style={{ background: 'var(--accent-soft)', border: '1px solid rgba(255,122,41,0.45)' }}>
-                    <div className="font-semibold uppercase tracking-wider mb-1 text-amber-300">🏢 İşletme</div>
+                    <div className="font-semibold uppercase tracking-wider mb-1 text-amber-300 flex items-center gap-1"><Building2 size={12} />İşletme</div>
                     <div className="font-bold text-sm text-white">{detailRow.business_name}</div>
                     {detailRow.business_id && (
                       <div className="font-mono text-xs mt-1 text-white/55" style={{ wordBreak: 'break-all' }}>{detailRow.business_id}</div>
@@ -599,19 +602,19 @@ export function ErrorLogPage() {
             <div className="px-5 md:px-6 py-4 flex gap-2 flex-wrap flex-shrink-0 border-t border-white/15">
               {detailRow.status !== 'investigating' && detailRow.status !== 'resolved' && detailRow.status !== 'ignored' && (
                 <button onClick={() => handleStatusChange('investigating')}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn"
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn inline-flex items-center justify-center gap-1.5"
                   style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.4)' }}>
-                  🔍 İnceleniyor
+                  <Search size={14} />İnceleniyor
                 </button>
               )}
               <button onClick={() => handleStatusChange('resolved')}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn text-white"
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn text-white inline-flex items-center justify-center gap-1.5"
                 style={{ background: 'linear-gradient(135deg, #34D399 0%, #059669 100%)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 8px 20px rgba(5,150,105,0.35)' }}>
-                ✅ Çözüldü
+                <CircleCheck size={14} />Çözüldü
               </button>
               <button onClick={() => handleStatusChange('ignored')}
-                className="glass-pill flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">
-                🚫 Yok Say
+                className="glass-pill flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn inline-flex items-center justify-center gap-1.5">
+                <Ban size={14} />Yok Say
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../api/client';
+import { Lock, Check, ArrowLeft, Mail } from 'lucide-react';
 
 export function ResetPage() {
   const [email, setEmail] = useState('');
@@ -24,7 +25,7 @@ export function ResetPage() {
         <div className="text-center mb-7">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-2xl text-white border border-white/60"
             style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
-            <i className="fa-solid fa-lock" />
+            <Lock size={24} />
           </div>
           <h1 className="font-serif text-3xl font-bold text-white tracking-wide">
             Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
@@ -37,14 +38,14 @@ export function ResetPage() {
             <div className="text-center py-4">
               <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"
                 style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.4)' }}>
-                <i className="fa-solid fa-check" />
+                <Check size={24} />
               </div>
               <h2 className="font-serif font-bold text-lg mb-2 text-white">Mail Gönderildi!</h2>
               <p className="text-sm mb-6 text-white/75">
                 <strong className="text-white">{email}</strong> adresine şifre sıfırlama bağlantısı gönderildi. Lütfen mailinizi kontrol edin.
               </p>
-              <Link to="/login" className="text-sm font-semibold text-amber-300 hover:text-amber-200">
-                ← Giriş sayfasına dön
+              <Link to="/login" className="text-sm font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">
+                <ArrowLeft size={14} />Giriş sayfasına dön
               </Link>
             </div>
           ) : (
@@ -56,7 +57,7 @@ export function ResetPage() {
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 tracking-wider uppercase text-white/75">E-posta</label>
                   <div className="relative">
-                    <i className="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-white/60 pointer-events-none" />
+                    <Mail size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" />
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                       placeholder="admin@kafe.com" required
                       className="glass-input w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium" />
@@ -70,7 +71,7 @@ export function ResetPage() {
               </form>
 
               <div className="text-center mt-4">
-                <Link to="/login" className="text-xs font-semibold text-amber-300 hover:text-amber-200">← Giriş sayfasına dön</Link>
+                <Link to="/login" className="text-xs font-semibold text-amber-300 hover:text-amber-200 inline-flex items-center gap-1"><ArrowLeft size={12} />Giriş sayfasına dön</Link>
               </div>
             </>
           )}

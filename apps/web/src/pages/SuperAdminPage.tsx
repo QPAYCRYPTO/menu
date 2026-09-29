@@ -17,6 +17,10 @@ import {
 } from '../api/superadminApi';
 import { OwnerManagementModal } from './superadmin/OwnerManagementModal';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import {
+  Building2, RefreshCw, TriangleAlert, KeyRound, X, Menu, ClipboardList, User, CircleCheck, Circle,
+  Mail, Folder, ShoppingCart, Eye, EyeOff
+} from 'lucide-react';
 
 // Warm glass rozet/buton stilleri (semantik tokenlar)
 const BADGE_SUCCESS: React.CSSProperties = { background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.4)' };
@@ -166,7 +170,7 @@ export function SuperAdminPage() {
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div className="w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/60"
                 style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
-                <span className="text-base md:text-lg">🏢</span>
+                <Building2 className="w-4 h-4 md:w-[18px] md:h-[18px] text-white" />
               </div>
               <div className="min-w-0">
                 <h1 className="font-serif font-bold text-sm md:text-base truncate text-white">
@@ -178,17 +182,17 @@ export function SuperAdminPage() {
 
             {/* Desktop butonlar */}
             <div className="hidden md:flex gap-2 flex-shrink-0">
-              <button onClick={loadBusinesses} className="glass-pill px-3 py-2 rounded-xl text-sm font-semibold spring-btn">🔄 Yenile</button>
-              <button onClick={() => navigate('/superadmin/errors')} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_DANGER}>⚠️ Hatalar</button>
-              <button onClick={() => setShowResetModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_WARNING}>🔑 Admin Şifre</button>
+              <button onClick={loadBusinesses} className="glass-pill px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5"><RefreshCw size={14} />Yenile</button>
+              <button onClick={() => navigate('/superadmin/errors')} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5" style={BADGE_DANGER}><TriangleAlert size={14} />Hatalar</button>
+              <button onClick={() => setShowResetModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5" style={BADGE_WARNING}><KeyRound size={14} />Admin Şifre</button>
               <button onClick={() => setShowNewModal(true)} className="btn-accent px-3 py-2 rounded-xl text-sm font-bold spring-btn">+ Yeni</button>
               <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_DANGER}>Çıkış</button>
             </div>
 
             {/* Mobil hamburger */}
             <button onClick={() => setMenuOpen(!menuOpen)}
-              className="glass-pill md:hidden w-9 h-9 rounded-xl flex items-center justify-center spring-btn">
-              <i className={`fa-solid ${menuOpen ? 'fa-xmark' : 'fa-bars'} text-sm`} />
+              className="glass-pill md:hidden w-9 h-9 rounded-xl flex items-center justify-center spring-btn" aria-label="Menü">
+              {menuOpen ? <X size={14} /> : <Menu size={14} />}
             </button>
           </div>
 
@@ -196,16 +200,16 @@ export function SuperAdminPage() {
           {menuOpen && (
             <div className="md:hidden mt-3 pt-3 border-t border-white/20 flex flex-col gap-2 fade-enter">
               <button onClick={() => { loadBusinesses(); setMenuOpen(false); }}
-                className="glass-pill px-3 py-2.5 rounded-xl text-sm font-semibold text-left">
-                🔄 Yenile
+                className="glass-pill px-3 py-2.5 rounded-xl text-sm font-semibold text-left flex items-center gap-2">
+                <RefreshCw size={14} />Yenile
               </button>
               <button onClick={() => { navigate('/superadmin/errors'); setMenuOpen(false); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={BADGE_DANGER}>
-                ⚠️ Hata Logu
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left flex items-center gap-2" style={BADGE_DANGER}>
+                <TriangleAlert size={14} />Hata Logu
               </button>
               <button onClick={() => { setShowResetModal(true); setMenuOpen(false); }}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left" style={BADGE_WARNING}>
-                🔑 Admin Şifre Sıfırla
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left flex items-center gap-2" style={BADGE_WARNING}>
+                <KeyRound size={14} />Admin Şifre Sıfırla
               </button>
               <button onClick={() => { setShowNewModal(true); setMenuOpen(false); }}
                 className="btn-accent px-3 py-2.5 rounded-xl text-sm font-bold text-left">
@@ -245,7 +249,7 @@ export function SuperAdminPage() {
         </div>
 
         <div className="flex items-center gap-3 mb-3 px-1">
-          <h2 className="font-serif font-bold text-base text-white">📋 İşletmeler</h2>
+          <h2 className="font-serif font-bold text-base text-white flex items-center gap-2"><ClipboardList size={16} />İşletmeler</h2>
           <div className="flex-1 h-px bg-white/20" />
         </div>
 
@@ -269,7 +273,7 @@ export function SuperAdminPage() {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div className="font-semibold truncate text-white">{b.name}</div>
-                  <div className="text-xs" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}>{b.is_active ? '● Aktif' : '● Pasif'}</div>
+                  <div className="text-xs" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}><span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 align-middle" />{b.is_active ? 'Aktif' : 'Pasif'}</div>
                 </div>
               </div>
               <div>
@@ -280,10 +284,10 @@ export function SuperAdminPage() {
 
               <div className="text-center">
                 <button onClick={() => setOwnerModalBusiness(b)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold spring-btn"
+                  className="px-2 py-1 rounded-lg text-xs font-bold spring-btn inline-flex items-center gap-1"
                   style={b.owner_count > 0 ? BADGE_SUCCESS : BADGE_WARNING}
                   title="Owner yönetimi">
-                  👤 {b.owner_count}
+                  <User size={12} />{b.owner_count}
                 </button>
               </div>
 
@@ -292,10 +296,10 @@ export function SuperAdminPage() {
 
               <div className="text-center">
                 <button onClick={() => toggleWaiter(b)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn inline-flex items-center gap-1"
                   style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}
                   title={b.waiter_module_enabled ? 'Garson modülü AÇIK' : 'Garson modülü KAPALI'}>
-                  {b.waiter_module_enabled ? '✅ Açık' : '⚪ Kapalı'}
+                  {b.waiter_module_enabled ? <><CircleCheck size={12} />Açık</> : <><Circle size={12} />Kapalı</>}
                 </button>
               </div>
 
@@ -310,7 +314,7 @@ export function SuperAdminPage() {
 
           {businesses.length === 0 && (
             <div className="text-center py-16">
-              <div className="text-4xl mb-3">🏢</div>
+              <div className="mb-3 flex justify-center"><Building2 size={36} className="text-white/70" /></div>
               <p className="text-sm text-white/60">Henüz işletme yok</p>
             </div>
           )}
@@ -320,7 +324,7 @@ export function SuperAdminPage() {
         <div className="lg:hidden flex flex-col gap-3 mb-8">
           {businesses.length === 0 && (
             <div className="glass-card text-center py-16 rounded-3xl">
-              <div className="text-4xl mb-3">🏢</div>
+              <div className="mb-3 flex justify-center"><Building2 size={36} className="text-white/70" /></div>
               <p className="text-sm text-white/60">Henüz işletme yok</p>
             </div>
           )}
@@ -338,14 +342,14 @@ export function SuperAdminPage() {
                 <div className="flex-1 min-w-0">
                   <div className="font-serif font-bold text-sm text-white">{b.name}</div>
                   <div className="text-xs mt-0.5" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}>
-                    {b.is_active ? '● Aktif' : '● Pasif'}
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 align-middle" />{b.is_active ? 'Aktif' : 'Pasif'}
                   </div>
                   <a href={`https://www.atlasqrmenu.com/m/${b.slug}`} target="_blank" rel="noreferrer"
                     className="text-xs font-mono block mt-1 truncate text-amber-300">
                     /{b.slug}
                   </a>
                   {b.admin_email && (
-                    <div className="text-xs mt-1 truncate text-white/65">✉️ {b.admin_email}</div>
+                    <div className="text-xs mt-1 truncate text-white/65"><Mail size={12} className="inline-block align-[-2px] mr-1" />{b.admin_email}</div>
                   )}
                 </div>
               </div>
@@ -355,15 +359,15 @@ export function SuperAdminPage() {
                 <button onClick={() => setOwnerModalBusiness(b)}
                   className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center spring-btn"
                   style={b.owner_count > 0 ? BADGE_SUCCESS : BADGE_WARNING}>
-                  <span>👤 {b.owner_count}</span>
+                  <span className="inline-flex items-center gap-1"><User size={12} />{b.owner_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Owner</span>
                 </button>
                 <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-black/25 border border-white/15 text-white">
-                  <span>📁 {b.category_count}</span>
+                  <span className="inline-flex items-center gap-1"><Folder size={12} />{b.category_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Kategori</span>
                 </div>
                 <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-black/25 border border-white/15 text-white">
-                  <span>🛒 {b.product_count}</span>
+                  <span className="inline-flex items-center gap-1"><ShoppingCart size={12} />{b.product_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Ürün</span>
                 </div>
               </div>
@@ -371,9 +375,9 @@ export function SuperAdminPage() {
               {/* Aksiyonlar */}
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => toggleWaiter(b)}
-                  className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn"
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"
                   style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}>
-                  {b.waiter_module_enabled ? '✅ Garson Açık' : '⚪ Garson Kapalı'}
+                  {b.waiter_module_enabled ? <><CircleCheck size={12} />Garson Açık</> : <><Circle size={12} />Garson Kapalı</>}
                 </button>
                 <button onClick={() => toggleActive(b)}
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn"
@@ -394,7 +398,7 @@ export function SuperAdminPage() {
               <h2 className="font-serif font-bold text-lg text-white">Yeni İşletme Ekle</h2>
               <button onClick={() => { setShowNewModal(false); setFieldErrors({}); }}
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
             <div className="p-5 md:p-6 space-y-4 overflow-y-auto flex-1">
@@ -408,15 +412,15 @@ export function SuperAdminPage() {
                 <input value={newForm.slug} onChange={(e) => handleSlugChange(e.target.value)}
                   placeholder="Örn: harika-kafe" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
                   style={fieldErrors.slug ? { borderColor: 'var(--danger)' } : undefined} />
-                {fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ {fieldErrors.slug}</p>}
-                {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--success)' }}>✅ Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
+                {fieldErrors.slug && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />{fieldErrors.slug}</p>}
+                {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--success)' }}><CircleCheck size={12} />Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Admin E-posta</label>
                 <input type="email" value={newForm.email} onChange={(e) => setNewForm(p => ({ ...p, email: e.target.value }))}
                   placeholder="admin@kafe.com" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
                   style={fieldErrors.email ? { borderColor: 'var(--danger)' } : undefined} />
-                {fieldErrors.email && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ {fieldErrors.email}</p>}
+                {fieldErrors.email && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />{fieldErrors.email}</p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Şifre</label>
@@ -426,11 +430,12 @@ export function SuperAdminPage() {
                     placeholder="Min 8 karakter" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
                     style={{ ...(fieldErrors.password ? { borderColor: 'var(--danger)' } : {}), paddingRight: 44, boxSizing: 'border-box' }} />
                   <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={showNewPassword ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-white/70 hover:text-white"
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>
-                    {showNewPassword ? '🙈' : '👁️'}
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {fieldErrors.password && <p className="text-xs mt-1 font-medium" style={{ color: 'var(--danger)' }}>⚠️ {fieldErrors.password}</p>}
+                {fieldErrors.password && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />{fieldErrors.password}</p>}
               </div>
             </div>
             <div className="px-5 md:px-6 py-4 flex gap-3 flex-shrink-0 border-t border-white/15">
@@ -450,10 +455,10 @@ export function SuperAdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/50 backdrop-blur-md fade-enter">
           <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
             <div className="px-5 md:px-6 py-4 flex items-center justify-between border-b border-white/15">
-              <h2 className="font-serif font-bold text-lg text-white">🔑 Admin Şifre Sıfırla</h2>
+              <h2 className="font-serif font-bold text-lg text-white flex items-center gap-2"><KeyRound size={18} />Admin Şifre Sıfırla</h2>
               <button onClick={() => setShowResetModal(false)}
                 className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} />
               </button>
             </div>
             <div className="p-5 md:p-6 space-y-4">
@@ -473,8 +478,9 @@ export function SuperAdminPage() {
                     placeholder="Min 8 karakter" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
                     style={{ paddingRight: 44, boxSizing: 'border-box' }} />
                   <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
+                    aria-label={showResetPassword ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-white/70 hover:text-white"
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>
-                    {showResetPassword ? '🙈' : '👁️'}
+                    {showResetPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>

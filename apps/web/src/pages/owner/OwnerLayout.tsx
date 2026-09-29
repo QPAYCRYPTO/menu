@@ -3,13 +3,14 @@
 // Admin'den farklı: operasyonel menu yok, sadece rapor sekmeler
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { LayoutDashboard, LogOut, BriefcaseBusiness } from 'lucide-react';
 
 export function OwnerLayout() {
   const { logout, email, businessName } = useAuth();
   const navigate = useNavigate();
 
   const navItems = [
-    { to: '/owner', label: 'Dashboard', icon: '📊', end: true },
+    { to: '/owner', label: 'Dashboard', icon: LayoutDashboard, end: true },
     // Aşama 5'te eklenebilecekler:
     // { to: '/owner/sales', label: 'Satış', icon: '💰' },
     // { to: '/owner/products', label: 'Ürünler', icon: '📦' },
@@ -43,8 +44,8 @@ export function OwnerLayout() {
             <div className="flex items-center gap-3 flex-shrink-0">
               {email && (
                 <div className="text-right hidden sm:block">
-                  <div className="text-xs font-semibold text-white">
-                    👔 Patron
+                  <div className="text-xs font-semibold text-white flex items-center justify-end gap-1">
+                    <BriefcaseBusiness size={12} />Patron
                   </div>
                   <div className="text-xs truncate text-white/65" style={{ maxWidth: 220 }} title={email}>
                     {email}
@@ -56,7 +57,7 @@ export function OwnerLayout() {
                 className="px-4 py-2 rounded-xl text-sm font-semibold spring-btn flex items-center gap-2"
                 style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' }}
               >
-                <i className="fa-solid fa-right-from-bracket text-xs" />
+                <LogOut size={12} />
                 Çıkış
               </button>
             </div>
@@ -74,7 +75,7 @@ export function OwnerLayout() {
                     `px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 spring-btn whitespace-nowrap ${isActive ? 'btn-accent' : 'text-white/70 hover:text-white'}`
                   }
                 >
-                  <span>{item.icon}</span>
+                  <item.icon size={14} />
                   <span>{item.label}</span>
                 </NavLink>
               ))}
