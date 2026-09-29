@@ -2,6 +2,8 @@
 // CHANGELOG v3:
 // - Masalar altına "Ödemeler" alt menüsü eklendi (indent ile)
 // - Stil 5: Kart tarzı — sol kenar 3px renk şerit + hafif border + soft icon kutusu
+// - Atölye tasarımı: gece/gündüz temasına uyar; aktif sekme petrol (bg-brand), başlıkta güneş/ay düğmesi.
+//   Sidebar genişliği, ikonlar ve mobil hamburger menü korunur.
 
 import { useEffect, useState } from 'react';
 import {
@@ -13,25 +15,21 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useOrders } from '../context/OrderContext';
+import { useThemedPage } from '../lib/theme';
+import { ThemeToggle } from './ThemeToggle';
 
-type NavColor = {
-  base: string;
-  bgPasif: string;
-  bgIcon: string;
-  bgAktif: string;
-};
-
-const COLORS: Record<string, NavColor> = {
-  panel:      { base: '#A78BFA', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(139,92,246,0.24)', bgAktif: '#8B5CF6' },
-  orders:     { base: '#FBBF24', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(245,158,11,0.24)', bgAktif: '#F59E0B' },
-  tables:     { base: '#34D399', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(16,185,129,0.24)', bgAktif: '#10B981' },
-  payment:    { base: '#FDBA74', bgPasif: 'rgba(255,255,255,0.04)', bgIcon: 'rgba(255,122,41,0.22)', bgAktif: '#FF7A29' },
-  categories: { base: '#7DD3FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(14,165,233,0.24)', bgAktif: '#0EA5E9' },
-  products:   { base: '#D8B4FE', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(168,85,247,0.24)', bgAktif: '#A855F7' },
-  waiters:    { base: '#FF9A5A', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(255,122,41,0.24)', bgAktif: '#FF7A29' },
-  kitchen:    { base: '#FCA5A5', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(239,68,68,0.24)', bgAktif: '#EF4444' },
-  settings:   { base: '#E2E8F0', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(255,255,255,0.16)', bgAktif: '#94A3B8' },
-  qr:         { base: '#A5B4FC', bgPasif: 'rgba(255,255,255,0.06)', bgIcon: 'rgba(99,102,241,0.26)', bgAktif: '#6366F1' }
+// Sekme ikonlarının tonu — her iki temada okunur orta doygunlukta renkler
+const ICON_HUE: Record<string, string> = {
+  panel: '#7c5cc4',
+  orders: '#b7791f',
+  tables: '#2f855a',
+  payment: '#c05621',
+  categories: '#2b6cb0',
+  products: '#8b5cf6',
+  waiters: '#c05621',
+  kitchen: '#c53030',
+  settings: '#718096',
+  qr: '#4c51bf'
 };
 
 type ModuleKey = 'waiter' | 'kitchen';
@@ -66,6 +64,7 @@ export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { pendingCount, callCount, unlockAudio } = useOrders();
   const moduleFlags = useModuleFlags(accessToken);
+  useThemedPage();
 
   // Ana nav item'ları — payment Masalar'ın altında sub-item olarak gelecek
   // `module` olan sekmeler yalnızca o modül işletmede açıksa görünür (bilinmiyorken gizli)
@@ -131,91 +130,57 @@ export function AdminLayout() {
 
   const SidebarContent = () => (
     <>
-      <div className="p-5 border-b border-white/20">
+      <div className="p-5 border-b border-line">
         <div className="flex items-center gap-3">
-          <div className="btn-accent w-10 h-10 rounded-2xl flex items-center justify-center">
-            <QrCode size={18} color="#fff" strokeWidth={2.5} />
+          <div className="bg-brand text-on-brand w-10 h-10 rounded-2xl flex items-center justify-center">
+            <QrCode size={18} strokeWidth={2.5} />
           </div>
           <div>
-            <div className="font-serif font-bold text-white text-lg leading-tight tracking-wide">
-              Atlas<span style={{ color: 'var(--accent)' }}>QR</span>
+            <div className="font-serif font-bold text-ink text-lg leading-tight tracking-wide">
+              Atlas<span className="text-accent">QR</span>
             </div>
-            <div className="text-[10px] font-semibold text-white/60" style={{ letterSpacing: '0.12em' }}>YÖNETİM PANELİ</div>
+            <div className="ui-eyebrow" style={{ fontSize: 9 }}>Yönetim Paneli</div>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-none">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-none" aria-label="Yönetim menüsü">
         {navItems.map(item => {
           const active = isActive(item.to);
-          const color = COLORS[item.colorKey];
-          const badge = (item as any).badge;
+          const hue = ICON_HUE[item.colorKey] ?? 'var(--accent)';
+          const badge = item.badge ?? 0;
           const isSub = item.sub;
 
           return (
-            <Link key={item.to} to={item.to}
+            <Link key={`${item.to}-${item.label}`} to={item.to}
               onClick={() => setSidebarOpen(false)}
-              className={`spring-btn ${active ? 'btn-accent' : isSub ? 'bg-white/[0.04] hover:bg-white/15' : 'bg-white/[0.06] hover:bg-white/15'}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: isSub ? '7px 10px 7px 14px' : '9px 10px',
-                marginLeft: isSub ? 16 : 0,
-                border: active ? undefined : '1px solid transparent',
-                borderLeft: active
-                  ? undefined
-                  : isSub
-                  ? '2px solid rgba(255,255,255,0.25)'
-                  : '1px solid transparent',
-                borderRadius: 14,
-                textDecoration: 'none',
-                marginBottom: 2
-              }}>
-              <div style={{
-                width: isSub ? 24 : 30,
-                height: isSub ? 24 : 30,
-                borderRadius: isSub ? 8 : 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                background: active ? 'rgba(255,255,255,0.25)' : color.bgIcon,
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: active ? 'white' : color.base,
-                position: 'relative'
-              }}>
+              aria-current={active ? 'page' : undefined}
+              className={`spring-btn no-underline flex items-center gap-2.5 rounded-[14px] mb-0.5 ${
+                active ? 'bg-brand text-on-brand' : 'text-ink hover:bg-surface-2'
+              } ${isSub ? 'ml-4 py-[7px] pr-2.5 pl-3.5 border-l-2 border-line' : 'py-[9px] px-2.5'}`}>
+              <div className="relative flex items-center justify-center flex-shrink-0"
+                style={{
+                  width: isSub ? 24 : 30,
+                  height: isSub ? 24 : 30,
+                  borderRadius: isSub ? 8 : 10,
+                  // İkon kutusu: sekmenin kendi renginde yumuşak ton; aktifken petrol üstünde saydam beyaz
+                  background: active ? 'rgba(255,255,255,0.18)' : `color-mix(in srgb, ${hue} 14%, transparent)`,
+                  color: active ? 'currentColor' : hue
+                }}>
                 {item.icon}
                 {badge > 0 && (
-                  <span style={{
-                    position: 'absolute', top: -6, right: -6,
-                    background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', color: 'white',
-                    border: '1px solid rgba(255,255,255,0.7)',
-                    minWidth: 16, height: 16, borderRadius: 8,
-                    fontSize: 9, fontWeight: 800,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 4px'
-                  }}>
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-extrabold text-white"
+                    style={{ background: '#d4453d' }}>
                     {badge > 9 ? '9+' : badge}
                   </span>
                 )}
               </div>
-              <span style={{
-                flex: 1,
-                fontSize: isSub ? 12 : 13,
-                fontWeight: active ? 700 : 600,
-                color: active ? 'white' : isSub ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)'
-              }}>
+              <span className={`flex-1 ${isSub ? 'text-xs' : 'text-[13px]'} ${active ? 'font-bold' : isSub ? 'font-semibold text-ink-muted' : 'font-semibold'}`}>
                 {item.label}
               </span>
               {badge > 0 && (
-                <span style={{
-                  background: active ? 'rgba(255,255,255,0.28)' : 'var(--danger-bg)',
-                  color: active ? 'white' : 'var(--danger)',
-                  border: active ? '1px solid rgba(255,255,255,0.4)' : '1px solid rgba(251,113,133,0.45)',
-                  fontSize: 10, fontWeight: 800,
-                  padding: '2px 7px', borderRadius: 999
-                }}>
+                <span className={`text-[10px] font-extrabold px-[7px] py-0.5 rounded-full ${
+                  active ? 'bg-white/25 text-on-brand' : 'bg-state-danger-bg text-state-danger'}`}>
                   {badge}
                 </span>
               )}
@@ -224,9 +189,9 @@ export function AdminLayout() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-white/20">
+      <div className="p-3 border-t border-line">
         <button onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/15 spring-btn">
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-2 spring-btn">
           <LogOut size={16} className="flex-shrink-0" />
           Çıkış Yap
         </button>
@@ -235,64 +200,62 @@ export function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen flex text-white md:p-3 md:gap-3" onClick={unlockAudio}>
+    <div className="min-h-screen flex bg-page text-ink md:p-3 md:gap-3" onClick={unlockAudio}>
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col glass-panel glass-sidebar rounded-3xl overflow-hidden sticky top-3"
+      <aside className="hidden md:flex flex-col ui-card rounded-3xl overflow-hidden sticky top-3"
         style={{ width: 232, height: 'calc(100vh - 24px)', flexShrink: 0 }}>
         <SidebarContent />
-      </div>
+      </aside>
 
       {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-md fade-enter" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 flex flex-col glass-dark glass-sidebar rounded-r-3xl overflow-hidden"
+          <div className="absolute inset-0 ui-scrim fade-enter" onClick={() => setSidebarOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 flex flex-col bg-surface border-r border-line rounded-r-3xl overflow-hidden"
             style={{ width: 260 }}>
             <SidebarContent />
-          </div>
+          </aside>
         </div>
       )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <div className="px-3 pt-3 md:px-0 md:pt-0">
-          <div className="glass-panel rounded-3xl px-4 md:px-6 py-3 flex items-center justify-between">
+          <header className="ui-card rounded-3xl px-4 md:px-6 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <button className="md:hidden glass-pill w-9 h-9 rounded-xl flex items-center justify-center spring-btn"
-                onClick={() => setSidebarOpen(true)}>
-                <Menu size={18} color="#fff" />
+              <button className="md:hidden ui-chip w-9 h-9 rounded-xl flex items-center justify-center spring-btn"
+                onClick={() => setSidebarOpen(true)} aria-label="Menüyü aç">
+                <Menu size={18} />
               </button>
-              <h1 className="font-serif font-bold text-white truncate" style={{ fontSize: 20 }}>
+              <h1 className="font-serif font-bold text-ink truncate" style={{ fontSize: 22 }}>
                 {currentLabel}
               </h1>
             </div>
             <div className="flex items-center gap-2">
               {pendingCount > 0 && (
-                <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse"
-                    style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.45)' }}>
-                    <div className="w-2 h-2 rounded-full" style={{ background: 'var(--danger)' }} />
+                <Link to="/admin/orders" className="no-underline">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse bg-state-danger-bg text-state-danger">
+                    <div className="w-2 h-2 rounded-full bg-current" />
                     {pendingCount} sipariş
                   </div>
                 </Link>
               )}
               {callCount > 0 && (
-                <Link to="/admin/orders" style={{ textDecoration: 'none' }}>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse"
-                    style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.45)' }}>
+                <Link to="/admin/orders" className="no-underline">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse bg-state-warn-bg text-state-warn">
                     <Bell size={12} /> {callCount} çağrı
                   </div>
                 </Link>
               )}
               {pendingCount === 0 && callCount === 0 && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
-                  style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.45)' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--success)' }} />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-state-ok-bg text-state-ok">
+                  <div className="w-2 h-2 rounded-full bg-current" />
                   <span className="hidden sm:inline">Aktif</span>
                 </div>
               )}
+              <ThemeToggle />
             </div>
-          </div>
+          </header>
         </div>
 
         <div className="flex-1 overflow-auto p-4 md:px-2 md:py-6">

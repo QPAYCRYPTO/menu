@@ -45,7 +45,7 @@ export function ImageUploadField({
   onRemove,
   label,
   hint = 'PNG, JPG · max 5MB',
-  themeColor = '#FF7A29',
+  themeColor = 'var(--accent)',
   previewSize = 96,
   rounded = false
 }: ImageUploadFieldProps) {
@@ -105,7 +105,7 @@ export function ImageUploadField({
   return (
     <div>
       {label && (
-        <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-white/70">
+        <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
           {label}
         </label>
       )}
@@ -125,8 +125,8 @@ export function ImageUploadField({
 
       {/* GÖRSELLİ DURUM — preview + butonlar */}
       {hasImage && !uploading && (
-        <div className="glass-card flex items-center gap-4 p-3 rounded-2xl">
-          <div className="flex-shrink-0 overflow-hidden bg-white/10"
+        <div className="ui-card flex items-center gap-4 p-3 rounded-2xl">
+          <div className="flex-shrink-0 overflow-hidden bg-surface-2"
             style={{
               width: previewSize,
               height: previewSize,
@@ -138,18 +138,18 @@ export function ImageUploadField({
           </div>
 
           <div className="flex-1 flex flex-col gap-2 min-w-0">
-            <div className="text-[13px] font-semibold text-white flex items-center gap-1.5">
-              <CircleCheck size={13} style={{ color: 'var(--success)' }} /> Görsel yüklendi
+            <div className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
+              <CircleCheck size={13} style={{ color: 'var(--state-ok)' }} /> Görsel yüklendi
             </div>
             <div className="flex gap-2 flex-wrap">
               <button type="button" onClick={openFilePicker}
-                className="btn-accent px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 spring-btn">
+                className="btn-primary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 spring-btn">
                 <RefreshCw size={10} /> Değiştir
               </button>
               {onRemove && (
                 <button type="button" onClick={handleRemove}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 spring-btn"
-                  style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+                  style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1px solid var(--state-danger)' }}>
                   <Trash2 size={10} /> Kaldır
                 </button>
               )}
@@ -168,21 +168,21 @@ export function ImageUploadField({
           className="rounded-2xl text-center cursor-pointer"
           style={{
             padding: '28px 16px',
-            background: dragActive ? 'var(--accent-soft)' : 'rgba(255,255,255,0.08)',
-            border: `2px dashed ${dragActive ? 'var(--accent)' : 'rgba(255,255,255,0.35)'}`,
+            background: dragActive ? 'var(--accent-soft)' : 'var(--surface-2)',
+            border: `2px dashed ${dragActive ? 'var(--accent)' : 'var(--line)'}`,
             transition: 'all 0.2s'
           }}>
-          <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-lg text-white border border-white/40"
+          <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center text-lg text-ink border border-line"
             style={{ background: 'var(--accent-soft)' }}>
             <ImageIcon size={18} />
           </div>
-          <div className="text-sm font-semibold text-white mb-1 flex items-center justify-center gap-1.5">
+          <div className="text-sm font-semibold text-ink mb-1 flex items-center justify-center gap-1.5">
             <Upload size={14} /> Görsel Yükle
           </div>
-          <div className="text-xs text-white/70 mb-2">
+          <div className="text-xs text-ink-muted mb-2">
             Tıkla veya sürükleyip bırak
           </div>
-          <div className="text-[11px] text-white/50">
+          <div className="text-[11px] text-ink-muted">
             {hint}
           </div>
         </div>
@@ -193,11 +193,11 @@ export function ImageUploadField({
         <div className="rounded-2xl text-center"
           style={{
             padding: '28px 16px',
-            background: 'rgba(255,255,255,0.08)',
-            border: '2px dashed rgba(255,255,255,0.35)'
+            background: 'var(--surface-2)',
+            border: '2px dashed var(--line)'
           }}>
-          <div className="w-8 h-8 mx-auto mb-3 rounded-full border-[3px] border-white/25 border-t-[var(--accent)] animate-spin" />
-          <div className="text-[13px] font-semibold text-white/85">
+          <div className="w-8 h-8 mx-auto mb-3 rounded-full border-[3px] border-line border-t-[var(--accent)] animate-spin" />
+          <div className="text-[13px] font-semibold text-ink-muted">
             Yükleniyor...
           </div>
         </div>

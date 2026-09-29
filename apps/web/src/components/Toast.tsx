@@ -13,6 +13,7 @@
 // - Aynı animasyon (slide-in, slide-out)
 // - Success (yeşil) / Error (kırmızı) / Info (mavi)
 // - 2.4 saniye sonra otomatik kapanır
+// - Gece/gündüz uyumlu: yüzey --surface, kenar ve ikon durum rengi (--state-*)
 
 import { useEffect, useState } from 'react';
 import { Check, Info, X, type LucideIcon } from 'lucide-react';
@@ -20,10 +21,10 @@ import { Check, Info, X, type LucideIcon } from 'lucide-react';
 export type ToastType = 'success' | 'error' | 'info';
 export type ToastState = { message: string; type: ToastType } | null;
 
-const STYLES: Record<ToastType, { bg: string; color: string; border: string; icon: LucideIcon }> = {
-  success: { bg: 'var(--success-bg)', color: 'var(--success)', border: 'rgba(52,211,153,0.45)', icon: Check },
-  error:   { bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'rgba(251,113,133,0.45)', icon: X },
-  info:    { bg: 'var(--info-bg)', color: 'var(--info)', border: 'rgba(125,211,252,0.45)', icon: Info }
+const STYLES: Record<ToastType, { bg: string; color: string; icon: LucideIcon }> = {
+  success: { bg: 'var(--state-ok-bg)', color: 'var(--state-ok)', icon: Check },
+  error:   { bg: 'var(--state-danger-bg)', color: 'var(--state-danger)', icon: X },
+  info:    { bg: 'var(--state-info-bg)', color: 'var(--state-info)', icon: Info }
 };
 
 /**
@@ -50,7 +51,6 @@ export function Toast({ state }: { state: ToastState }) {
 
   return (
     <div
-      className="glass-dark"
       style={{
         position: 'fixed',
         top: 24,
@@ -60,9 +60,11 @@ export function Toast({ state }: { state: ToastState }) {
         alignItems: 'center',
         gap: 10,
         padding: '12px 16px',
+        background: 'var(--surface)',
         backgroundImage: `linear-gradient(${style.bg}, ${style.bg})`,
-        color: 'var(--text)',
-        border: `1px solid ${style.border}`,
+        color: 'var(--ink)',
+        border: `1px solid ${style.color}`,
+        boxShadow: 'var(--shadow), 0 8px 24px rgba(0,0,0,0.12)',
         borderRadius: 16,
         fontSize: 14,
         fontWeight: 600,
@@ -79,7 +81,7 @@ export function Toast({ state }: { state: ToastState }) {
         height: 22,
         borderRadius: '50%',
         background: style.color,
-        color: '#14110F',
+        color: 'var(--bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

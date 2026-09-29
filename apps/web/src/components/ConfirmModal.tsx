@@ -36,32 +36,34 @@ export type ConfirmState = {
   onConfirm: () => void | Promise<void>;
 } | null;
 
+// Gece/gündüz uyumlu: tehlikeli işlem kırmızı dolgu (yazı zemin rengiyle → iki temada okunur),
+// diğerleri birincil petrol buton
 const TONES: Record<ConfirmTone, {
   iconBg: string;
   iconColor: string;
   buttonBg: string;
-  buttonHover: string;
+  buttonColor: string;
   icon: LucideIcon;
 }> = {
   danger: {
-    iconBg: 'var(--danger-bg)',
-    iconColor: 'var(--danger)',
-    buttonBg: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)',
-    buttonHover: '#BE123C',
+    iconBg: 'var(--state-danger-bg)',
+    iconColor: 'var(--state-danger)',
+    buttonBg: 'var(--state-danger)',
+    buttonColor: 'var(--bg)',
     icon: Trash2
   },
   warning: {
-    iconBg: 'var(--warning-bg)',
-    iconColor: 'var(--warning)',
-    buttonBg: 'var(--accent-gradient)',
-    buttonHover: '#FF5A1F',
+    iconBg: 'var(--state-warn-bg)',
+    iconColor: 'var(--state-warn)',
+    buttonBg: 'var(--brand)',
+    buttonColor: 'var(--on-brand)',
     icon: TriangleAlert
   },
   info: {
-    iconBg: 'var(--info-bg)',
-    iconColor: 'var(--info)',
-    buttonBg: 'linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)',
-    buttonHover: '#0369A1',
+    iconBg: 'var(--state-info-bg)',
+    iconColor: 'var(--state-info)',
+    buttonBg: 'var(--brand)',
+    buttonColor: 'var(--on-brand)',
     icon: Info
   }
 };
@@ -125,20 +127,19 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
-        background: visible ? 'var(--overlay)' : 'rgba(10, 7, 5, 0)',
-        backdropFilter: visible ? 'blur(12px)' : 'blur(0px)',
-        WebkitBackdropFilter: visible ? 'blur(12px)' : 'blur(0px)',
+        background: visible ? 'var(--scrim)' : 'transparent',
+        backdropFilter: visible ? 'blur(4px)' : 'blur(0px)',
+        WebkitBackdropFilter: visible ? 'blur(4px)' : 'blur(0px)',
         transition: 'background 0.2s ease-out, backdrop-filter 0.2s ease-out'
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="glass-dark rounded-3xl"
+        className="ui-card rounded-3xl"
         style={{
           width: '100%',
           maxWidth: 380,
           overflow: 'hidden',
-          color: 'var(--text)',
           transform: visible ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(-10px)',
           opacity: visible ? 1 : 0,
           transition: 'transform 0.2s ease-out, opacity 0.2s ease-out'
@@ -151,7 +152,6 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
             width: 56,
             height: 56,
             background: tone.iconBg,
-            border: '1px solid rgba(255,255,255,0.22)',
             borderRadius: '50%',
             alignItems: 'center',
             justifyContent: 'center',
@@ -162,14 +162,14 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
           <div className="font-serif" style={{
             fontSize: 18,
             fontWeight: 700,
-            color: 'var(--text)',
+            color: 'var(--ink)',
             marginBottom: 8
           }}>
             {state.title}
           </div>
           <div style={{
             fontSize: 13,
-            color: 'var(--text-muted)',
+            color: 'var(--ink-muted)',
             lineHeight: 1.5
           }}>
             {state.message}
@@ -185,7 +185,7 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
           <button
             onClick={onClose}
             disabled={submitting}
-            className="glass-pill spring-btn"
+            className="btn-outline spring-btn"
             style={{
               flex: 1,
               padding: 11,
@@ -207,11 +207,10 @@ export function ConfirmModal({ state, onClose }: ConfirmModalProps) {
               padding: 11,
               borderRadius: 999,
               background: tone.buttonBg,
-              color: 'white',
+              color: tone.buttonColor,
               fontWeight: 700,
               fontSize: 14,
-              border: '1px solid rgba(255,255,255,0.5)',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.6)',
+              border: '1px solid transparent',
               cursor: submitting ? 'not-allowed' : 'pointer',
               opacity: submitting ? 0.7 : 1
             }}
