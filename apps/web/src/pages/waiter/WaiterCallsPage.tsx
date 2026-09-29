@@ -10,6 +10,7 @@ import { useWaiterCalls } from '../../context/WaiterCallsContext';
 import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
 import type { WaiterActiveCall } from '../../api/waiterPublicApi';
+import { AlertTriangle, BellOff, Bell, Calendar, Check, Clock, MapPin, NotebookPen, RefreshCw, Timer } from 'lucide-react';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('tr-TR', {
@@ -55,10 +56,10 @@ function useLiveElapsed(dateStr: string): string {
 function LiveTimerBadge({ dateStr }: { dateStr: string }) {
   const elapsed = useLiveElapsed(dateStr);
   return (
-    <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-full"
+    <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1"
       style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.45)' }}
       title="Çağrı yapıldıktan beri geçen süre">
-      ⏱ {elapsed}
+      <Timer size={12} aria-hidden /> {elapsed}
     </span>
   );
 }
@@ -116,13 +117,13 @@ function CallCard({ call, onTake }: {
             fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
             letterSpacing: '0.06em', color: accentColor, marginBottom: 2
           }}>
-            {info.critical ? '⚠️ Acil İstek' : 'Çağrı'}
+            {info.critical ? <span className="inline-flex items-center gap-1"><AlertTriangle size={12} aria-hidden /> Acil İstek</span> : 'Çağrı'}
           </div>
           <div className="font-serif font-bold text-white" style={{ fontSize: 17, lineHeight: 1.2 }}>
             {info.label}
           </div>
-          <div className="font-bold text-sm mt-0.5 text-white/85">
-            📍 {call.table_name}
+          <div className="font-bold text-sm mt-0.5 text-white/85 flex items-center gap-1">
+            <MapPin size={14} aria-hidden /> {call.table_name}
           </div>
         </div>
         <div style={{ flexShrink: 0 }}>
@@ -140,7 +141,7 @@ function CallCard({ call, onTake }: {
             fontSize: 11, fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4
           }}>
-            📝 Müşteri Açıklaması
+            <span className="inline-flex items-center gap-1"><NotebookPen size={12} aria-hidden /> Müşteri Açıklaması</span>
           </div>
           <div className="text-white" style={{ fontSize: 14, lineHeight: 1.4 }}>
             {call.note}
@@ -151,8 +152,8 @@ function CallCard({ call, onTake }: {
       {/* Diğer türlerde note varsa */}
       {call.call_type !== 'other' && call.note && call.note.trim() && (
         <div style={{ padding: '8px 16px' }}>
-          <div className="glass-pill text-xs px-2.5 py-1.5 rounded-xl font-semibold">
-            📝 {call.note}
+          <div className="glass-pill text-xs px-2.5 py-1.5 rounded-xl font-semibold flex items-center gap-1.5">
+            <NotebookPen size={12} className="shrink-0" aria-hidden /> {call.note}
           </div>
         </div>
       )}
@@ -160,9 +161,9 @@ function CallCard({ call, onTake }: {
       {/* Tarih + saat + ne kadar zaman önce */}
       <div style={{ padding: '8px 16px', borderTop: `1px solid ${divider}` }}>
         <div className="flex items-center gap-1.5 flex-wrap text-xs text-white/65">
-          <span className="font-mono">📅 {formatDate(call.created_at)}</span>
+          <span className="font-mono inline-flex items-center gap-1"><Calendar size={12} aria-hidden /> {formatDate(call.created_at)}</span>
           <span className="text-white/30">·</span>
-          <span className="font-mono">🕐 {formatTime(call.created_at)}</span>
+          <span className="font-mono inline-flex items-center gap-1"><Clock size={12} aria-hidden /> {formatTime(call.created_at)}</span>
           <span className="text-white/30">·</span>
           <span>{timeAgo(call.created_at)}</span>
         </div>
@@ -171,7 +172,7 @@ function CallCard({ call, onTake }: {
       {/* Aksiyon butonu */}
       <div style={{ padding: '8px 16px 16px' }}>
         <button onClick={handleTake} disabled={taking}
-          className="w-full py-3 rounded-full text-sm font-bold text-white spring-btn disabled:opacity-60"
+          className="w-full py-3 rounded-full text-sm font-bold text-white spring-btn disabled:opacity-60 flex items-center justify-center gap-1.5"
           style={{
             background: info.critical
               ? 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)'
@@ -181,7 +182,7 @@ function CallCard({ call, onTake }: {
               ? '0 8px 20px rgba(225,29,72,0.4), inset 0 1px 1px rgba(255,255,255,0.7)'
               : '0 8px 20px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.7)'
           }}>
-          {taking ? 'İşleniyor...' : '✓ İlgilendim'}
+          {taking ? 'İşleniyor...' : <><Check size={14} aria-hidden /> İlgilendim</>}
         </button>
       </div>
     </div>
@@ -223,7 +224,7 @@ export function WaiterCallsPage() {
       <div className="glass-panel rounded-3xl px-4 py-3 flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-            <i className="fa-regular fa-bell text-amber-300" /> Çağrılar
+            <Bell size={18} className="text-amber-300" aria-hidden /> Çağrılar
           </h2>
           {calls.length > 0 && (
             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold"
@@ -232,21 +233,21 @@ export function WaiterCallsPage() {
             </span>
           )}
           {criticalCount > 0 && (
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold text-white animate-pulse"
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold text-white animate-pulse inline-flex items-center gap-1"
               style={{ background: 'linear-gradient(135deg, #FB7185, #E11D48)', border: '1px solid rgba(255,255,255,0.6)' }}>
-              ⚠️ {criticalCount} acil
+              <AlertTriangle size={11} aria-hidden /> {criticalCount} acil
             </span>
           )}
         </div>
         <button onClick={refresh} disabled={loading}
-          className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn disabled:opacity-60">
-          <span className={loading ? 'inline-block animate-spin' : 'inline-block'}>🔄</span> Yenile
+          className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn disabled:opacity-60 inline-flex items-center gap-1">
+          <span className={loading ? 'inline-flex animate-spin' : 'inline-flex'}><RefreshCw size={12} aria-hidden /></span> Yenile
         </button>
       </div>
 
       {calls.length === 0 ? (
         <div className="glass-card text-center py-14 px-4 rounded-3xl">
-          <div className="text-5xl mb-3">🔕</div>
+          <div className="mb-3 flex justify-center text-white/70"><BellOff size={44} aria-hidden /></div>
           <div className="font-serif font-bold mb-1">Aktif çağrı yok</div>
           <p className="text-sm text-white/65">
             Müşteri çağırdığında burada görünür ve ses çalar.

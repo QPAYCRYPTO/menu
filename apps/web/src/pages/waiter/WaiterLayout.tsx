@@ -5,6 +5,7 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { useWaiterCalls } from '../../context/WaiterCallsContext';
+import { Bell, LogOut, User, UtensilsCrossed } from 'lucide-react';
 
 export function WaiterLayout() {
   const { waiter, isAuthenticated, isChecking, logout } = useWaiterAuth();
@@ -29,9 +30,9 @@ export function WaiterLayout() {
   const callCount = calls.length;
 
   const navItems = [
-    { to: '/garson', label: 'Masalar', icon: '🍽️', exact: true, badge: 0 },
-    { to: '/garson/cagrilar', label: 'Çağrılar', icon: '🔔', exact: false, badge: callCount },
-    { to: '/garson/profil', label: 'Profil', icon: '👤', exact: false, badge: 0 }
+    { to: '/garson', label: 'Masalar', icon: UtensilsCrossed, exact: true, badge: 0 },
+    { to: '/garson/cagrilar', label: 'Çağrılar', icon: Bell, exact: false, badge: callCount },
+    { to: '/garson/profil', label: 'Profil', icon: User, exact: false, badge: 0 }
   ];
 
   function isActive(to: string, exact: boolean) {
@@ -58,7 +59,7 @@ export function WaiterLayout() {
           <button onClick={logout}
             className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 spring-btn"
             style={{ background: 'var(--danger-bg)', color: 'var(--danger)', borderColor: 'rgba(251,113,133,0.45)' }}>
-            <i className="fa-solid fa-right-from-bracket" /> Çıkış
+            <LogOut size={12} aria-hidden /> Çıkış
           </button>
         </div>
       </div>
@@ -79,7 +80,7 @@ export function WaiterLayout() {
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl relative spring-btn ${active ? 'btn-accent' : 'text-white/70'}`}
                 style={{ textDecoration: 'none' }}>
                 <div style={{ position: 'relative' }}>
-                  <span className="text-lg leading-none">{item.icon}</span>
+                  <span className="leading-none flex"><item.icon size={18} aria-hidden /></span>
                   {item.badge > 0 && (
                     <span style={{
                       position: 'absolute',

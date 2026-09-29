@@ -9,8 +9,17 @@ import { Link } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { WaiterTable, listTables } from '../../api/waiterPublicApi';
 import { waiterMoveSession, waiterMergeSessions } from '../../api/tableOperationsApi';
+import { AlertTriangle, ArrowLeftRight, Armchair, Bell, ClipboardList, Link2, Plus, RefreshCw, Timer, UtensilsCrossed, Wallet } from 'lucide-react';
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
+
+// Küçük renkli durum noktası (eski yeşil/kırmızı/mavi daire emojileri yerine)
+function StatusDot({ color, hollow = false }: { color: string; hollow?: boolean }) {
+  return (
+    <span aria-hidden className="inline-block rounded-full flex-shrink-0"
+      style={{ width: 8, height: 8, background: hollow ? 'transparent' : color, border: `1.5px solid ${color}` }} />
+  );
+}
 
 function formatPrice(priceInt: number): string {
   return `${(priceInt / 100).toFixed(2)} TL`;
@@ -73,7 +82,7 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
         onClick={e => e.stopPropagation()}>
         <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 mb-3" />
         <h3 className="font-serif font-bold text-lg mb-1 flex items-center gap-2">
-          🔄 Masa Taşı
+          <ArrowLeftRight size={18} aria-hidden /> Masa Taşı
         </h3>
         <p className="text-xs mb-4 text-white/65">
           <strong className="text-white">{table.name}</strong> masasını boş bir masaya taşı
@@ -97,8 +106,8 @@ function MoveModal({ table, allTables, token, tabId, onClose, onSuccess, onError
                   checked={targetTableId === t.id}
                   onChange={() => setTargetTableId(t.id)}
                   style={{ width: 18, height: 18, accentColor: '#FF7A29' }} />
-                <span className="font-bold text-sm">
-                  🟢 {t.name}
+                <span className="font-bold text-sm inline-flex items-center gap-2">
+                  <StatusDot color="#34D399" /> {t.name}
                 </span>
               </label>
             ))}
@@ -158,7 +167,7 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
         onClick={e => e.stopPropagation()}>
         <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3 mb-3" />
         <h3 className="font-serif font-bold text-lg mb-1 flex items-center gap-2">
-          🔗 Masa Birleştir
+          <Link2 size={18} aria-hidden /> Masa Birleştir
         </h3>
         <p className="text-xs mb-4 text-white/65">
           <strong className="text-white">{table.name}</strong> masasını başka bir masayla birleştir.
@@ -184,8 +193,8 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
                   onChange={() => setTargetSessionId(t.session_id ?? '')}
                   style={{ width: 18, height: 18, accentColor: '#FF7A29' }} />
                 <div className="flex-1">
-                  <span className="font-bold text-sm">
-                    🔴 {t.name}
+                  <span className="font-bold text-sm inline-flex items-center gap-2">
+                    <StatusDot color="#FB7185" /> {t.name}
                   </span>
                   <span className="text-xs ml-2 text-white/65">
                     {formatPrice(t.total_int)} · {t.order_count} sipariş
@@ -196,9 +205,9 @@ function MergeModal({ table, allTables, token, tabId, onClose, onSuccess, onErro
           </div>
         )}
 
-        <div className="p-3 rounded-2xl mb-4 text-xs"
+        <div className="p-3 rounded-2xl mb-4 text-xs flex items-start gap-1.5"
           style={{ background: 'var(--warning-bg)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
-          ⚠️ <strong className="text-white">{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.
+          <AlertTriangle size={14} className="shrink-0" aria-hidden /> <span><strong className="text-white">{table.name}</strong> kapanır, siparişleri seçilen masaya taşınır.</span>
         </div>
 
         <div className="flex gap-3">
@@ -244,8 +253,9 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
         fontSize: 11,
         textTransform: 'uppercase',
         letterSpacing: '0.06em',
+        display: 'flex', alignItems: 'center', gap: 6
       }}>
-        🔵 BİRLEŞİK MASA GRUBU
+        <StatusDot color="#38BDF8" /> BİRLEŞİK MASA GRUBU
       </div>
 
       <div style={{ padding: 14 }}>
@@ -286,9 +296,9 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
                 textDecoration: 'none', padding: '9px 10px',
                 borderRadius: 14, minHeight: 36,
                 fontSize: 12, fontWeight: 700, textAlign: 'center',
-                display: 'block'
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
               }}>
-              📋 {t.name} — Adisyon Aç
+              <ClipboardList size={12} aria-hidden /> {t.name} — Adisyon Aç
             </Link>
           ))}
         </div>
@@ -299,15 +309,15 @@ function MergeGroupCard({ tables, canTransfer, canMerge, onMove, onMerge }: {
         <div style={{ padding: '8px 14px 12px', borderTop: '1px solid rgba(125,211,252,0.35)', display: 'flex', gap: 6 }}>
           {canTransfer && (
             <button onClick={() => onMove(tables[0])}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn">
-              🔄 Taşı
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1">
+              <ArrowLeftRight size={12} aria-hidden /> Taşı
             </button>
           )}
           {canMerge && (
             <button onClick={() => onMerge(tables[0])}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn"
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1"
               style={{ background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
-              🔗 Ekle
+              <Link2 size={12} aria-hidden /> Ekle
             </button>
           )}
         </div>
@@ -353,7 +363,7 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
           boxShadow: '0 6px 14px rgba(225,29,72,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14, zIndex: 1
-        }}>🔔</div>
+        }}><Bell size={14} aria-hidden /></div>
       )}
 
       <div style={{
@@ -364,9 +374,13 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
         letterSpacing: '0.06em',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
       }}>
-        <span>{hasCall ? '🔔 ÇAĞRI' : isOccupied ? '● Dolu' : '○ Boş'}</span>
+        <span className="inline-flex items-center gap-1.5">{hasCall
+          ? <><Bell size={11} aria-hidden /> ÇAĞRI</>
+          : isOccupied
+            ? <><StatusDot color="#fff" /> Dolu</>
+            : <><StatusDot color="#fff" hollow /> Boş</>}</span>
         {isOccupied && duration && (
-          <span className="font-mono text-white/90">⏱ {duration}</span>
+          <span className="font-mono text-white/90 inline-flex items-center gap-1"><Timer size={11} aria-hidden /> {duration}</span>
         )}
       </div>
 
@@ -409,16 +423,16 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
         <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.16)', display: 'flex', gap: 6 }}>
           {canTransfer && (
             <button onClick={e => { e.preventDefault(); onMove(); }}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn"
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1"
               style={{ background: 'var(--info-bg)', color: '#E0F2FE', borderColor: 'rgba(125,211,252,0.45)' }}>
-              🔄 Taşı
+              <ArrowLeftRight size={12} aria-hidden /> Taşı
             </button>
           )}
           {canMerge && (
             <button onClick={e => { e.preventDefault(); onMerge(); }}
-              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn"
+              className="glass-pill flex-1 min-h-[36px] py-2 rounded-2xl text-xs font-bold spring-btn flex items-center justify-center gap-1"
               style={{ background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
-              🔗 Birleştir
+              <Link2 size={12} aria-hidden /> Birleştir
             </button>
           )}
         </div>
@@ -427,8 +441,9 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
       <div style={{ padding: '8px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.16)' }}>
         <Link to={`/garson/masa/${table.id}`} style={{ textDecoration: 'none' }}
           className={`${isOccupied ? 'glass-pill' : 'btn-accent'} spring-btn flex items-center justify-center min-h-[38px] rounded-full`}>
-          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#fff' }}>
-            {isOccupied ? '📋 Adisyonu Aç' : '➕ Sipariş Al'}
+          <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: 5 }}>
+            {isOccupied ? <ClipboardList size={12} aria-hidden /> : <Plus size={12} aria-hidden />}
+            {isOccupied ? 'Adisyonu Aç' : 'Sipariş Al'}
           </div>
         </Link>
       </div>
@@ -522,11 +537,11 @@ export function WaiterTablesPage() {
 
       <div className="glass-panel rounded-3xl px-4 py-3 flex items-center justify-between mb-3">
         <h2 className="font-serif font-bold text-lg flex items-center gap-2">
-          🍽️ Masalar
+          <UtensilsCrossed size={18} aria-hidden /> Masalar
         </h2>
         <button onClick={() => loadTables()}
-          className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn">
-          🔄 Yenile
+          className="glass-pill min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn inline-flex items-center gap-1">
+          <RefreshCw size={12} aria-hidden /> Yenile
         </button>
       </div>
 
@@ -534,19 +549,19 @@ export function WaiterTablesPage() {
       {tables.length > 0 && (
         <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
           <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--success-bg)', borderColor: 'rgba(52,211,153,0.5)' }}>
-            <span className="text-xs font-bold" style={{ color: '#A7F3D0' }}>🟢 Boş: {emptyCount}</span>
+            <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: '#A7F3D0' }}><StatusDot color="#34D399" /> Boş: {emptyCount}</span>
           </div>
           <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--danger-bg)', borderColor: 'rgba(251,113,133,0.5)' }}>
-            <span className="text-xs font-bold" style={{ color: '#FECDD3' }}>🔴 Dolu: {busyCount}</span>
+            <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: '#FECDD3' }}><StatusDot color="#FB7185" /> Dolu: {busyCount}</span>
           </div>
           {mergedCount > 0 && (
             <div className="glass-pill flex-shrink-0 px-3 py-1.5 rounded-2xl" style={{ background: 'var(--info-bg)', borderColor: 'rgba(125,211,252,0.5)' }}>
-              <span className="text-xs font-bold" style={{ color: '#E0F2FE' }}>🔵 Birleşik: {mergedCount} grup</span>
+              <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: '#E0F2FE' }}><StatusDot color="#38BDF8" /> Birleşik: {mergedCount} grup</span>
             </div>
           )}
           {totalOpen > 0 && (
             <div className="btn-accent flex-shrink-0 px-3 py-1.5 rounded-2xl">
-              <span className="text-xs font-extrabold">💰 {formatPrice(totalOpen)}</span>
+              <span className="text-xs font-extrabold inline-flex items-center gap-1"><Wallet size={12} aria-hidden /> {formatPrice(totalOpen)}</span>
             </div>
           )}
         </div>
@@ -561,7 +576,7 @@ export function WaiterTablesPage() {
 
       {!loading && tables.length === 0 && (
         <div className="glass-card text-center py-14 rounded-3xl">
-          <div className="text-4xl mb-3">🪑</div>
+          <div className="mb-3 flex justify-center text-white/70"><Armchair size={36} aria-hidden /></div>
           <p className="text-sm text-white/70">Henüz masa yok</p>
         </div>
       )}

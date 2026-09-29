@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { loginByEmail, reasonToMessage } from '../../api/waiterPublicApi';
+import { AlertTriangle, ArrowLeft, ChefHat } from 'lucide-react';
 
 export function WaiterLoginPage() {
   const { token: urlToken } = useParams<{ token?: string }>();
@@ -97,7 +98,7 @@ export function WaiterLoginPage() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-3 mb-3">
             <div className="btn-accent w-16 h-16 rounded-3xl flex items-center justify-center">
-              <span className="text-3xl">👨‍🍳</span>
+              <ChefHat size={30} aria-hidden />
             </div>
           </div>
           <h1 className="font-serif font-bold text-3xl tracking-wide">
@@ -117,7 +118,7 @@ export function WaiterLoginPage() {
 
           {!loading && error && mode === 'auto' && (
             <div className="text-center py-4">
-              <div className="text-4xl mb-3">⚠️</div>
+              <div className="mb-3 flex justify-center" style={{ color: 'var(--danger)' }}><AlertTriangle size={36} aria-hidden /></div>
               <p className="text-sm font-bold mb-2" style={{ color: 'var(--danger)' }}>
                 Giriş yapılamadı
               </p>
@@ -132,9 +133,9 @@ export function WaiterLoginPage() {
           {mode === 'email' && (
             <>
               {error && (
-                <div className="mb-4 p-3 rounded-2xl text-xs font-semibold"
+                <div className="mb-4 p-3 rounded-2xl text-xs font-semibold flex items-center gap-1.5"
                   style={{ background: 'var(--danger-bg)', color: '#FECDD3', border: '1px solid rgba(251,113,133,0.45)' }}>
-                  ⚠️ {error}
+                  <AlertTriangle size={14} className="shrink-0" aria-hidden /> {error}
                 </div>
               )}
 
@@ -177,7 +178,7 @@ export function WaiterLoginPage() {
 
         <div className="text-center mt-6">
           <Link to="/" className="glass-pill inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold spring-btn">
-            ← Ana Sayfa
+            <ArrowLeft size={12} aria-hidden /> Ana Sayfa
           </Link>
         </div>
       </div>

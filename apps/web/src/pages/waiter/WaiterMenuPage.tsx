@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { OrderNoteTemplates } from '../../components/OrderNoteTemplates';
+import { Check, ChevronLeft, ChevronRight, ClipboardList, Info, Minus, NotebookPen, Plus, Search, ShoppingCart, Star, UtensilsCrossed, X } from 'lucide-react';
 import {
   WaiterMenuCategory,
   WaiterMenuProduct,
@@ -275,22 +276,22 @@ export function WaiterMenuPage() {
       <div className="glass-panel rounded-3xl p-2.5 flex items-center gap-3 mb-3">
         <button onClick={() => navigate(`/garson/masa/${tableId}`)} aria-label="Geri"
           className="glass-pill w-10 h-10 rounded-2xl text-sm font-bold flex items-center justify-center flex-shrink-0 spring-btn">
-          <i className="fa-solid fa-chevron-left" />
+          <ChevronLeft size={14} aria-hidden />
         </button>
-        <h2 className="font-serif font-bold text-lg flex-1 truncate">
-          🍽️ {tableName}
+        <h2 className="font-serif font-bold text-lg flex-1 truncate flex items-center gap-2">
+          <UtensilsCrossed size={18} className="shrink-0" aria-hidden /> <span className="truncate">{tableName}</span>
         </h2>
       </div>
 
       {activeOrderId && (
-        <div className="mb-3 p-3 rounded-2xl text-xs font-semibold"
+        <div className="mb-3 p-3 rounded-2xl text-xs font-semibold flex items-center gap-1.5"
           style={{ background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', color: '#E0F2FE' }}>
-          ℹ️ Açık sipariş var. Eklediğin ürünler mevcut siparişe eklenecek.
+          <Info size={14} className="shrink-0" aria-hidden /> Açık sipariş var. Eklediğin ürünler mevcut siparişe eklenecek.
         </div>
       )}
 
       <div className="relative mb-3">
-        <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 text-xs pointer-events-none" />
+        <Search size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none" aria-hidden />
         <input type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
@@ -306,7 +307,7 @@ export function WaiterMenuPage() {
               <button onClick={() => setSelectedCatId(FAVORITES_CAT_ID)}
                 className={`flex-shrink-0 px-4 py-2 min-h-[36px] rounded-2xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 spring-btn ${isFavoritesView ? 'btn-accent' : 'glass-pill'}`}
                 style={isFavoritesView ? undefined : { background: 'var(--warning-bg)', color: '#FDE68A', borderColor: 'rgba(251,191,36,0.45)' }}>
-                ⭐ Favoriler ({favorites.length})
+                <Star size={12} className="fill-current" aria-hidden /> Favoriler ({favorites.length})
               </button>
             )}
             {categories.map(cat => (
@@ -322,7 +323,7 @@ export function WaiterMenuPage() {
 
       {isFavoritesView && filteredProducts.length === 0 && !searchQuery && (
         <div className="glass-card text-center py-10 rounded-3xl" style={{ borderColor: 'rgba(251,191,36,0.5)' }}>
-          <div className="text-4xl mb-2">⭐</div>
+          <div className="mb-2 flex justify-center text-amber-300"><Star size={36} className="fill-current" aria-hidden /></div>
           <p className="text-sm font-bold text-amber-300">Favori ürün yok</p>
           <p className="text-xs mt-1 text-white/65 px-4">
             Bir kategoriden ürün seçip yıldıza basarak favorilere ekle.
@@ -332,7 +333,7 @@ export function WaiterMenuPage() {
 
       {filteredProducts.length === 0 && !(isFavoritesView && !searchQuery) ? (
         <div className="glass-card text-center py-10 rounded-3xl">
-          <div className="text-3xl mb-2">🔍</div>
+          <div className="mb-2 flex justify-center text-white/70"><Search size={28} aria-hidden /></div>
           <p className="text-sm text-white/70">
             {searchQuery ? 'Ürün bulunamadı' : 'Bu kategoride ürün yok'}
           </p>
@@ -358,7 +359,7 @@ export function WaiterMenuPage() {
                       aria-label={`${p.name} sepete ekle`}>
                     </button>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">🍽️</div>
+                    <div className="w-full h-full flex items-center justify-center text-white/70"><UtensilsCrossed size={28} aria-hidden /></div>
                   )}
 
                   {inCart && (
@@ -379,8 +380,8 @@ export function WaiterMenuPage() {
                         border: '1px solid rgba(255,255,255,0.7)',
                         boxShadow: '0 4px 10px rgba(225,29,72,0.45)'
                       }}
-                      title="Bu üründen vazgeç">
-                      ✕
+                      title="Bu üründen vazgeç" aria-label="Bu üründen vazgeç">
+                      <X size={14} strokeWidth={3} aria-hidden />
                     </button>
                   )}
                 </div>
@@ -402,7 +403,7 @@ export function WaiterMenuPage() {
                       </span>
                       {!inCart && (
                         <span className="btn-accent w-9 h-9 rounded-full flex items-center justify-center text-sm spring-btn" aria-hidden="true">
-                          <i className="fa-solid fa-plus" />
+                          <Plus size={14} aria-hidden />
                         </span>
                       )}
                     </div>
@@ -415,7 +416,7 @@ export function WaiterMenuPage() {
                           e.stopPropagation();
                           decrementCart(p.id);
                         }}
-                        className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn">−</button>
+                        className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn" aria-label="Azalt"><Minus size={14} aria-hidden /></button>
                       <span className="font-extrabold text-xs">
                         {inCart.quantity} adet
                       </span>
@@ -424,7 +425,7 @@ export function WaiterMenuPage() {
                           e.stopPropagation();
                           addToCart(p);
                         }}
-                        className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">+</button>
+                        className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn" aria-label="Artır"><Plus size={14} aria-hidden /></button>
                     </div>
                   )}
                 </div>
@@ -440,8 +441,11 @@ export function WaiterMenuPage() {
                     border: '1px solid rgba(255,255,255,0.7)',
                     boxShadow: '0 4px 12px rgba(245,158,11,0.45)'
                   } : undefined}
-                  title={isFav ? 'Favorilerden çıkar' : 'Favorilere ekle'}>
-                  {isFav ? '⭐' : '☆'}
+                  title={isFav ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+                  aria-label={isFav ? 'Favorilerden çıkar' : 'Favorilere ekle'}>
+                  {isFav
+                    ? <Star size={16} className="text-white fill-current" aria-hidden />
+                    : <Star size={16} aria-hidden />}
                 </button>
               </div>
             );
@@ -454,10 +458,10 @@ export function WaiterMenuPage() {
           <button onClick={() => setCartOpen(true)}
             className="btn-accent w-full py-3.5 rounded-full flex items-center justify-between px-5 spring-btn">
             <div className="flex items-center gap-2 text-sm font-extrabold">
-              <i className="fa-solid fa-cart-shopping" /> Sepet ({cartItemCount})
+              <ShoppingCart size={14} aria-hidden /> Sepet ({cartItemCount})
             </div>
             <div className="text-sm font-extrabold flex items-center gap-1.5">
-              {formatPrice(cartTotal)} <i className="fa-solid fa-chevron-right text-[10px] text-white/80" />
+              {formatPrice(cartTotal)} <ChevronRight size={10} className="text-white/80" aria-hidden />
             </div>
           </button>
         </div>
@@ -472,12 +476,12 @@ export function WaiterMenuPage() {
             <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
 
             <div className="px-5 pt-3 pb-3 flex items-center justify-between border-b border-white/20">
-              <h3 className="font-serif font-bold text-lg">
-                🛒 Sepet — {tableName}
+              <h3 className="font-serif font-bold text-lg flex items-center gap-2">
+                <ShoppingCart size={18} aria-hidden /> Sepet — {tableName}
               </h3>
               <button onClick={() => setCartOpen(false)} aria-label="Kapat"
                 className="glass-pill w-9 h-9 rounded-full flex items-center justify-center text-xs spring-btn">
-                <i className="fa-solid fa-xmark" />
+                <X size={12} aria-hidden />
               </button>
             </div>
 
@@ -506,18 +510,18 @@ export function WaiterMenuPage() {
                               </div>
                             </div>
                             <button onClick={() => removeFromCart(item.product_id)}
-                              className="text-xs font-bold px-2 py-1.5 rounded-lg spring-btn"
+                              className="text-xs font-bold px-2 py-1.5 rounded-lg spring-btn inline-flex items-center gap-1"
                               style={{ color: 'var(--danger)' }}>
-                              ✕ Çıkar
+                              <X size={12} aria-hidden /> Çıkar
                             </button>
                           </div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/20">
                               <button onClick={() => changeQuantity(item.product_id, -1)}
-                                className="w-9 h-9 rounded-lg bg-white/20 font-bold text-lg flex items-center justify-center spring-btn">−</button>
+                                className="w-9 h-9 rounded-lg bg-white/20 font-bold text-lg flex items-center justify-center spring-btn" aria-label="Azalt"><Minus size={18} aria-hidden /></button>
                               <span className="font-extrabold text-sm w-7 text-center">{item.quantity}</span>
                               <button onClick={() => changeQuantity(item.product_id, 1)}
-                                className="btn-accent w-9 h-9 rounded-lg font-bold text-lg flex items-center justify-center spring-btn">+</button>
+                                className="btn-accent w-9 h-9 rounded-lg font-bold text-lg flex items-center justify-center spring-btn" aria-label="Artır"><Plus size={18} aria-hidden /></button>
                             </div>
                             <div className="font-extrabold text-sm text-amber-300">
                               {formatPrice(item.price_int * item.quantity)}
@@ -528,8 +532,8 @@ export function WaiterMenuPage() {
                         {/* Mevcut not özeti — kapalıyken göster */}
                         {hasNote && !isNoteOpen && (
                           <div className="px-3 py-2 bg-amber-500/20 border-t border-amber-300/30 flex items-center justify-between gap-2">
-                            <div className="text-xs text-amber-100 flex-1 min-w-0">
-                              📝 <strong>{item.note}</strong>
+                            <div className="text-xs text-amber-100 flex-1 min-w-0 flex items-center gap-1.5">
+                              <NotebookPen size={12} className="shrink-0" aria-hidden /> <strong>{item.note}</strong>
                             </div>
                             <button onClick={() => setOpenNoteFor(item.product_id)}
                               className="text-xs font-bold text-amber-300 whitespace-nowrap px-1 py-1.5">
@@ -543,7 +547,7 @@ export function WaiterMenuPage() {
                           <div className="px-3 pb-2.5">
                             <button onClick={() => setOpenNoteFor(item.product_id)}
                               className="text-xs font-semibold flex items-center gap-1 text-amber-300 py-1">
-                              📝 + Bu ürüne özel not ekle
+                              <NotebookPen size={12} aria-hidden /> + Bu ürüne özel not ekle
                             </button>
                           </div>
                         )}
@@ -554,13 +558,13 @@ export function WaiterMenuPage() {
                             <OrderNoteTemplates
                               value={item.note ?? ''}
                               onChange={(newNote) => updateItemNote(item.product_id, newNote)}
-                              label={`📝 ${item.product_name} İçin Not`}
+                              label={`${item.product_name} İçin Not`}
                               placeholder="Bu ürüne özel istek (örn: sıcak olsun)..."
                               rows={2}
                             />
                             <button onClick={() => setOpenNoteFor(null)}
-                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn">
-                              ✓ Tamam
+                              className="mt-2 w-full py-2 rounded-xl glass-pill text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
+                              <Check size={14} aria-hidden /> Tamam
                             </button>
                           </div>
                         )}
@@ -573,8 +577,8 @@ export function WaiterMenuPage() {
               {/* GENEL not — sipariş geneli */}
               {cart.length > 0 && !activeOrderId && (
                 <div className="mt-4 pt-4 border-t border-dashed border-white/25">
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-white/70">
-                    📋 Sipariş Geneli Not (opsiyonel)
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-white/70 flex items-center gap-1">
+                    <ClipboardList size={12} aria-hidden /> Sipariş Geneli Not (opsiyonel)
                   </div>
                   <p className="text-[11px] mb-2 text-white/55">
                     Tüm sipariş için geçerli notlar (örn: "acele edin", "kapı kenarındaki masa")
@@ -588,9 +592,9 @@ export function WaiterMenuPage() {
               )}
 
               {activeOrderId && (
-                <div className="mt-3 p-3 rounded-2xl text-xs font-semibold"
+                <div className="mt-3 p-3 rounded-2xl text-xs font-semibold flex items-center gap-1.5"
                   style={{ background: 'var(--info-bg)', border: '1px solid rgba(125,211,252,0.45)', color: '#E0F2FE' }}>
-                  ℹ️ Eklediğin ürünler mevcut siparişe iliştirilecek. Her ürünün kendi notu kaydedilir.
+                  <Info size={14} className="shrink-0" aria-hidden /> Eklediğin ürünler mevcut siparişe iliştirilecek. Her ürünün kendi notu kaydedilir.
                 </div>
               )}
             </div>
@@ -606,7 +610,7 @@ export function WaiterMenuPage() {
                 <button onClick={handleSendOrder}
                   disabled={sending}
                   className="btn-accent w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 spring-btn">
-                  {sending ? 'Gönderiliyor...' : (activeOrderId ? '✓ Siparişe Ekle' : '✓ Mutfağa Gönder')}
+                  {sending ? 'Gönderiliyor...' : <><Check size={14} aria-hidden /> {activeOrderId ? 'Siparişe Ekle' : 'Mutfağa Gönder'}</>}
                 </button>
               </div>
             )}

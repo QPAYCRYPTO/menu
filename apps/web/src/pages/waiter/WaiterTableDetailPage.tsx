@@ -10,6 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
+import { AlertTriangle, ArrowLeft, Armchair, Check, ChevronLeft, ClipboardList, Lightbulb, Minus, NotebookPen, Plus, RefreshCw, Smartphone, User, UtensilsCrossed, XCircle } from 'lucide-react';
 import {
   WaiterTableDetail,
   CANCEL_REASON_OPTIONS,
@@ -138,11 +139,11 @@ export function WaiterTableDetailPage() {
     return (
       <div className="text-white">
         <button onClick={() => navigate('/garson')}
-          className="glass-pill mb-3 min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn">
-          ← Masalar
+          className="glass-pill mb-3 min-h-[36px] px-3.5 py-2 rounded-2xl text-xs font-bold spring-btn inline-flex items-center gap-1">
+          <ArrowLeft size={12} aria-hidden /> Masalar
         </button>
         <div className="glass-card text-center py-14 rounded-3xl" style={{ borderColor: 'rgba(251,113,133,0.55)' }}>
-          <div className="text-4xl mb-3">⚠️</div>
+          <div className="mb-3 flex justify-center" style={{ color: 'var(--danger)' }}><AlertTriangle size={36} aria-hidden /></div>
           <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>{error ?? 'Masa bulunamadı.'}</p>
         </div>
       </div>
@@ -168,14 +169,14 @@ export function WaiterTableDetailPage() {
       <div className="glass-panel rounded-3xl p-2.5 flex items-center gap-2 mb-3">
         <button onClick={() => navigate('/garson')} aria-label="Masalar"
           className="glass-pill w-10 h-10 rounded-2xl text-sm font-bold flex items-center justify-center flex-shrink-0 spring-btn">
-          <i className="fa-solid fa-chevron-left" />
+          <ChevronLeft size={14} aria-hidden />
         </button>
-        <h2 className="font-serif font-bold text-xl flex-1 truncate">
-          🍽️ {data.table.name}
+        <h2 className="font-serif font-bold text-xl flex-1 truncate flex items-center gap-2">
+          <UtensilsCrossed size={20} className="shrink-0" aria-hidden /> <span className="truncate">{data.table.name}</span>
         </h2>
         <button onClick={() => loadDetail()} aria-label="Yenile"
           className="glass-pill w-10 h-10 rounded-2xl text-sm flex items-center justify-center flex-shrink-0 spring-btn">
-          🔄
+          <RefreshCw size={14} aria-hidden />
         </button>
       </div>
 
@@ -209,7 +210,7 @@ export function WaiterTableDetailPage() {
                       textTransform: 'uppercase', letterSpacing: '0.06em',
                       color: accentColor, marginBottom: 2
                     }}>
-                      {info.critical ? '⚠️ Acil İstek' : 'Müşteri Çağrısı'}
+                      {info.critical ? <span className="inline-flex items-center gap-1"><AlertTriangle size={11} aria-hidden /> Acil İstek</span> : 'Müşteri Çağrısı'}
                     </div>
                     <div className="font-serif font-bold text-white" style={{ fontSize: 16, lineHeight: 1.2 }}>
                       {info.label}
@@ -218,9 +219,10 @@ export function WaiterTableDetailPage() {
                       <div className="glass-pill" style={{
                         fontSize: 13,
                         marginTop: 6, padding: '6px 9px',
-                        borderRadius: 10
+                        borderRadius: 10,
+                        display: 'flex', alignItems: 'center', gap: 6
                       }}>
-                        📝 {call.note}
+                        <NotebookPen size={13} style={{ flexShrink: 0 }} aria-hidden /> {call.note}
                       </div>
                     )}
                   </div>
@@ -231,9 +233,10 @@ export function WaiterTableDetailPage() {
                   borderTop: '1px solid rgba(255,255,255,0.14)',
                   fontSize: 11,
                   color: 'var(--text-muted)',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
                 }}>
-                  💡 İlgilenmek için Çağrılar sekmesine git
+                  <Lightbulb size={12} aria-hidden /> İlgilenmek için Çağrılar sekmesine git
                 </div>
               </div>
             );
@@ -264,8 +267,8 @@ export function WaiterTableDetailPage() {
 
           <div className="mb-3">
             <div className="flex items-center gap-3 mb-3 px-1">
-              <div className="font-serif font-bold text-base">
-                📋 Siparişler ({data.orders.length})
+              <div className="font-serif font-bold text-base flex items-center gap-2">
+                <ClipboardList size={16} aria-hidden /> Siparişler ({data.orders.length})
               </div>
               <div className="flex-1 h-px bg-white/20" />
             </div>
@@ -300,17 +303,17 @@ export function WaiterTableDetailPage() {
                             order.status === 'pending' ? 'Bekliyor' :
                             order.status === 'preparing' ? 'Hazırlanıyor' :
                             order.status === 'ready' ? 'Hazır' :
-                            order.status === 'delivered' ? 'Teslim ✓' :
+                            order.status === 'delivered' ? <span className="inline-flex items-center gap-1">Teslim <Check size={12} aria-hidden /></span> :
                             order.status === 'cancelled' ? 'İptal' : order.status
                           }
                         </span>
                         {order.waiter_name ? (
-                          <span className="text-xs font-bold" style={{ color: '#FDBA74' }}>
-                            👤 {order.waiter_name}
+                          <span className="text-xs font-bold inline-flex items-center gap-1" style={{ color: '#FDBA74' }}>
+                            <User size={12} aria-hidden /> {order.waiter_name}
                           </span>
                         ) : (
-                          <span className="text-xs text-white/60">
-                            📱 Müşteri
+                          <span className="text-xs text-white/60 inline-flex items-center gap-1">
+                            <Smartphone size={12} aria-hidden /> Müşteri
                           </span>
                         )}
                       </div>
@@ -337,13 +340,14 @@ export function WaiterTableDetailPage() {
                                     className="w-9 h-9 rounded-lg bg-white/20 font-bold text-sm flex items-center justify-center spring-btn"
                                     style={{
                                       opacity: item.quantity <= 1 ? 0.3 : 1
-                                    }}>−</button>
+                                    }}
+                                    aria-label="Azalt"><Minus size={14} aria-hidden /></button>
                                   <span className="font-extrabold text-sm w-6 text-center">
                                     {item.quantity}
                                   </span>
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, 1)}
-                                    className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn">+</button>
+                                    className="btn-accent w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn" aria-label="Artır"><Plus size={14} aria-hidden /></button>
                                 </div>
                               ) : (
                                 <span className="glass-pill text-xs font-bold px-2.5 py-1 rounded-lg text-white/75">
@@ -354,17 +358,17 @@ export function WaiterTableDetailPage() {
 
                             {/* ÜRÜN BAŞINA NOT — sarı şerit */}
                             {item.note && item.note.trim() && (
-                              <div className="mt-1.5 px-2.5 py-1.5 rounded-xl text-xs"
+                              <div className="mt-1.5 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5"
                                 style={{ background: 'rgba(245,158,11,0.2)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
-                                📝 {item.note}
+                                <NotebookPen size={12} className="shrink-0" aria-hidden /> {item.note}
                               </div>
                             )}
                           </div>
                         ))}
                         {order.note && (
-                          <div className="mt-2 mb-1 px-2.5 py-1.5 rounded-xl text-xs"
+                          <div className="mt-2 mb-1 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5"
                             style={{ background: 'rgba(245,158,11,0.2)', color: '#FDE68A', border: '1px solid rgba(251,191,36,0.35)' }}>
-                            📋 <strong>Genel:</strong> {order.note}
+                            <ClipboardList size={12} className="shrink-0" aria-hidden /> <span><strong>Genel:</strong> {order.note}</span>
                           </div>
                         )}
                       </div>
@@ -373,9 +377,9 @@ export function WaiterTableDetailPage() {
                         <div className="px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
                           <button
                             onClick={() => openCancelModal(order.id, orderLabel)}
-                            className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn"
+                            className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5"
                             style={{ background: 'var(--danger-bg)', color: '#FECDD3', border: '1px solid rgba(251,113,133,0.45)' }}>
-                            ❌ Siparişi İptal Et
+                            <XCircle size={14} aria-hidden /> Siparişi İptal Et
                           </button>
                         </div>
                       )}
@@ -396,7 +400,7 @@ export function WaiterTableDetailPage() {
         </>
       ) : (
         <div className="glass-card mb-3 p-8 rounded-3xl text-center">
-          <div className="text-4xl mb-2">🪑</div>
+          <div className="mb-2 flex justify-center text-white/70"><Armchair size={36} aria-hidden /></div>
           <p className="font-serif font-bold text-base">Masa boş</p>
           <p className="text-xs mt-1 text-white/65">
             Sipariş alarak yeni adisyon açın.
@@ -408,7 +412,7 @@ export function WaiterTableDetailPage() {
         <button
           onClick={() => navigate(`/garson/masa/${id}/menu`)}
           className="btn-accent w-full py-3.5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 spring-btn">
-          <i className="fa-solid fa-plus" /> Sipariş Al
+          <Plus size={14} aria-hidden /> Sipariş Al
         </button>
       </div>
 
@@ -418,8 +422,8 @@ export function WaiterTableDetailPage() {
             style={{ maxHeight: '90vh' }}>
             <div className="w-10 h-1 bg-white/40 rounded-full mx-auto mt-3" />
             <div className="px-5 pt-3 pb-3 border-b border-white/20">
-              <h3 className="font-serif font-bold text-lg" style={{ color: 'var(--danger)' }}>
-                ❌ Sipariş İptal — {cancelModal.orderLabel}
+              <h3 className="font-serif font-bold text-lg flex items-center gap-2" style={{ color: 'var(--danger)' }}>
+                <XCircle size={18} aria-hidden /> Sipariş İptal — {cancelModal.orderLabel}
               </h3>
               <p className="text-xs mt-1 text-white/65">
                 İptal sebebini seç. Bu işlem loglanır.
