@@ -145,14 +145,19 @@ export function PublicMenuPage() {
     return () => { mounted = false; };
   }, [slug, tableId]);
 
-  // İşletmenin tema rengi → vurgu rengi (--accent). Diğer tonlar index.css'te bundan türetilir.
-  // Sadece geçerli hex kabul edilir; sayfadan çıkınca varsayılan (turuncu) geri gelir.
+  // İşletmenin tema rengi yalnızca müşteri menüsünde: vurgular (--accent) + birincil butonlar (--business-accent).
+  // Diğer tonlar index.css'te bundan türetilir. Sadece geçerli hex kabul edilir;
+  // sayfadan çıkınca sistem renkleri (petrol/altın) geri gelir.
   const accentColor = menu?.business.theme_color?.trim();
   useEffect(() => {
     if (!accentColor || !/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(accentColor)) return;
     const root = document.documentElement;
     root.style.setProperty('--accent', accentColor);
-    return () => { root.style.removeProperty('--accent'); };
+    root.style.setProperty('--business-accent', accentColor);
+    return () => {
+      root.style.removeProperty('--accent');
+      root.style.removeProperty('--business-accent');
+    };
   }, [accentColor]);
 
   const activeCategory = useMemo<PublicMenuCategory | null>(() => {

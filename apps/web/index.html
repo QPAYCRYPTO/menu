@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#14110F" />
+    <meta name="theme-color" content="#faf9f6" />
+    <!-- Tema açılış betiği: CSS'ten ve React'ten ÖNCE çalışır → açık/koyu arasında yanıp sönme olmaz.
+         Öncelik: kaydedilmiş tercih (localStorage) > cihazın sistem ayarı. Mantık src/lib/theme.ts ile aynı. -->
+    <script>
+      (function () {
+        var d = document.documentElement, t = 'light';
+        try {
+          var s = localStorage.getItem('atlasqr:theme');
+          t = s === 'light' || s === 'dark' ? s
+            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        } catch (e) {}
+        d.setAttribute('data-theme', t);
+        d.style.colorScheme = t;
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', t === 'dark' ? '#0e1a20' : '#faf9f6');
+      })();
+    </script>
     <title>Menü</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
