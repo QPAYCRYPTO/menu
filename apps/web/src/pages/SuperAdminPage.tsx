@@ -7,6 +7,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useThemedPage } from '../lib/theme';
 import {
   Business,
   listBusinesses,
@@ -24,12 +26,16 @@ import {
 } from 'lucide-react';
 
 // Warm glass rozet/buton stilleri (semantik tokenlar)
-const BADGE_SUCCESS: React.CSSProperties = { background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid rgba(52,211,153,0.4)' };
-const BADGE_WARNING: React.CSSProperties = { background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid rgba(251,191,36,0.4)' };
-const BADGE_DANGER: React.CSSProperties = { background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(251,113,133,0.4)' };
-const BADGE_NEUTRAL: React.CSSProperties = { background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.22)' };
+// Durum rozetleri (gece/gündüz uyumlu)
+const BADGE_SUCCESS: React.CSSProperties = { background: 'var(--state-ok-bg)', color: 'var(--state-ok)', border: '1px solid transparent' };
+const BADGE_WARNING: React.CSSProperties = { background: 'var(--state-warn-bg)', color: 'var(--state-warn)', border: '1px solid transparent' };
+const BADGE_DANGER: React.CSSProperties = { background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1px solid transparent' };
+// Modül (feature flag) düğmeleri: açık = petrol dolgu, kapalı = yüzey + çerçeve
+const FLAG_ON: React.CSSProperties = { background: 'var(--brand)', color: 'var(--on-brand)', border: '1px solid transparent' };
+const FLAG_OFF: React.CSSProperties = { background: 'var(--surface)', color: 'var(--ink-muted)', border: '1px solid var(--line)' };
 
 export function SuperAdminPage() {
+  useThemedPage();
   const { accessToken, role, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -171,48 +177,49 @@ export function SuperAdminPage() {
   }
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen bg-page text-ink">
       <Toast state={toast} />
 
       {/* HEADER — Responsive */}
-      <div className="sticky top-0 z-30 px-3 md:px-6 pt-3">
-        <div className="glass-panel max-w-7xl mx-auto rounded-3xl px-4 md:px-6 py-3 md:py-4">
+      <div className="sticky top-0 z-30 px-3 md:px-6 pt-3 bg-page">
+        <div className="ui-card max-w-7xl mx-auto rounded-3xl px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Logo + başlık */}
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/60"
-                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}>
-                <Building2 className="w-4 h-4 md:w-[18px] md:h-[18px] text-white" />
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-brand text-on-brand">
+                <Building2 className="w-4 h-4 md:w-[18px] md:h-[18px]" />
               </div>
               <div className="min-w-0">
-                <h1 className="font-serif font-bold text-sm md:text-base truncate text-white">
+                <h1 className="font-serif font-bold text-base md:text-xl truncate text-ink">
                   Atlas Super Admin
                 </h1>
-                <p className="text-xs hidden sm:block text-white/65">{businesses.length} işletme kayıtlı</p>
+                <p className="ui-eyebrow hidden sm:block">{businesses.length} işletme kayıtlı</p>
               </div>
             </div>
 
             {/* Desktop butonlar */}
             <div className="hidden md:flex gap-2 flex-shrink-0">
-              <button onClick={loadBusinesses} className="glass-pill px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5"><RefreshCw size={14} />Yenile</button>
+              <ThemeToggle />
+              <button onClick={loadBusinesses} className="btn-outline px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5"><RefreshCw size={14} />Yenile</button>
               <button onClick={() => navigate('/superadmin/errors')} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5" style={BADGE_DANGER}><TriangleAlert size={14} />Hatalar</button>
               <button onClick={() => setShowResetModal(true)} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn inline-flex items-center gap-1.5" style={BADGE_WARNING}><KeyRound size={14} />Admin Şifre</button>
-              <button onClick={() => setShowNewModal(true)} className="btn-accent px-3 py-2 rounded-xl text-sm font-bold spring-btn">+ Yeni</button>
+              <button onClick={() => setShowNewModal(true)} className="btn-primary px-3 py-2 rounded-xl text-sm font-bold spring-btn">+ Yeni</button>
               <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 rounded-xl text-sm font-semibold spring-btn" style={BADGE_DANGER}>Çıkış</button>
             </div>
 
-            {/* Mobil hamburger */}
+            {/* Mobil: tema + hamburger */}
+            <div className="md:hidden flex items-center gap-2"><ThemeToggle /></div>
             <button onClick={() => setMenuOpen(!menuOpen)}
-              className="glass-pill md:hidden w-9 h-9 rounded-xl flex items-center justify-center spring-btn" aria-label="Menü">
+              className="ui-chip md:hidden w-9 h-9 rounded-xl flex items-center justify-center spring-btn" aria-label="Menü">
               {menuOpen ? <X size={14} /> : <Menu size={14} />}
             </button>
           </div>
 
           {/* Mobil menu drawer */}
           {menuOpen && (
-            <div className="md:hidden mt-3 pt-3 border-t border-white/20 flex flex-col gap-2 fade-enter">
+            <div className="md:hidden mt-3 pt-3 border-t border-line flex flex-col gap-2 fade-enter">
               <button onClick={() => { loadBusinesses(); setMenuOpen(false); }}
-                className="glass-pill px-3 py-2.5 rounded-xl text-sm font-semibold text-left flex items-center gap-2">
+                className="ui-chip px-3 py-2.5 rounded-xl text-sm font-semibold text-left flex items-center gap-2">
                 <RefreshCw size={14} />Yenile
               </button>
               <button onClick={() => { navigate('/superadmin/errors'); setMenuOpen(false); }}
@@ -224,7 +231,7 @@ export function SuperAdminPage() {
                 <KeyRound size={14} />Admin Şifre Sıfırla
               </button>
               <button onClick={() => { setShowNewModal(true); setMenuOpen(false); }}
-                className="btn-accent px-3 py-2.5 rounded-xl text-sm font-bold text-left">
+                className="btn-primary px-3 py-2.5 rounded-xl text-sm font-bold text-left">
                 + Yeni İşletme
               </button>
               <button onClick={() => { logout(); navigate('/login'); }}
@@ -240,20 +247,20 @@ export function SuperAdminPage() {
       <div className="max-w-7xl mx-auto px-3 md:px-6 pt-4 md:pt-6">
         <div className="grid gap-3 mb-4 md:mb-6"
           style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
-            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Toplam İşletme</div>
-            <div className="font-serif text-xl md:text-2xl font-bold text-white">{businesses.length}</div>
+          <div className="ui-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-ink-muted">Toplam İşletme</div>
+            <div className="font-serif text-xl md:text-2xl font-bold text-ink">{businesses.length}</div>
           </div>
-          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
-            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Aktif</div>
-            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--success)' }}>{businesses.filter(b => b.is_active).length}</div>
+          <div className="ui-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-ink-muted">Aktif</div>
+            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--state-ok)' }}>{businesses.filter(b => b.is_active).length}</div>
           </div>
-          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
-            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Pasif</div>
-            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--danger)' }}>{businesses.filter(b => !b.is_active).length}</div>
+          <div className="ui-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-ink-muted">Pasif</div>
+            <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--state-danger)' }}>{businesses.filter(b => !b.is_active).length}</div>
           </div>
-          <div className="glass-card rounded-2xl md:rounded-3xl p-3 md:p-4">
-            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-white/70">Toplam Owner</div>
+          <div className="ui-card rounded-2xl md:rounded-3xl p-3 md:p-4">
+            <div className="text-[11px] font-semibold mb-1 uppercase tracking-wider text-ink-muted">Toplam Owner</div>
             <div className="font-serif text-xl md:text-2xl font-bold" style={{ color: 'var(--accent)' }}>
               {businesses.reduce((sum, b) => sum + Number(b.owner_count), 0)}
             </div>
@@ -261,14 +268,14 @@ export function SuperAdminPage() {
         </div>
 
         <div className="flex items-center gap-3 mb-3 px-1">
-          <h2 className="font-serif font-bold text-base text-white flex items-center gap-2"><ClipboardList size={16} />İşletmeler</h2>
-          <div className="flex-1 h-px bg-white/20" />
+          <h2 className="font-serif font-bold text-base text-ink flex items-center gap-2"><ClipboardList size={16} />İşletmeler</h2>
+          <div className="flex-1 h-px bg-surface-2" />
         </div>
 
         {/* DESKTOP — Tablo görünümü */}
-        <div className="hidden lg:block glass-dark rounded-3xl overflow-hidden mb-8">
-          <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-white/60 border-b border-white/15"
-            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: 'rgba(255,255,255,0.06)' }}>
+        <div className="hidden lg:block ui-card rounded-3xl overflow-hidden mb-8">
+          <div className="grid items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted border-b border-line"
+            style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: 'var(--surface-2)' }}>
             <div>İşletme</div><div>Slug</div><div>Admin E-posta</div>
             <div className="text-center">Owner</div><div className="text-center">Kat.</div><div className="text-center">Ürün</div>
             <div className="text-center">Garson</div>
@@ -277,23 +284,23 @@ export function SuperAdminPage() {
           </div>
 
           {businesses.map(b => (
-            <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm border-b border-white/10 hover:bg-white/5 transition-colors"
-              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: b.is_active ? undefined : 'rgba(244,63,94,0.08)' }}>
+            <div key={b.id} className="grid items-center gap-3 px-4 py-3 text-sm border-b border-line bg-surface hover:bg-surface-2 transition-colors"
+              style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: b.is_active ? undefined : 'var(--state-danger-bg)' }}>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                  style={{ background: b.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={b.is_active ? { background: 'var(--brand)', color: 'var(--on-brand)' } : { background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
                   {b.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div className="font-semibold truncate text-white">{b.name}</div>
-                  <div className="text-xs" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}><span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 align-middle" />{b.is_active ? 'Aktif' : 'Pasif'}</div>
+                  <div className="font-semibold truncate text-ink">{b.name}</div>
+                  <div className="text-xs" style={{ color: b.is_active ? 'var(--state-ok)' : 'var(--state-danger)' }}><span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 align-middle" />{b.is_active ? 'Aktif' : 'Pasif'}</div>
                 </div>
               </div>
               <div>
                 <a href={`https://www.atlasqrmenu.com/m/${b.slug}`} target="_blank" rel="noreferrer"
-                  className="text-xs font-mono truncate block text-amber-300 hover:text-amber-200">/{b.slug}</a>
+                  className="text-xs font-mono truncate block text-accent hover:text-accent">/{b.slug}</a>
               </div>
-              <div className="text-xs truncate text-white/65">{b.admin_email || '-'}</div>
+              <div className="text-xs truncate text-ink-muted">{b.admin_email || '-'}</div>
 
               <div className="text-center">
                 <button onClick={() => setOwnerModalBusiness(b)}
@@ -304,13 +311,13 @@ export function SuperAdminPage() {
                 </button>
               </div>
 
-              <div className="text-center font-semibold text-white">{b.category_count}</div>
-              <div className="text-center font-semibold text-white">{b.product_count}</div>
+              <div className="text-center font-semibold text-ink">{b.category_count}</div>
+              <div className="text-center font-semibold text-ink">{b.product_count}</div>
 
               <div className="text-center">
                 <button onClick={() => toggleWaiter(b)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn inline-flex items-center gap-1"
-                  style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}
+                  style={b.waiter_module_enabled ? FLAG_ON : FLAG_OFF}
                   title={b.waiter_module_enabled ? 'Garson modülü AÇIK' : 'Garson modülü KAPALI'}>
                   {b.waiter_module_enabled ? <><CircleCheck size={12} />Açık</> : <><Circle size={12} />Kapalı</>}
                 </button>
@@ -319,7 +326,7 @@ export function SuperAdminPage() {
               <div className="text-center">
                 <button onClick={() => toggleKitchen(b)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn inline-flex items-center gap-1"
-                  style={b.kitchen_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}
+                  style={b.kitchen_module_enabled ? FLAG_ON : FLAG_OFF}
                   title={b.kitchen_module_enabled ? 'Mutfak modülü AÇIK' : 'Mutfak modülü KAPALI'}>
                   {b.kitchen_module_enabled ? <><CircleCheck size={12} />Açık</> : <><Circle size={12} />Kapalı</>}
                 </button>
@@ -336,8 +343,8 @@ export function SuperAdminPage() {
 
           {businesses.length === 0 && (
             <div className="text-center py-16">
-              <div className="mb-3 flex justify-center"><Building2 size={36} className="text-white/70" /></div>
-              <p className="text-sm text-white/60">Henüz işletme yok</p>
+              <div className="mb-3 flex justify-center"><Building2 size={36} className="text-ink-muted" /></div>
+              <p className="text-sm text-ink-muted">Henüz işletme yok</p>
             </div>
           )}
         </div>
@@ -345,33 +352,33 @@ export function SuperAdminPage() {
         {/* MOBİL & TABLET — Kart görünümü */}
         <div className="lg:hidden flex flex-col gap-3 mb-8">
           {businesses.length === 0 && (
-            <div className="glass-card text-center py-16 rounded-3xl">
-              <div className="mb-3 flex justify-center"><Building2 size={36} className="text-white/70" /></div>
-              <p className="text-sm text-white/60">Henüz işletme yok</p>
+            <div className="ui-card text-center py-16 rounded-3xl">
+              <div className="mb-3 flex justify-center"><Building2 size={36} className="text-ink-muted" /></div>
+              <p className="text-sm text-ink-muted">Henüz işletme yok</p>
             </div>
           )}
 
           {businesses.map(b => (
-            <div key={b.id} className="glass-card rounded-3xl p-4"
-              style={b.is_active ? undefined : { background: 'rgba(244,63,94,0.14)', borderColor: 'rgba(251,113,133,0.45)' }}>
+            <div key={b.id} className="ui-card rounded-3xl p-4"
+              style={b.is_active ? undefined : { background: 'var(--state-danger-bg)', borderColor: 'var(--state-danger)' }}>
 
               {/* Üst: Avatar + İsim + Durum */}
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                  style={{ background: b.is_active ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.18)' }}>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+                  style={b.is_active ? { background: 'var(--brand)', color: 'var(--on-brand)' } : { background: 'var(--surface-2)', color: 'var(--ink-muted)' }}>
                   {b.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-serif font-bold text-sm text-white">{b.name}</div>
-                  <div className="text-xs mt-0.5" style={{ color: b.is_active ? 'var(--success)' : 'var(--danger)' }}>
+                  <div className="font-serif font-bold text-sm text-ink">{b.name}</div>
+                  <div className="text-xs mt-0.5" style={{ color: b.is_active ? 'var(--state-ok)' : 'var(--state-danger)' }}>
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 align-middle" />{b.is_active ? 'Aktif' : 'Pasif'}
                   </div>
                   <a href={`https://www.atlasqrmenu.com/m/${b.slug}`} target="_blank" rel="noreferrer"
-                    className="text-xs font-mono block mt-1 truncate text-amber-300">
+                    className="text-xs font-mono block mt-1 truncate text-accent">
                     /{b.slug}
                   </a>
                   {b.admin_email && (
-                    <div className="text-xs mt-1 truncate text-white/65"><Mail size={12} className="inline-block align-[-2px] mr-1" />{b.admin_email}</div>
+                    <div className="text-xs mt-1 truncate text-ink-muted"><Mail size={12} className="inline-block align-[-2px] mr-1" />{b.admin_email}</div>
                   )}
                 </div>
               </div>
@@ -384,11 +391,11 @@ export function SuperAdminPage() {
                   <span className="inline-flex items-center gap-1"><User size={12} />{b.owner_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Owner</span>
                 </button>
-                <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-black/25 border border-white/15 text-white">
+                <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-surface-2 border border-line text-ink">
                   <span className="inline-flex items-center gap-1"><Folder size={12} />{b.category_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Kategori</span>
                 </div>
-                <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-black/25 border border-white/15 text-white">
+                <div className="px-2 py-2 rounded-xl text-xs font-bold flex flex-col items-center bg-surface-2 border border-line text-ink">
                   <span className="inline-flex items-center gap-1"><ShoppingCart size={12} />{b.product_count}</span>
                   <span className="text-[10px] font-medium opacity-75">Ürün</span>
                 </div>
@@ -398,12 +405,12 @@ export function SuperAdminPage() {
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => toggleWaiter(b)}
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"
-                  style={b.waiter_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}>
+                  style={b.waiter_module_enabled ? FLAG_ON : FLAG_OFF}>
                   {b.waiter_module_enabled ? <><CircleCheck size={12} />Garson Açık</> : <><Circle size={12} />Garson Kapalı</>}
                 </button>
                 <button onClick={() => toggleKitchen(b)}
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"
-                  style={b.kitchen_module_enabled ? BADGE_SUCCESS : BADGE_NEUTRAL}>
+                  style={b.kitchen_module_enabled ? FLAG_ON : FLAG_OFF}>
                   {b.kitchen_module_enabled ? <><CircleCheck size={12} />Mutfak Açık</> : <><Circle size={12} />Mutfak Kapalı</>}
                 </button>
                 <button onClick={() => toggleActive(b)}
@@ -419,57 +426,57 @@ export function SuperAdminPage() {
 
       {/* YENİ İŞLETME MODAL — mobile uyumlu */}
       {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-lg rounded-3xl overflow-hidden max-h-[95vh] flex flex-col">
-            <div className="px-5 md:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-white/15">
-              <h2 className="font-serif font-bold text-lg text-white">Yeni İşletme Ekle</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden max-h-[95vh] flex flex-col">
+            <div className="px-5 md:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-line">
+              <h2 className="font-serif font-bold text-lg text-ink">Yeni İşletme Ekle</h2>
               <button onClick={() => { setShowNewModal(false); setFieldErrors({}); }}
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
                 <X size={12} />
               </button>
             </div>
             <div className="p-5 md:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">İşletme Adı</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">İşletme Adı</label>
                 <input value={newForm.business_name} onChange={(e) => setNewForm(p => ({ ...p, business_name: e.target.value }))}
-                  placeholder="Örn: Harika Kafe" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm" />
+                  placeholder="Örn: Harika Kafe" className="ui-input w-full px-4 py-2.5 rounded-xl text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Slug (Menü URL'i)</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Slug (Menü URL'i)</label>
                 <input value={newForm.slug} onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="Örn: harika-kafe" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
-                  style={fieldErrors.slug ? { borderColor: 'var(--danger)' } : undefined} />
-                {fieldErrors.slug && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />{fieldErrors.slug}</p>}
-                {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--success)' }}><CircleCheck size={12} />Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
+                  placeholder="Örn: harika-kafe" className="ui-input w-full px-4 py-2.5 rounded-xl text-sm"
+                  style={fieldErrors.slug ? { borderColor: 'var(--state-danger)' } : undefined} />
+                {fieldErrors.slug && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--state-danger)' }}><TriangleAlert size={12} />{fieldErrors.slug}</p>}
+                {newForm.slug && !fieldErrors.slug && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--state-ok)' }}><CircleCheck size={12} />Menü: <span className="font-mono">/m/{newForm.slug}</span></p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Admin E-posta</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Admin E-posta</label>
                 <input type="email" value={newForm.email} onChange={(e) => setNewForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="admin@kafe.com" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
-                  style={fieldErrors.email ? { borderColor: 'var(--danger)' } : undefined} />
-                {fieldErrors.email && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />{fieldErrors.email}</p>}
+                  placeholder="admin@kafe.com" className="ui-input w-full px-4 py-2.5 rounded-xl text-sm"
+                  style={fieldErrors.email ? { borderColor: 'var(--state-danger)' } : undefined} />
+                {fieldErrors.email && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--state-danger)' }}><TriangleAlert size={12} />{fieldErrors.email}</p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Şifre</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Şifre</label>
                 <div style={{ position: 'relative' }}>
                   <input type={showNewPassword ? 'text' : 'password'} value={newForm.password}
                     onChange={(e) => setNewForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="Min 8 karakter" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
-                    style={{ ...(fieldErrors.password ? { borderColor: 'var(--danger)' } : {}), paddingRight: 44, boxSizing: 'border-box' }} />
+                    placeholder="Min 8 karakter" className="ui-input w-full px-4 py-2.5 rounded-xl text-sm"
+                    style={{ ...(fieldErrors.password ? { borderColor: 'var(--state-danger)' } : {}), paddingRight: 44, boxSizing: 'border-box' }} />
                   <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
-                    aria-label={showNewPassword ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-white/70 hover:text-white"
+                    aria-label={showNewPassword ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-ink-muted hover:text-ink"
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>
                     {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {fieldErrors.password && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--danger)' }}><TriangleAlert size={12} />{fieldErrors.password}</p>}
+                {fieldErrors.password && <p className="text-xs mt-1 font-medium flex items-center gap-1" style={{ color: 'var(--state-danger)' }}><TriangleAlert size={12} />{fieldErrors.password}</p>}
               </div>
             </div>
-            <div className="px-5 md:px-6 py-4 flex gap-3 flex-shrink-0 border-t border-white/15">
+            <div className="px-5 md:px-6 py-4 flex gap-3 flex-shrink-0 border-t border-line">
               <button onClick={() => { setShowNewModal(false); setFieldErrors({}); }}
-                className="glass-pill flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">İptal</button>
+                className="ui-chip flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">İptal</button>
               <button onClick={createBusiness} disabled={loading}
-                className="btn-accent flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn">
+                className="btn-primary flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn">
                 {loading ? 'Oluşturuluyor...' : 'Oluştur'}
               </button>
             </div>
@@ -479,44 +486,44 @@ export function SuperAdminPage() {
 
       {/* ADMIN ŞİFRE SIFIRLA MODAL — mobile uyumlu */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/50 backdrop-blur-md fade-enter">
-          <div className="glass-dark w-full max-w-md rounded-3xl overflow-hidden">
-            <div className="px-5 md:px-6 py-4 flex items-center justify-between border-b border-white/15">
-              <h2 className="font-serif font-bold text-lg text-white flex items-center gap-2"><KeyRound size={18} />Admin Şifre Sıfırla</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 ui-scrim fade-enter">
+          <div className="ui-card w-full max-w-md rounded-3xl overflow-hidden">
+            <div className="px-5 md:px-6 py-4 flex items-center justify-between border-b border-line">
+              <h2 className="font-serif font-bold text-lg text-ink flex items-center gap-2"><KeyRound size={18} />Admin Şifre Sıfırla</h2>
               <button onClick={() => setShowResetModal(false)}
-                className="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
+                className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn" aria-label="Kapat">
                 <X size={12} />
               </button>
             </div>
             <div className="p-5 md:p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">İşletme Seç</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">İşletme Seç</label>
                 <select value={resetForm.businessId} onChange={(e) => setResetForm(p => ({ ...p, businessId: e.target.value }))}
-                  className="glass-input w-full px-4 py-2.5 rounded-xl text-sm">
+                  className="ui-input w-full px-4 py-2.5 rounded-xl text-sm">
                   <option value="">Seçin</option>
                   {businesses.map(b => <option key={b.id} value={b.id}>{b.name} ({b.admin_email})</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-white/70">Yeni Şifre</label>
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Yeni Şifre</label>
                 <div style={{ position: 'relative' }}>
                   <input type={showResetPassword ? 'text' : 'password'} value={resetForm.new_password}
                     onChange={(e) => setResetForm(p => ({ ...p, new_password: e.target.value }))}
-                    placeholder="Min 8 karakter" className="glass-input w-full px-4 py-2.5 rounded-xl text-sm"
+                    placeholder="Min 8 karakter" className="ui-input w-full px-4 py-2.5 rounded-xl text-sm"
                     style={{ paddingRight: 44, boxSizing: 'border-box' }} />
                   <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
-                    aria-label={showResetPassword ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-white/70 hover:text-white"
+                    aria-label={showResetPassword ? 'Şifreyi gizle' : 'Şifreyi göster'} className="flex items-center text-ink-muted hover:text-ink"
                     style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 18 }}>
                     {showResetPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
             </div>
-            <div className="px-5 md:px-6 py-4 flex gap-3 border-t border-white/15">
+            <div className="px-5 md:px-6 py-4 flex gap-3 border-t border-line">
               <button onClick={() => setShowResetModal(false)}
-                className="glass-pill flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">İptal</button>
+                className="ui-chip flex-1 py-2.5 rounded-xl text-sm font-semibold spring-btn">İptal</button>
               <button onClick={resetAdminPassword}
-                className="btn-accent flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn">Şifreyi Güncelle</button>
+                className="btn-primary flex-1 py-2.5 rounded-xl text-sm font-bold spring-btn">Şifreyi Güncelle</button>
             </div>
           </div>
         </div>

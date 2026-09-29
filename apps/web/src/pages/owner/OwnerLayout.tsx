@@ -39,7 +39,7 @@ export function OwnerLayout() {
                 <h1 className="font-serif font-bold text-xl truncate text-ink">
                   {businessName || 'Yönetim Paneli'}
                 </h1>
-                <p className="ui-eyebrow">Patron · Raporlar & Analiz</p>
+                <p className="ui-eyebrow truncate"><span className="sm:hidden">Patron</span><span className="hidden sm:inline">Patron · Raporlar & Analiz</span></p>
               </div>
             </div>
 
