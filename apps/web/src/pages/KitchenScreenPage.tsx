@@ -2,9 +2,13 @@
 // Mutfak ekranı — /mutfak?t=<token>. Şifre yok; link token'ı yetkidir.
 // Bekleyen + hazırlanan siparişleri gösterir, "Hazırlandı" ile garsona canlı bildirim gider.
 // Canlı akış (SSE) + yeni siparişte ses; bağlantı koparsa "Çevrimdışı" rozeti, dönünce yeniden yükler.
+// Atölye tasarımı: gece/gündüz temasına uyar (bg-page / bg-surface / text-ink), başlıkta güneş/ay düğmesi.
+// Durum rozetleri diğer ekranlarla aynı: Bekliyor amber (--state-warn), Hazırlanıyor mavi (--state-info).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCheck, ChefHat, Clock, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useThemedPage } from '../lib/theme';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
@@ -70,6 +74,7 @@ export function KitchenScreenPage() {
   const [notice, setNotice] = useState('');
   const [streamKey, setStreamKey] = useState(0);
   const reloadTimer = useRef<number | null>(null);
+  useThemedPage();
 
   const load = useCallback(async (): Promise<LoadResult> => {
     if (!token) return 'invalid';
@@ -221,13 +226,14 @@ export function KitchenScreenPage() {
   // ── Geçersiz link ─────────────────────────────────────────────────────────
   if (invalid) {
     return (
-      <div className="fixed inset-0 bg-slate-950 text-white flex items-center justify-center px-6">
-        <div className="max-w-md text-center">
-          <div className="w-20 h-20 rounded-3xl bg-red-600/20 border border-red-500/50 flex items-center justify-center mx-auto mb-5">
-            <TriangleAlert size={38} className="text-red-400" />
+      <div className="fixed inset-0 bg-page text-ink flex items-center justify-center px-6">
+        <div className="absolute top-4 right-4"><ThemeToggle large size={20} /></div>
+        <div className="ui-card rounded-3xl max-w-md w-full text-center px-8 py-10">
+          <div className="w-20 h-20 rounded-3xl bg-state-danger-bg flex items-center justify-center mx-auto mb-5">
+            <TriangleAlert size={38} className="text-state-danger" />
           </div>
-          <h1 className="text-3xl font-black mb-3">Geçersiz link</h1>
-          <p className="text-xl text-slate-300">Geçersiz link, yöneticinizle iletişime geçin.</p>
+          <h1 className="font-serif text-3xl font-bold mb-3">Geçersiz link</h1>
+          <p className="text-xl text-ink-muted">Geçersiz link, yöneticinizle iletişime geçin.</p>
         </div>
       </div>
     );
@@ -235,32 +241,32 @@ export function KitchenScreenPage() {
 
   if (state === 'loading') {
     return (
-      <div className="fixed inset-0 bg-slate-950 text-white flex items-center justify-center">
-        <div className="w-10 h-10 rounded-full border-4 border-slate-700 border-t-orange-500 animate-spin" />
+      <div className="fixed inset-0 bg-page text-ink flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-4 border-line border-t-[var(--accent)] animate-spin" />
       </div>
     );
   }
 
   // ── Mutfak görünümü ───────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 overflow-y-auto bg-slate-950 text-white" onPointerDown={soundOn ? undefined : enableSound}>
-      <header className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center shrink-0">
+    <div className="fixed inset-0 overflow-y-auto bg-page text-ink" onPointerDown={soundOn ? undefined : enableSound}>
+      <header className="sticky top-0 z-20 bg-surface border-b border-line px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div className="w-12 h-12 rounded-2xl bg-brand text-on-brand flex items-center justify-center shrink-0">
           <ChefHat size={26} />
         </div>
         <div className="min-w-0">
-          <div className="text-2xl font-black leading-tight">Mutfak</div>
-          <div className="text-sm text-slate-400 truncate">{businessName}</div>
+          <div className="font-serif text-2xl font-bold leading-tight">Mutfak</div>
+          <div className="ui-eyebrow truncate">{businessName}</div>
         </div>
-        <div className="px-4 h-12 rounded-2xl bg-slate-800 flex items-center gap-2 text-xl font-black">
+        <div className="px-4 h-12 rounded-2xl bg-surface-2 border border-line flex items-center gap-2 text-xl font-black">
           <span className="tabular-nums">{orders.length}</span>
-          <span className="text-base font-bold text-slate-300">sipariş</span>
+          <span className="text-base font-bold text-ink-muted">sipariş</span>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
           {!soundOn && (
             <button onClick={enableSound}
-              className="h-12 px-4 rounded-2xl bg-slate-800 border border-slate-600 text-base font-bold flex items-center gap-2">
+              className="btn-outline h-12 px-4 rounded-2xl text-base font-bold flex items-center gap-2">
               <Volume2 size={20} /> Sesi aç
             </button>
           )}
@@ -274,22 +280,23 @@ export function KitchenScreenPage() {
               )}
             </span>
           ) : (
-            <span className="h-12 px-4 rounded-2xl bg-emerald-900/60 text-emerald-300 text-base font-bold flex items-center gap-2" role="status">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Canlı
+            <span className="h-12 px-4 rounded-2xl bg-state-ok-bg text-state-ok text-base font-bold flex items-center gap-2" role="status">
+              <span className="w-2.5 h-2.5 rounded-full bg-current" /> Canlı
             </span>
           )}
+          <ThemeToggle large size={20} />
         </div>
       </header>
 
       {notice && (
-        <div className="mx-4 mt-3 rounded-2xl bg-red-600 px-4 py-3 text-lg font-bold" role="alert">{notice}</div>
+        <div className="mx-4 mt-3 rounded-2xl bg-red-600 text-white px-4 py-3 text-lg font-bold" role="alert">{notice}</div>
       )}
 
       <main className="p-4">
         {orders.length === 0 ? (
-          <div className="py-24 flex flex-col items-center text-slate-500">
-            <UtensilsCrossed size={64} />
-            <p className="text-3xl font-bold mt-4">Bekleyen sipariş yok</p>
+          <div className="py-24 flex flex-col items-center text-ink-muted">
+            <UtensilsCrossed size={64} className="text-accent" />
+            <p className="font-serif text-3xl font-bold mt-4 text-ink">Bekleyen sipariş yok</p>
             <p className="text-lg mt-1">Yeni sipariş gelince burada anında görünür.</p>
           </div>
         ) : (
@@ -299,25 +306,28 @@ export function KitchenScreenPage() {
               const late = mins >= LATE_MINUTES;
               return (
                 <article key={order.id}
-                  className={`rounded-3xl border-2 bg-slate-900 flex flex-col overflow-hidden ${
-                    late ? 'border-red-500' : order.status === 'preparing' ? 'border-sky-500' : 'border-slate-700'
-                  }`}>
-                  <div className={`px-4 py-3 flex items-start justify-between gap-3 ${late ? 'bg-red-600' : 'bg-slate-800'}`}>
+                  className="rounded-3xl border-2 bg-surface flex flex-col overflow-hidden shadow-[var(--shadow)]"
+                  style={{ borderColor: late ? 'var(--state-danger)' : order.status === 'preparing' ? 'var(--state-info)' : 'var(--line)' }}>
+                  <div className={`px-4 py-3 flex items-start justify-between gap-3 border-b border-line ${late ? 'bg-state-danger-bg' : 'bg-surface-2'}`}>
                     <div className="min-w-0">
-                      <div className="text-4xl font-black leading-none truncate">{order.table_name}</div>
-                      <div className="text-lg font-bold text-white/70 mt-1">
-                        #{order.order_no || '—'}
-                        {order.status === 'preparing' && <span className="ml-2 text-sky-300">· Hazırlanıyor</span>}
+                      <div className="font-serif text-4xl font-bold leading-none truncate">{order.table_name}</div>
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-lg font-bold text-ink-muted">#{order.order_no || '—'}</span>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${
+                          order.status === 'preparing' ? 'bg-state-info-bg text-state-info' : 'bg-state-warn-bg text-state-warn'}`}>
+                          <span className="w-2 h-2 rounded-full bg-current" />
+                          {order.status === 'preparing' ? 'Hazırlanıyor' : 'Bekliyor'}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xl font-black shrink-0 tabular-nums">
+                    <div className={`flex items-center gap-1.5 text-xl font-black shrink-0 tabular-nums ${late ? 'text-state-danger' : ''}`}>
                       <Clock size={20} /> {mins === 0 ? 'şimdi' : `${mins} dk`}
                     </div>
                   </div>
 
                   {order.note && order.note.trim() && (
-                    <div className="mx-4 mt-4 rounded-2xl bg-yellow-300 text-slate-950 px-4 py-3">
-                      <div className="text-xs font-black tracking-widest">NOT</div>
+                    <div className="mx-4 mt-4 rounded-2xl text-ink px-4 py-3" style={{ background: 'var(--note-bg)', borderLeft: '6px solid var(--state-warn)' }}>
+                      <div className="text-xs font-black tracking-widest text-ink opacity-70">NOT</div>
                       <div className="text-2xl font-black leading-snug break-words">{order.note}</div>
                     </div>
                   )}
@@ -326,11 +336,11 @@ export function KitchenScreenPage() {
                     {order.items.map(item => (
                       <li key={item.id}>
                         <div className="flex items-baseline gap-3">
-                          <span className="text-3xl font-black text-orange-400 tabular-nums min-w-[3rem]">{item.quantity}×</span>
+                          <span className="text-3xl font-black text-accent tabular-nums min-w-[3rem]">{item.quantity}×</span>
                           <span className="text-2xl font-bold leading-tight break-words">{item.product_name}</span>
                         </div>
                         {item.note && item.note.trim() && (
-                          <div className="mt-1.5 ml-[3.75rem] rounded-xl bg-yellow-300 text-slate-950 px-3 py-2 text-xl font-black break-words">
+                          <div className="mt-1.5 ml-[3.75rem] rounded-xl text-ink px-3 py-2 text-xl font-black break-words" style={{ background: 'var(--note-bg)', borderLeft: '5px solid var(--state-warn)' }}>
                             {item.note}
                           </div>
                         )}
@@ -340,7 +350,7 @@ export function KitchenScreenPage() {
 
                   <div className="p-3 pt-0">
                     <button onClick={() => markReady(order)} disabled={busyIds.has(order.id)}
-                      className="w-full h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-2xl font-black flex items-center justify-center gap-2 disabled:opacity-50">
+                      className="w-full h-16 rounded-2xl bg-brand text-on-brand hover:opacity-90 active:opacity-80 text-2xl font-black flex items-center justify-center gap-2 disabled:opacity-50 spring-btn">
                       <CheckCheck size={30} /> Hazırlandı
                     </button>
                   </div>

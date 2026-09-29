@@ -90,6 +90,8 @@
   --state-danger-bg: #fde9e6;
   --state-info: #456c9b;
   --state-info-bg: #eaf1fb;
+  /* Öne çıkması gereken notlar (mutfak): gündüz yumuşak sarı, gece daha doygun (koyu zeminde sönük kalmasın) */
+  --note-bg: var(--state-warn-bg);
 
   /* Vurgunun türevleri (işletme rengi gelince hepsi kendiliğinden uyar) */
   --accent-deep: color-mix(in srgb, var(--accent) 82%, #000);
@@ -124,6 +126,7 @@ html[data-theme="dark"] {
   --state-danger-bg: rgba(236, 138, 130, 0.14);
   --state-info: #8fb3dd;
   --state-info-bg: rgba(143, 179, 221, 0.14);
+  --note-bg: color-mix(in srgb, var(--state-warn) 32%, var(--surface));
 
   color-scheme: dark;
 }
