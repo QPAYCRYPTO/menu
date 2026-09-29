@@ -2,13 +2,9 @@
 /* Atölye tasarım sistemi — sade açık tema + gece modu, tüm ekranlar
    (müşteri menüsü, garson, mutfak, admin, owner, süper admin).
 
-   KATMANLAR
-   1) Tema değişkenleri (--bg, --surface, --ink, …): html[data-theme="light"|"dark"] ile değişir.
-      Yeni/taşınmış sayfalar YALNIZCA bunları kullanır (Tailwind: bg-page, bg-surface, text-ink, border-line …).
-   2) Eski (legacy) sınıflar/değişkenler — glass-*, btn-accent, --danger, --text-muted …
-      Taşınmamış sayfalar koyu zemin + beyaz yazı varsayımıyla yazıldığı için bunlar geçici olarak
-      her zaman yeni paletin GECE tonlarına (--d-*) yönlendirilir: okunur kalırlar, hiçbir sayfa bozulmaz.
-      Tüm sayfalar taşınınca bu blok silinecek.
+   Tema değişkenleri (--bg, --surface, --ink, …) html[data-theme="light"|"dark"] ile değişir.
+   Sayfalar YALNIZCA bunları kullanır: Tailwind (bg-page, bg-surface, text-ink, border-line …)
+   ya da ortak sınıflar (ui-card, ui-input, btn-primary, btn-outline, ui-chip, ui-scrim, ui-eyebrow).
 
    Tema seçimi: index.html'deki açılış betiği (flash yok) + src/lib/theme.ts */
 @import "tailwindcss";
@@ -51,13 +47,10 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Gece paleti sabitleri — koyu petrol-lacivert zemin, kırık beyaz yazı, altın vurgu (saf siyah yok).
-     Dark tema bunlara bağlanır; legacy sınıflar da doğrudan bunları kullanır. */
+  /* Gece paleti sabitleri — koyu petrol-lacivert zemin, kırık beyaz yazı, altın vurgu (saf siyah yok) */
   --d-bg: #0e1a20;
   --d-surface: #15252c;
   --d-surface-2: #1b2f37;
-  --d-surface-3: #213841;
-  --d-sunken: #10202a;
   --d-ink: #efebe3;
   --d-ink-muted: #98a4a8;
   --d-line: #28404a;
@@ -95,10 +88,7 @@
 
   /* Vurgunun türevleri (işletme rengi gelince hepsi kendiliğinden uyar) */
   --accent-deep: color-mix(in srgb, var(--accent) 82%, #000);
-  --accent-light: color-mix(in srgb, var(--accent) 88%, #fff);
   --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
-  --accent-gradient: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-deep) 100%);
-  --accent-glow: none;
 
   color-scheme: light;
 }
@@ -131,49 +121,6 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   2) LEGACY DEĞİŞKENLER — taşınmamış sayfaların inline style'ları (var(--danger), var(--text-muted) …)
-      Her zaman gece paleti: bu sayfalar koyu zemin + açık yazı varsayar.
-   ───────────────────────────────────────────────────────────────────────────── */
-
-:root {
-  /* Çok eski değişkenler (geriye uyum) */
-  --teal: #0D9488;
-  --teal-light: #CCFBF1;
-  --teal-dark: #0F766E;
-  --navy: #0F172A;
-  --navy-mid: #1E293B;
-  --gold: #B8860B;
-  --gold-bright: #F59E0B;
-
-  --glass-bg: var(--d-surface);
-  --glass-bg-strong: var(--d-surface-3);
-  --glass-bg-hover: var(--d-surface-3);
-  --glass-sidebar-bg: var(--d-sunken);
-  --glass-border: var(--d-line);
-  --glass-border-soft: var(--d-line);
-  --glass-inset: none;
-  --glass-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  --glass-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --glass-dark: var(--d-surface);
-  --glass-dark-strong: var(--d-surface-2);
-  --overlay: rgba(4, 10, 13, 0.6);
-
-  --text: var(--d-ink);
-  --glass-text: var(--d-ink);
-  --text-muted: rgba(239, 235, 227, 0.72);
-  --text-faint: rgba(239, 235, 227, 0.5);
-
-  --success: #7cc896;
-  --success-bg: rgba(124, 200, 150, 0.16);
-  --warning: #e0b566;
-  --warning-bg: rgba(224, 181, 102, 0.16);
-  --danger: #ec8a82;
-  --danger-bg: rgba(236, 138, 130, 0.16);
-  --info: #8fb3dd;
-  --info-bg: rgba(143, 179, 221, 0.16);
-}
-
 html, body {
   min-height: 100%;
 }
@@ -182,12 +129,10 @@ html {
   background-color: var(--bg);
 }
 
-/* Taşınmamış sayfalar koyu zemin varsaydığı için gövde şimdilik gece zemininde.
-   Taşınan sayfalar kendi kökünde bg-page kullanır (temaya uyar). Son adımda: background var(--bg). */
 body {
   font-family: var(--font-sans);
-  color: var(--text);
-  background-color: var(--d-bg);
+  color: var(--ink);
+  background-color: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -210,7 +155,7 @@ body {
 select option { color: #073f46; background: #fff; }
 
 @layer components {
-  /* ── Yeni (temaya uyan) ortak bileşenler — taşınan sayfalar bunları kullanır ───────── */
+  /* ── Ortak bileşenler (temaya uyar) ─────────────────────────────────────── */
 
   .ui-card {
     background: var(--surface);
@@ -274,77 +219,6 @@ select option { color: #073f46; background: #fff; }
     font-weight: 600;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-  }
-
-  /* ── Legacy yüzeyler: düz renk, bulanıklık yok, gece paleti ─────────────── */
-
-  /* Başlık/sidebar/modal gibi büyük yüzeyler */
-  .glass-panel {
-    background: var(--glass-bg);
-    color: var(--glass-text);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-  }
-
-  /* Liste/grid kartları */
-  .glass-card {
-    background: var(--d-surface-2);
-    color: var(--glass-text);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow-sm);
-    transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
-  }
-  .glass-card-hover:hover {
-    background: var(--glass-bg-hover);
-    border-color: color-mix(in srgb, var(--d-accent) 55%, var(--d-line));
-    transform: translateY(-2px);
-  }
-
-  /* Okunabilirlik gereken yoğun içerik (tablolar, formlar, modal gövdesi) */
-  .glass-dark {
-    background: var(--glass-dark);
-    border: 1px solid var(--glass-border-soft);
-    box-shadow: var(--glass-shadow);
-  }
-
-  /* Sol menü (admin sidebar + mobil çekmece). glass-panel/glass-dark'tan sonra tanımlı ki onları ezsin */
-  .glass-sidebar {
-    background: var(--glass-sidebar-bg);
-  }
-
-  .glass-pill {
-    background: rgba(239, 235, 227, 0.08);
-    border: 1px solid var(--d-line);
-    color: var(--d-ink);
-  }
-
-  .glass-input {
-    background: var(--d-sunken);
-    border: 1px solid var(--d-line);
-    color: var(--d-ink);
-    outline: none;
-    transition: background 0.2s ease, border-color 0.2s ease;
-  }
-  /* Input'un yanındaki absolute ikon/butonlar (arama büyüteci, şifre göster vb.) üstte kalsın */
-  *:has(> .glass-input) > .absolute { z-index: 1; }
-  .glass-input::placeholder { color: var(--d-ink-muted); }
-  .glass-input:focus {
-    background: var(--d-bg);
-    border-color: var(--d-accent);
-  }
-
-  /* Birincil buton / aktif pill. Müşteri menüsünde işletme rengi (--business-accent), diğer yerlerde petrol. */
-  .btn-accent {
-    background: var(--business-accent, var(--d-brand));
-    border: 1px solid transparent;
-    color: #fff;
-    box-shadow: none;
-  }
-  .btn-accent:disabled {
-    background: var(--d-surface-3);
-    box-shadow: none;
-    color: var(--d-ink-muted);
-    cursor: not-allowed;
   }
 
   /* ── Ortak yardımcılar (temadan bağımsız) ─────────────────────────────── */

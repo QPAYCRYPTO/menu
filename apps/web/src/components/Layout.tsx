@@ -163,14 +163,13 @@ export function AdminLayout() {
                   width: isSub ? 24 : 30,
                   height: isSub ? 24 : 30,
                   borderRadius: isSub ? 8 : 10,
-                  // İkon kutusu: sekmenin kendi renginde yumuşak ton; aktifken petrol üstünde saydam beyaz
-                  background: active ? 'rgba(255,255,255,0.18)' : `color-mix(in srgb, ${hue} 14%, transparent)`,
+                  // İkon kutusu: sekmenin kendi renginde yumuşak ton; aktifken petrol üstünde saydam açık ton
+                  background: active ? 'color-mix(in srgb, var(--on-brand) 18%, transparent)' : `color-mix(in srgb, ${hue} 14%, transparent)`,
                   color: active ? 'currentColor' : hue
                 }}>
                 {item.icon}
                 {badge > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-extrabold text-white"
-                    style={{ background: '#d4453d' }}>
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-extrabold bg-state-danger text-page">
                     {badge > 9 ? '9+' : badge}
                   </span>
                 )}
@@ -180,7 +179,7 @@ export function AdminLayout() {
               </span>
               {badge > 0 && (
                 <span className={`text-[10px] font-extrabold px-[7px] py-0.5 rounded-full ${
-                  active ? 'bg-white/25 text-on-brand' : 'bg-state-danger-bg text-state-danger'}`}>
+                  active ? 'bg-[color-mix(in_srgb,var(--on-brand)_25%,transparent)] text-on-brand' : 'bg-state-danger-bg text-state-danger'}`}>
                   {badge}
                 </span>
               )}

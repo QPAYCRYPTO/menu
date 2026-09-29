@@ -88,9 +88,8 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void; toggle
 }
 
 /**
- * Yeni temaya taşınmış sayfalar için: sayfa açıkken gövde zemini temaya uyar
- * (taşınmamış sayfalar için gövde şimdilik gece zemininde — bkz. index.css).
- * Böylece iOS'ta aşağı/yukarı esnemede ve kısa içerikte alttan koyu zemin görünmez.
+ * Sayfa açıkken gövde zemini/yazısı temaya uyar. Gövde index.css'te zaten var(--bg) — bu kanca
+ * ek güvence: iOS'ta aşağı/yukarı esnemede ve kısa içerikte alttan farklı zemin görünmez.
  */
 export function useThemedPage(): void {
   useEffect(() => {

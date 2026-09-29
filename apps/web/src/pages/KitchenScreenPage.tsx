@@ -271,7 +271,7 @@ export function KitchenScreenPage() {
             </button>
           )}
           {offline ? (
-            <span className="h-12 px-4 rounded-2xl bg-red-600 text-white text-lg font-black flex items-center gap-2" role="status">
+            <span className="h-12 px-4 rounded-2xl bg-state-danger text-page text-lg font-black flex items-center gap-2" role="status">
               <WifiOff size={22} /> Çevrimdışı
               {lastSync && (
                 <span className="text-sm font-semibold text-red-100">
@@ -289,7 +289,7 @@ export function KitchenScreenPage() {
       </header>
 
       {notice && (
-        <div className="mx-4 mt-3 rounded-2xl bg-red-600 text-white px-4 py-3 text-lg font-bold" role="alert">{notice}</div>
+        <div className="mx-4 mt-3 rounded-2xl bg-state-danger text-page px-4 py-3 text-lg font-bold" role="alert">{notice}</div>
       )}
 
       <main className="p-4">

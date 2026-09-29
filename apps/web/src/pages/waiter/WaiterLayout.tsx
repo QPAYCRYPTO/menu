@@ -90,8 +90,8 @@ export function WaiterLayout() {
                 <div className="relative">
                   <span className="leading-none flex"><item.icon size={19} aria-hidden /></span>
                   {item.badge > 0 && (
-                    <span className="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] px-[5px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white border-2 border-[var(--surface)]"
-                      style={{ background: '#d4453d', animation: 'badge-pulse 1.5s ease-in-out infinite' }}>
+                    <span className="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] px-[5px] rounded-full flex items-center justify-center text-[10px] font-extrabold bg-state-danger text-page border-2 border-[var(--surface)]"
+                      style={{ animation: 'badge-pulse 1.5s ease-in-out infinite' }}>
                       {item.badge}
                     </span>
                   )}
