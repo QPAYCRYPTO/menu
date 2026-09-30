@@ -1,34 +1,17 @@
 // apps/web/src/pages/TablesPage.tsx
 // CHANGELOG v4:
 // - Birleşik masalar mavi gösterim + grup bağlantı çizgisi
-// - Her masa kartında "💳 Ödeme Al" butonu (dolu masada)
-// - Ödeme modal: item seçim + nakit/kart/yemek kartı + tahsil + masa kapat
 // - merge_group_id ile birleşik masalar gruplanır
+// - Ödeme ve hesap kapatma Kasa ekranına taşındı (/admin/kasa): dolu masada "Kasaya Git".
 
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import {
-  AlertTriangle, Armchair, Banknote, Check, Clock, CreditCard, Link2, Lock, Receipt, RefreshCw, Ticket, Timer,
-  NotebookPen, Wallet, X, type LucideIcon
-} from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Armchair, Check, Clock, Link2, Receipt, Timer, Wallet, X } from 'lucide-react';
 import { orderStatusStyle } from '../lib/orderStatus';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
-import {
-  getSessionBill,
-  payItems,
-  closeTable,
-  type BillItem,
-  type BillSummary,
-  type OpenOrderDecision,
-  type OpenOrderRequiringDecision,
-  type PaymentMethod,
-} from '../api/paymentApi';
-import { adminMergeSessions, adminMoveSession } from '../api/tableOperationsApi';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 type Table = { id: string; name: string; sort_order: number; is_active: boolean; };
 
@@ -80,403 +63,6 @@ function useDuration(openedAt: string) {
   return formatDuration(openedAt);
 }
 
-// ─── ÖDEME MODAL ─────────────────────────────────────────────────────────────
-type PaymentModalProps = {
-  sessionId: string;
-  tableName: string;
-  token: string;
-  onClose: () => void;
-  onTableClosed: () => void;
-  onToast: (msg: string, type: 'success' | 'error') => void;
-};
-
-const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }[] = [
-  { value: 'cash', label: 'Nakit', icon: Banknote },
-  { value: 'card', label: 'Kredi Kartı', icon: CreditCard },
-  { value: 'other', label: 'Yemek Kartı', icon: Ticket },
-];
-
-function PaymentModal({ sessionId, tableName, token, onClose, onTableClosed, onToast }: PaymentModalProps) {
-  const [bill, setBill] = useState<BillSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [paying, setPaying] = useState(false);
-  const [closing, setClosing] = useState(false);
-  // Doluysa masa kapanmadı: ödenmemiş açık siparişler için karar paneli gösterilir
-  const [openOrders, setOpenOrders] = useState<OpenOrderRequiringDecision[] | null>(null);
-  const [decisions, setDecisions] = useState<Record<string, OpenOrderDecision>>({});
-  const paymentStartAt = useRef(new Date().toISOString());
-
-  useEffect(() => {
-    loadBill();
-  }, []);
-
-  async function loadBill() {
-    setLoading(true);
-    try {
-      const data = await getSessionBill(token, sessionId);
-      setBill(data);
-    } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Adisyon yüklenemedi.', 'error');
-      onClose();
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function toggleItem(itemId: string) {
-    setSelectedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
-  }
-
-  function selectAll() {
-    if (!bill) return;
-    const unpaid = bill.items.filter(i => !i.is_paid).map(i => i.item_id);
-    setSelectedItems(new Set(unpaid));
-  }
-
-  async function handlePay() {
-    if (selectedItems.size === 0) { onToast('En az 1 ürün seçin.', 'error'); return; }
-    setPaying(true);
-    try {
-      const result = await payItems(token, sessionId, Array.from(selectedItems), paymentMethod);
-      onToast(`${selectedItems.size} ürün tahsil edildi. Kalan: ${formatPrice(result.remaining_int)}`, 'success');
-      setSelectedItems(new Set());
-      await loadBill();
-    } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Ödeme alınamadı.', 'error');
-    } finally {
-      setPaying(false);
-    }
-  }
-
-  async function handleCloseTable(force = false) {
-    setClosing(true);
-    try {
-      const decisionList = Object.entries(decisions).map(([order_id, decision]) => ({ order_id, decision }));
-      const result = await closeTable(token, sessionId, force, force ? decisionList : []);
-      if (result.open_orders && result.open_orders.length > 0) {
-        // Kararı eksik açık sipariş var → masa kapanmadı, panel açılır (liste değiştiyse güncellenir)
-        const ids = new Set(result.open_orders.map(o => o.order_id));
-        if (openOrders) onToast('Açık sipariş listesi değişti. Seçimleri kontrol edin.', 'error');
-        setOpenOrders(result.open_orders);
-        setDecisions(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))));
-        return;
-      }
-      if (result.closed_session_ids.length === 0 && !force) {
-        // Ödenmemiş item var
-        const proceed = window.confirm(
-          `${result.unpaid_items_count} ödenmemiş ürün var. Yine de masayı kapat?`
-        );
-        if (proceed) await handleCloseTable(true);
-        setClosing(false);
-        return;
-      }
-      onToast('Masa kapatıldı.', 'success');
-      onTableClosed();
-      onClose();
-    } catch (e) {
-      onToast(e instanceof Error ? e.message : 'Masa kapatılamadı.', 'error');
-    } finally {
-      setClosing(false);
-    }
-  }
-
-  const unpaidItems = bill?.items.filter(i => !i.is_paid) ?? [];
-  const paidItems = bill?.items.filter(i => i.is_paid) ?? [];
-  const selectedTotal = bill?.items
-    .filter(i => selectedItems.has(i.item_id))
-    .reduce((sum, i) => sum + i.price_int * i.quantity, 0) ?? 0;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fade-enter"
-      style={{ background: 'var(--scrim)' }}
-      onClick={onClose}>
-      <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden flex flex-col text-ink"
-        style={{ maxHeight: '90vh' }}
-        onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
-        <div className="px-5 py-4 flex items-center justify-between flex-shrink-0 border-b border-line">
-          <div>
-            <div className="font-serif font-bold text-lg text-ink flex items-center gap-2">
-              <CreditCard size={16} className="text-accent" />
-              Ödeme Al — {tableName}
-            </div>
-            {bill && (
-              <div className="text-xs mt-0.5 text-ink-muted">
-                Toplam: <span className="text-ink font-bold">{formatPrice(bill.total_int)}</span> · Kalan: <span className="text-ink font-bold">{formatPrice(bill.remaining_int)}</span>
-              </div>
-            )}
-          </div>
-          <button onClick={onClose} aria-label="Kapat"
-            className="ui-chip w-8 h-8 rounded-full flex items-center justify-center spring-btn">
-            <X size={14} />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center py-16">
-            <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
-          </div>
-        ) : bill && openOrders ? (
-          <OpenOrdersDecisionPanel
-            orders={openOrders}
-            decisions={decisions}
-            closing={closing}
-            onDecide={(orderId, decision) => setDecisions(prev => ({ ...prev, [orderId]: decision }))}
-            onCancel={() => { setOpenOrders(null); setDecisions({}); }}
-            onConfirm={() => handleCloseTable(true)}
-          />
-        ) : bill ? (
-          <>
-            {/* Ödeme Yöntemi */}
-            <div className="px-5 pt-4 flex-shrink-0">
-              <div className="text-[11px] font-semibold mb-2 uppercase tracking-wider text-ink-muted">
-                Ödeme Yöntemi
-              </div>
-              <div className="flex gap-2 mb-4">
-                {PAYMENT_METHODS.map(pm => (
-                  <button key={pm.value}
-                    onClick={() => setPaymentMethod(pm.value)}
-                    className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold spring-btn flex items-center justify-center gap-1.5 ${paymentMethod === pm.value ? 'btn-primary' : 'ui-chip text-ink-muted'}`}>
-                    <pm.icon size={14} /> {pm.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Item Listesi */}
-            <div className="flex-1 overflow-y-auto px-5">
-              {/* Ödenmemiş */}
-              {unpaidItems.length > 0 && (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                      Ödenmemiş ({unpaidItems.length})
-                    </div>
-                    <button onClick={selectAll}
-                      className="text-xs font-bold spring-btn"
-                      style={{ color: 'var(--accent)' }}>
-                      Tümünü Seç
-                    </button>
-                  </div>
-                  <div className="space-y-1.5 mb-4">
-                    {unpaidItems.map(item => {
-                      const selected = selectedItems.has(item.item_id);
-                      return (
-                        <div key={item.item_id}
-                          onClick={() => toggleItem(item.item_id)}
-                          className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-colors"
-                          style={{
-                            background: selected ? 'var(--accent-soft)' : 'var(--surface-2)',
-                            border: `1.5px solid ${selected ? 'var(--accent)' : 'var(--line)'}`
-                          }}>
-                          <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                            style={{ background: selected ? 'var(--brand)' : 'var(--surface)', border: `1.5px solid ${selected ? 'var(--brand)' : 'var(--ink-muted)'}` }}>
-                            {selected && <Check size={10} strokeWidth={3.5} className="text-on-brand" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-ink">
-                              {item.quantity}x {item.product_name}
-                            </div>
-                            {item.note && (
-                              <div className="text-xs text-state-warn font-semibold flex items-center gap-1"><NotebookPen size={12} className="flex-shrink-0" /> {item.note}</div>
-                            )}
-                          </div>
-                          <div className="text-sm font-bold flex-shrink-0 text-ink">
-                            {formatPrice(item.price_int * item.quantity)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* Ödenmiş */}
-              {paidItems.length > 0 && (
-                <>
-                  <div className="text-[11px] font-semibold mb-2 uppercase tracking-wider text-ink-muted">
-                    Tahsil Edildi ({paidItems.length})
-                  </div>
-                  <div className="space-y-1.5 mb-4">
-                    {paidItems.map(item => (
-                      <div key={item.item_id}
-                        className="flex items-center gap-3 p-3 rounded-2xl opacity-50"
-                        style={{ background: 'var(--surface-2)', border: '1.5px solid var(--line)' }}>
-                        <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                          style={{ background: 'var(--state-ok-bg)', border: '1.5px solid var(--state-ok)' }}>
-                          <Check size={10} strokeWidth={3.5} style={{ color: 'var(--state-ok)' }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold line-through text-ink-muted">
-                            {item.quantity}x {item.product_name}
-                          </div>
-                        </div>
-                        <div className="text-sm font-bold flex-shrink-0 line-through text-ink-muted">
-                          {formatPrice(item.price_int * item.quantity)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {bill.items.length === 0 && (
-                <div className="text-center py-8 text-ink-muted">
-                  Bu adisyonda ürün yok.
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 py-4 flex-shrink-0 border-t border-line">
-              {/* Seçili tutar */}
-              {selectedItems.size > 0 && (
-                <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-2xl"
-                  style={{ background: 'var(--accent-soft)', border: '1px solid var(--accent)' }}>
-                  <span className="text-sm font-semibold text-ink-muted">
-                    {selectedItems.size} ürün seçildi
-                  </span>
-                  <span className="text-base font-extrabold text-ink">
-                    {formatPrice(selectedTotal)}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button onClick={() => handlePay()}
-                  disabled={paying || selectedItems.size === 0}
-                  className="btn-primary flex-1 py-3 rounded-2xl text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
-                  {paying ? 'İşleniyor...' : <><CreditCard size={14} /> {`Tahsil Et${selectedItems.size > 0 ? ` (${formatPrice(selectedTotal)})` : ''}`}</>}
-                </button>
-                <button onClick={() => handleCloseTable()}
-                  disabled={closing}
-                  className="px-4 py-3 rounded-2xl text-sm font-bold spring-btn flex items-center justify-center gap-1.5"
-                  style={{ background: 'var(--state-danger-bg)', color: 'var(--state-danger)', border: '1.5px solid var(--state-danger)' }}>
-                  {closing ? '...' : <><Lock size={14} /> Kapat</>}
-                </button>
-              </div>
-            </div>
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-// ─── AÇIK SİPARİŞ KARAR PANELİ ───────────────────────────────────────────────
-// Ödenmemiş ürünü olan, teslim edilmemiş her sipariş için "İptal Et" veya "Zayi Say"
-// seçilmeden masa kapatılamaz (backend de aynı kuralı zorunlu tutar).
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: 'Bekliyor',
-  preparing: 'Hazırlanıyor',
-  ready: 'Hazır',
-};
-
-const DECISION_OPTIONS: { value: OpenOrderDecision; label: string; icon: LucideIcon; hint: string; color: string; bg: string }[] = [
-  { value: 'customer_left', label: 'İptal Et', icon: X, hint: 'Müşteri kalktı', color: 'var(--state-warn)', bg: 'var(--state-warn-bg)' },
-  { value: 'no_payment', label: 'Zayi Say', icon: AlertTriangle, hint: 'Hazırlandı, ödenmedi', color: 'var(--state-danger)', bg: 'var(--state-danger-bg)' },
-];
-
-function OpenOrdersDecisionPanel({ orders, decisions, closing, onDecide, onCancel, onConfirm }: {
-  orders: OpenOrderRequiringDecision[];
-  decisions: Record<string, OpenOrderDecision>;
-  closing: boolean;
-  onDecide: (orderId: string, decision: OpenOrderDecision) => void;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const decidedCount = orders.filter(o => decisions[o.order_id]).length;
-  const allDecided = decidedCount === orders.length;
-
-  return (
-    <>
-      <div className="flex-1 overflow-y-auto px-5 pt-4">
-        <div className="mb-3 px-3 py-2.5 rounded-2xl text-xs font-semibold flex gap-2 items-start"
-          style={{ background: 'var(--state-danger-bg)', color: 'var(--ink)' }}>
-          <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'var(--state-danger)' }} />
-          <span>Masa kapatılmadan önce ödenmemiş açık siparişler için karar verin. Karar verilmeden masa kapatılamaz.</span>
-        </div>
-
-        <div className="space-y-3 mb-4">
-          {orders.map(order => {
-            const selected = decisions[order.order_id];
-            const hasPaidItems = order.items.some(i => i.is_paid);
-            return (
-              <div key={order.order_id} className="p-3 rounded-2xl"
-                style={{
-                  background: selected ? 'var(--accent-soft)' : 'var(--surface-2)',
-                  border: `1.5px solid ${selected ? 'var(--accent)' : 'var(--line)'}`
-                }}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-bold text-ink">
-                    {order.table_name} · {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                  </span>
-                  <span className="text-sm font-bold" style={{ color: 'var(--state-danger)' }}>
-                    {formatPrice(order.unpaid_total_int)}
-                  </span>
-                </div>
-                <div className="text-xs mb-2 text-ink-muted">
-                  {order.items.map((i, idx) => (
-                    <span key={idx} style={i.is_paid ? { textDecoration: 'line-through', opacity: 0.6 } : undefined}>
-                      {idx > 0 ? ', ' : ''}{i.quantity}x {i.product_name}
-                    </span>
-                  ))}
-                </div>
-                {hasPaidItems && (
-                  <div className="text-xs mb-2 text-state-warn font-semibold">
-                    Bu siparişte ödenmiş ürün de var; sipariş bütün olarak iptal edilir.
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  {DECISION_OPTIONS.map(opt => (
-                    <button key={opt.value}
-                      onClick={() => onDecide(order.order_id, opt.value)}
-                      className="flex-1 py-2 rounded-2xl text-xs font-semibold spring-btn"
-                      style={{
-                        background: selected === opt.value ? opt.color : opt.bg,
-                        color: selected === opt.value ? 'var(--bg)' : opt.color,
-                        border: `1.5px solid ${opt.color}`
-                      }}>
-                      <span className="inline-flex items-center gap-1"><opt.icon size={12} strokeWidth={2.5} /> {opt.label}</span>
-                      <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.85 }}>{opt.hint}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="px-5 py-4 flex-shrink-0 border-t border-line">
-        <div className="text-xs mb-2 text-center text-ink-muted">
-          {decidedCount}/{orders.length} sipariş için karar verildi
-        </div>
-        <div className="flex gap-2">
-          <button onClick={onCancel} disabled={closing}
-            className="ui-chip px-4 py-3 rounded-2xl text-sm font-semibold spring-btn">
-            Vazgeç
-          </button>
-          <button onClick={onConfirm}
-            disabled={closing || !allDecided}
-            className="btn-primary flex-1 py-3 rounded-2xl text-sm font-bold spring-btn flex items-center justify-center gap-1.5">
-            {closing ? '...' : <><Lock size={14} /> Kararları Uygula ve Masayı Kapat</>}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── ANA SAYFA ────────────────────────────────────────────────────────────────
 export function TablesPage() {
   const { accessToken } = useAuth();
@@ -501,10 +87,8 @@ export function TablesPage() {
   const [detailData, setDetailData] = useState<SessionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const [closeModal, setCloseModal] = useState<{ sessionId: string; tableName: string; pendingCount: number } | null>(null);
-
-  // Ödeme modal
-  const [paymentSession, setPaymentSession] = useState<{ sessionId: string; tableName: string } | null>(null);
+  const navigate = useNavigate();
+  const goToCashier = (tableId: string) => navigate(`/admin/kasa?masa=${tableId}`);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -596,80 +180,6 @@ export function TablesPage() {
       setDetailOpen(null);
     } finally {
       setDetailLoading(false);
-    }
-  }
-
-  async function tryCloseSession(sessionId: string, tableName: string, action: 'close' | 'transfer' | 'cancel_pending' = 'close') {
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/sessions/${sessionId}/close`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
-      });
-      if (res.status === 409) {
-        const body = await res.json();
-        setCloseModal({ sessionId, tableName, pendingCount: body.pending_count });
-        return;
-      }
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ message: 'Hata' }));
-        throw new Error(body.message);
-      }
-      await loadSessions();
-      setDetailOpen(null);
-      setDetailData(null);
-      setCloseModal(null);
-      showToast('Masa kapatıldı.', 'success');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Masa kapatılamadı.', 'error');
-    }
-  }
-
-  // Kapat: masa artık buradan doğrudan kapatılmaz (sessions/:id/close çağrılmaz).
-  // Bekleyen sipariş varsa seçenek modalı (yeni müşteri / iptal et ve ödemeye geç),
-  // yoksa ödeme ekranı açılır; ödenmemiş ürün kontrolü ve kapatma orada yapılır.
-  async function startCloseFlow(sessionId: string, tableName: string) {
-    try {
-      const detail = await apiRequest<SessionDetail>(`/admin/sessions/${sessionId}`, { token: accessToken });
-      const pendingCount = detail.orders.filter(o =>
-        o.type === 'order' && ['pending', 'preparing', 'ready'].includes(o.status)
-      ).length;
-      if (pendingCount > 0) {
-        setCloseModal({ sessionId, tableName, pendingCount });
-        return;
-      }
-      setDetailOpen(null);
-      setDetailData(null);
-      setPaymentSession({ sessionId, tableName });
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Masa bilgisi alınamadı.', 'error');
-    }
-  }
-
-  // Bekleyen siparişleri tek tek iptal et (customer_left), masayı KAPATMA → ödeme ekranını aç.
-  // Kapatma ödeme ekranından yapılır (ödenmemiş ürün kontrolü + açık sipariş karar paneli orada).
-  async function cancelPendingAndOpenPayment(sessionId: string, tableName: string) {
-    try {
-      const detail = await apiRequest<SessionDetail>(`/admin/sessions/${sessionId}`, { token: accessToken });
-      const pendingOrders = detail.orders.filter(o =>
-        o.type === 'order' && ['pending', 'preparing', 'ready'].includes(o.status)
-      );
-      await Promise.all(pendingOrders.map(o =>
-        apiRequest(`/admin/orders/${o.id}/cancel`, {
-          method: 'POST',
-          token: accessToken,
-          body: { reason_code: 'customer_left' }
-        })
-      ));
-      setCloseModal(null);
-      setDetailOpen(null);
-      setDetailData(null);
-      await loadSessions();
-      setPaymentSession({ sessionId, tableName });
-      showToast(`${pendingOrders.length} bekleyen sipariş iptal edildi. Ödemeyi alıp masayı kapatın.`, 'success');
-    } catch (e) {
-      await loadSessions();
-      showToast(e instanceof Error ? e.message : 'Bekleyen siparişler iptal edilemedi.', 'error');
     }
   }
 
@@ -791,11 +301,7 @@ export function TablesPage() {
             onToggleActive={() => toggleActive(table)}
             onDelete={() => askDeleteTable(table)}
             onOpenDetail={() => table.paymentSessionInfo && openDetail(table.paymentSessionInfo.id)}
-            onCloseSession={() => table.session && startCloseFlow(table.session.id, table.name)}
-            onOpenPayment={() => table.paymentSessionInfo && setPaymentSession({ 
-              sessionId: table.paymentSessionInfo.id, 
-              tableName: table.paymentSessionInfo.table_name 
-            })}
+            onGoToCashier={() => goToCashier(table.id)}
           />
         ))}
 
@@ -872,20 +378,10 @@ export function TablesPage() {
             {detailData && detailData.session?.status === 'open' && (
               <div className="border-t border-line" style={{ padding: '12px 24px 16px', display: 'flex', gap: 10 }}>
                 <button
-                  onClick={() => {
-                    setDetailOpen(null);
-                    setDetailData(null);
-                    if (detailData?.table) setPaymentSession({ sessionId: detailOpen!, tableName: detailData.table.name });
-                  }}
-                  className="btn-primary spring-btn flex items-center justify-center gap-1.5"
+                  onClick={() => detailData?.table && goToCashier(detailData.table.id)}
+                  className="bg-cash text-on-cash spring-btn flex items-center justify-center gap-1.5"
                   style={{ flex: 1, padding: 12, borderRadius: 16, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                  <CreditCard size={16} /> Ödeme Al
-                </button>
-                <button
-                  onClick={() => startCloseFlow(detailOpen!, detailData?.table?.name ?? 'Masa')}
-                  className="spring-btn flex items-center justify-center gap-1.5"
-                  style={{ flex: 1, padding: 12, borderRadius: 16, border: '1.5px solid var(--state-danger)', background: 'var(--state-danger-bg)', color: 'var(--state-danger)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                  <Lock size={16} /> Masayı Kapat
+                  <Wallet size={16} /> Kasaya Git
                 </button>
               </div>
             )}
@@ -893,51 +389,6 @@ export function TablesPage() {
         </div>
       )}
 
-      {/* Pending sipariş modal */}
-      {closeModal && (
-        <div className="fade-enter" style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--scrim)', padding: 16 }}
-          onClick={() => setCloseModal(null)}>
-          <div className="ui-card rounded-3xl text-ink" style={{ maxWidth: 440, width: '100%', padding: 24 }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, color: 'var(--state-warn)' }}><AlertTriangle size={32} /></div>
-            <h3 className="font-serif text-ink" style={{ fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 8 }}>
-              Teslim Edilmemiş Sipariş Var
-            </h3>
-            <p style={{ fontSize: 13, color: 'var(--ink-muted)', textAlign: 'center', marginBottom: 20, lineHeight: 1.5 }}>
-              <strong className="text-ink">{closeModal.tableName}</strong> masasında <strong className="text-state-warn">{closeModal.pendingCount}</strong> bekleyen sipariş var.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => tryCloseSession(closeModal.sessionId, closeModal.tableName, 'transfer')}
-                className="spring-btn flex items-center gap-2"
-                style={{ padding: 12, borderRadius: 16, border: '1.5px solid var(--accent)', background: 'var(--accent-soft)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                <RefreshCw size={14} className="flex-shrink-0" /> Yeni müşteriye ait — yeni masa aç
-              </button>
-              <button onClick={() => cancelPendingAndOpenPayment(closeModal.sessionId, closeModal.tableName)}
-                className="spring-btn flex items-center gap-2"
-                style={{ padding: 12, borderRadius: 16, border: '1.5px solid var(--state-danger)', background: 'var(--state-danger-bg)', color: 'var(--state-danger)', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                <X size={14} strokeWidth={3} className="flex-shrink-0" /> Bekleyenleri İptal Et ve Ödemeye Geç
-              </button>
-              <button onClick={() => setCloseModal(null)}
-                className="ui-chip spring-btn"
-                style={{ padding: 12, borderRadius: 16, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                Vazgeç
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ödeme Modal */}
-      {paymentSession && accessToken && (
-        <PaymentModal
-          sessionId={paymentSession.sessionId}
-          tableName={paymentSession.tableName}
-          token={accessToken}
-          onClose={() => setPaymentSession(null)}
-          onTableClosed={() => { loadSessions(); loadTables(); }}
-          onToast={showToast}
-        />
-      )}
     </div>
   );
 }
@@ -959,15 +410,14 @@ type TableCardProps = {
   onToggleActive: () => void;
   onDelete: () => void;
   onOpenDetail: () => void;
-  onCloseSession: () => void;
-  onOpenPayment: () => void;
+  onGoToCashier: () => void;
 };
 
 function TableCard({
   table, session, isMerged, mergeGroupId, mergedInto, onGoToTable,
   editing, editingName,
   onStartEdit, onChangeEditName, onSaveEdit, onCancelEdit,
-  onToggleActive, onDelete, onOpenDetail, onCloseSession, onOpenPayment
+  onToggleActive, onDelete, onOpenDetail, onGoToCashier
 }: TableCardProps) {
   const isOccupied = !!session;
   const isPassive = !table.is_active;
@@ -1074,22 +524,17 @@ function TableCard({
 
         {isOccupied && !editing && !mergedInto && (
           <>
-            {/* Ödeme Al butonu */}
-            <button onClick={onOpenPayment}
-              className="btn-primary spring-btn flex items-center justify-center gap-1.5"
-              style={{ width: '100%', padding: '9px', borderRadius: 12, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-              <CreditCard size={12} /> Ödeme Al
-            </button>
+            {/* Ödeme ve hesap kapatma Kasa ekranında */}
             <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={onGoToCashier}
+                className="bg-cash text-on-cash spring-btn flex items-center justify-center gap-1.5"
+                style={{ flex: 1, padding: '9px', borderRadius: 12, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                <Wallet size={13} /> Kasaya Git
+              </button>
               <button onClick={onOpenDetail}
                 className="btn-outline spring-btn flex items-center justify-center gap-1"
-                style={{ flex: 1, padding: '7px', borderRadius: 12, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                <Receipt size={11} /> Detay
-              </button>
-              <button onClick={onCloseSession}
-                className="spring-btn flex items-center justify-center gap-1"
-                style={{ flex: 1, padding: '7px', borderRadius: 12, border: '1px solid var(--state-danger)', background: 'var(--state-danger-bg)', color: 'var(--state-danger)', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                <Lock size={11} /> Kapat
+                style={{ flex: 1, padding: '9px', borderRadius: 12, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                <Receipt size={12} /> Detay
               </button>
             </div>
           </>

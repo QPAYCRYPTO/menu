@@ -4,12 +4,13 @@
 // - Stil 5: Kart tarzı — sol kenar 3px renk şerit + hafif border + soft icon kutusu
 // - Atölye tasarımı: gece/gündüz temasına uyar; aktif sekme petrol (bg-brand), başlıkta güneş/ay düğmesi.
 // - Sade kenar menü (referans tasarım): renkli ikon kutuları yok; ince çizgili (1.5), tek renk ikonlar.
-//   Pasif: mürekkep rengi · Aktif: petrol zemin + beyaz · Alt sekme (Ödemeler): girintili, daha küçük.
+//   Pasif: mürekkep rengi · Aktif: petrol zemin + beyaz.
+// - Ödemeler (Kasa) ayrı sayfa (/admin/kasa): kendi rengi altın-bakır (--cash) — ikon altın, aktifken altın zemin.
 
 import { useEffect, useState } from 'react';
 import {
-  Armchair, Bell, CalendarDays, ChefHat, ClipboardList, ConciergeBell, CreditCard, House, LayoutList, LogOut, Menu, QrCode, Settings,
-  Users
+  Armchair, Bell, CalendarDays, ChefHat, ClipboardList, ConciergeBell, House, LayoutList, LogOut, Menu, QrCode, Settings,
+  Users, Wallet
 } from 'lucide-react';
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
@@ -76,10 +77,10 @@ export function AdminLayout() {
   const moduleFlags = useModuleFlags(accessToken);
   useThemedPage();
 
-  // Ana nav item'ları — payment Masalar'ın altında sub-item olarak gelecek
   // `module` olan sekmeler yalnızca o modül işletmede açıksa görünür (bilinmiyorken gizli)
+  // `cash`: Kasa sekmesi kendi altın-bakır rengiyle öne çıkar
   const allNavItems: Array<{
-    to: string; label: string; sub: boolean; icon: typeof House; badge?: number; module?: ModuleKey;
+    to: string; label: string; sub: boolean; icon: typeof House; badge?: number; module?: ModuleKey; cash?: boolean;
   }> = [
     {
       to: '/admin', label: 'Panel', sub: false,
@@ -90,13 +91,12 @@ export function AdminLayout() {
       icon: ClipboardList
     },
     {
+      to: '/admin/kasa', label: 'Ödemeler', sub: false, cash: true,
+      icon: Wallet
+    },
+    {
       to: '/admin/tables', label: 'Masalar', sub: false,
       icon: Armchair
-    },
-    // Alt menü — Masalar'ın altında, indent'li
-    {
-      to: '/admin/tables', label: 'Ödemeler', sub: true,
-      icon: CreditCard
     },
     {
       to: '/admin/categories', label: 'Kategoriler', sub: false,
@@ -162,19 +162,21 @@ export function AdminLayout() {
           const Icon = item.icon;
           // Alt sekme ana sekmeyle aynı sayfayı açar; aktifken dolgu yerine yalnızca kalın yazı alır (çift vurgu olmasın)
           const filled = active && !isSub;
+          const cash = item.cash === true;
 
           return (
             <Link key={`${item.to}-${item.label}`} to={item.to}
               onClick={() => setSidebarOpen(false)}
               aria-current={active && !isSub ? 'page' : undefined}
               className={`spring-btn no-underline flex items-center gap-3 rounded-2xl transition-colors ${
-                filled ? 'bg-brand text-on-brand' : active ? 'text-ink' : 'text-ink hover:bg-surface-2'
+                filled ? (cash ? 'bg-cash text-on-cash' : 'bg-brand text-on-brand') : active ? 'text-ink' : 'text-ink hover:bg-surface-2'
               } ${isSub ? 'ml-6 py-2 pl-3 pr-3 border-l border-line rounded-l-none' : 'py-2.5 px-3.5'}`}>
-              <Icon size={isSub ? 17 : 21} strokeWidth={1.5} className={`flex-shrink-0 ${filled ? '' : isSub ? 'text-ink-muted' : ''}`} aria-hidden />
+              <Icon size={isSub ? 17 : 21} strokeWidth={1.5} className={`flex-shrink-0 ${filled ? '' : cash ? 'text-cash' : isSub ? 'text-ink-muted' : ''}`} aria-hidden />
               <span className={`flex-1 font-serif ${isSub ? 'text-[14px]' : 'text-[16px]'} ${
                 filled ? 'font-semibold' : active ? 'font-semibold' : isSub ? 'text-ink-muted' : ''}`}>
                 {item.label}
               </span>
+              {cash && !filled && <span className="w-2 h-2 rounded-full bg-cash flex-shrink-0" aria-hidden />}
               {badge > 0 && (
                 <span className={`min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
                   filled ? 'bg-[color-mix(in_srgb,var(--on-brand)_25%,transparent)] text-on-brand' : 'bg-state-danger text-page'}`}>

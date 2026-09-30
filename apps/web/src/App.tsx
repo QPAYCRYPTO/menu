@@ -25,6 +25,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { ErrorLogPage } from './pages/superadmin/ErrorLogPage';
 import { TablesPage } from './pages/TablesPage';
+import { CashierPage } from './pages/CashierPage';
 import { OwnerLayout } from './pages/owner/OwnerLayout';
 import { OwnerDashboardPage } from './pages/owner/OwnerDashboardPage';
 import { WaitersPage } from './pages/WaitersPage';
@@ -110,6 +111,7 @@ export function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="qr" element={<QrPage />} />
                 <Route path="tables" element={<TablesPage />} />
+                <Route path="kasa" element={<CashierPage />} />
                 <Route path="orders" element={<OrdersPage />} />
                 <Route path="waiters" element={<WaitersPage />} />
                 <Route path="kitchen" element={<KitchenPage />} />

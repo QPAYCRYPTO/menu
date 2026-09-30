@@ -42,6 +42,9 @@
   --color-state-info-bg: var(--state-info-bg);
   --color-state-done: var(--state-done);
   --color-state-done-bg: var(--state-done-bg);
+  --color-cash: var(--cash);
+  --color-cash-bg: var(--cash-bg);
+  --color-on-cash: var(--on-cash);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +94,11 @@
   /* Öne çıkması gereken notlar (mutfak): gündüz yumuşak sarı, gece daha doygun (koyu zeminde sönük kalmasın) */
   --note-bg: var(--state-warn-bg);
 
+  /* Kasa (Ödemeler) rengi: altın-bakır — durum renkleriyle karışmaz */
+  --cash: #b07d2e;
+  --cash-bg: #fdf6e3;
+  --on-cash: #ffffff;
+
   /* Vurgunun türevleri (işletme rengi gelince hepsi kendiliğinden uyar) */
   --accent-deep: color-mix(in srgb, var(--accent) 82%, #000);
   --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
@@ -124,6 +132,9 @@ html[data-theme="dark"] {
   --state-done: #b9a3e3;
   --state-done-bg: rgba(185, 163, 227, 0.14);
   --note-bg: color-mix(in srgb, var(--state-warn) 32%, var(--surface));
+  --cash: #c9ab7e;
+  --cash-bg: #1e1a0f;
+  --on-cash: #1a1408;
 
   color-scheme: dark;
 }
