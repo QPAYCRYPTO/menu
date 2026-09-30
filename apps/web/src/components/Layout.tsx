@@ -3,12 +3,13 @@
 // - Masalar altına "Ödemeler" alt menüsü eklendi (indent ile)
 // - Stil 5: Kart tarzı — sol kenar 3px renk şerit + hafif border + soft icon kutusu
 // - Atölye tasarımı: gece/gündüz temasına uyar; aktif sekme petrol (bg-brand), başlıkta güneş/ay düğmesi.
-//   Sidebar genişliği, ikonlar ve mobil hamburger menü korunur.
+// - Sade kenar menü (referans tasarım): renkli ikon kutuları yok; ince çizgili (1.5), tek renk ikonlar.
+//   Pasif: mürekkep rengi · Aktif: petrol zemin + beyaz · Alt sekme (Ödemeler): girintili, daha küçük.
 
 import { useEffect, useState } from 'react';
 import {
-  Armchair, Bell, ChefHat, ClipboardList, CreditCard, LayoutDashboard, List, LogOut, Menu, QrCode, Settings,
-  ShoppingCart, Users
+  Armchair, Bell, ChefHat, ClipboardList, ConciergeBell, CreditCard, House, LayoutList, LogOut, Menu, QrCode, Settings,
+  Users
 } from 'lucide-react';
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
@@ -17,20 +18,6 @@ import { useAuth } from '../auth/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useThemedPage } from '../lib/theme';
 import { ThemeToggle } from './ThemeToggle';
-
-// Sekme ikonlarının tonu — her iki temada okunur orta doygunlukta renkler
-const ICON_HUE: Record<string, string> = {
-  panel: '#7c5cc4',
-  orders: '#b7791f',
-  tables: '#2f855a',
-  payment: '#c05621',
-  categories: '#2b6cb0',
-  products: '#8b5cf6',
-  waiters: '#c05621',
-  kitchen: '#c53030',
-  settings: '#718096',
-  qr: '#4c51bf'
-};
 
 type ModuleKey = 'waiter' | 'kitchen';
 type ModuleFlags = Record<ModuleKey, boolean>;
@@ -69,48 +56,48 @@ export function AdminLayout() {
   // Ana nav item'ları — payment Masalar'ın altında sub-item olarak gelecek
   // `module` olan sekmeler yalnızca o modül işletmede açıksa görünür (bilinmiyorken gizli)
   const allNavItems: Array<{
-    to: string; label: string; colorKey: string; sub: boolean; icon: JSX.Element; badge?: number; module?: ModuleKey;
+    to: string; label: string; sub: boolean; icon: typeof House; badge?: number; module?: ModuleKey;
   }> = [
     {
-      to: '/admin', label: 'Panel', colorKey: 'panel', sub: false,
-      icon: <LayoutDashboard size={14} />
+      to: '/admin', label: 'Panel', sub: false,
+      icon: House
     },
     {
-      to: '/admin/orders', label: 'Siparişler', badge: pendingCount, colorKey: 'orders', sub: false,
-      icon: <ClipboardList size={14} />
+      to: '/admin/orders', label: 'Siparişler', badge: pendingCount, sub: false,
+      icon: ClipboardList
     },
     {
-      to: '/admin/tables', label: 'Masalar', colorKey: 'tables', sub: false,
-      icon: <Armchair size={14} />
+      to: '/admin/tables', label: 'Masalar', sub: false,
+      icon: Armchair
     },
     // Alt menü — Masalar'ın altında, indent'li
     {
-      to: '/admin/tables', label: 'Ödemeler', colorKey: 'payment', sub: true,
-      icon: <CreditCard size={12} />
+      to: '/admin/tables', label: 'Ödemeler', sub: true,
+      icon: CreditCard
     },
     {
-      to: '/admin/categories', label: 'Kategoriler', colorKey: 'categories', sub: false,
-      icon: <List size={14} />
+      to: '/admin/categories', label: 'Kategoriler', sub: false,
+      icon: LayoutList
     },
     {
-      to: '/admin/products', label: 'Ürünler', colorKey: 'products', sub: false,
-      icon: <ShoppingCart size={14} />
+      to: '/admin/products', label: 'Ürünler', sub: false,
+      icon: ConciergeBell
     },
     {
-      to: '/admin/waiters', label: 'Garsonlar', colorKey: 'waiters', sub: false, module: 'waiter',
-      icon: <Users size={14} />
+      to: '/admin/waiters', label: 'Garsonlar', sub: false, module: 'waiter',
+      icon: Users
     },
     {
-      to: '/admin/kitchen', label: 'Mutfak', colorKey: 'kitchen', sub: false, module: 'kitchen',
-      icon: <ChefHat size={14} />
+      to: '/admin/kitchen', label: 'Mutfak', sub: false, module: 'kitchen',
+      icon: ChefHat
     },
     {
-      to: '/admin/settings', label: 'Ayarlar', colorKey: 'settings', sub: false,
-      icon: <Settings size={14} />
+      to: '/admin/settings', label: 'Ayarlar', sub: false,
+      icon: Settings
     },
     {
-      to: '/admin/qr', label: 'QR Kod', colorKey: 'qr', sub: false,
-      icon: <QrCode size={14} />
+      to: '/admin/qr', label: 'QR Kod', sub: false,
+      icon: QrCode
     },
   ];
   const navItems = allNavItems.filter(i => !i.module || moduleFlags?.[i.module] === true);
@@ -144,43 +131,31 @@ export function AdminLayout() {
         </div>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-none" aria-label="Yönetim menüsü">
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-none" aria-label="Yönetim menüsü">
         {navItems.map(item => {
           const active = isActive(item.to);
-          const hue = ICON_HUE[item.colorKey] ?? 'var(--accent)';
           const badge = item.badge ?? 0;
           const isSub = item.sub;
+          const Icon = item.icon;
+          // Alt sekme ana sekmeyle aynı sayfayı açar; aktifken dolgu yerine yalnızca kalın yazı alır (çift vurgu olmasın)
+          const filled = active && !isSub;
 
           return (
             <Link key={`${item.to}-${item.label}`} to={item.to}
               onClick={() => setSidebarOpen(false)}
-              aria-current={active ? 'page' : undefined}
-              className={`spring-btn no-underline flex items-center gap-2.5 rounded-[14px] mb-0.5 ${
-                active ? 'bg-brand text-on-brand' : 'text-ink hover:bg-surface-2'
-              } ${isSub ? 'ml-4 py-[7px] pr-2.5 pl-3.5 border-l-2 border-line' : 'py-[9px] px-2.5'}`}>
-              <div className="relative flex items-center justify-center flex-shrink-0"
-                style={{
-                  width: isSub ? 24 : 30,
-                  height: isSub ? 24 : 30,
-                  borderRadius: isSub ? 8 : 10,
-                  // İkon kutusu: sekmenin kendi renginde yumuşak ton; aktifken petrol üstünde saydam açık ton
-                  background: active ? 'color-mix(in srgb, var(--on-brand) 18%, transparent)' : `color-mix(in srgb, ${hue} 14%, transparent)`,
-                  color: active ? 'currentColor' : hue
-                }}>
-                {item.icon}
-                {badge > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-extrabold bg-state-danger text-page">
-                    {badge > 9 ? '9+' : badge}
-                  </span>
-                )}
-              </div>
-              <span className={`flex-1 ${isSub ? 'text-xs' : 'text-[13px]'} ${active ? 'font-bold' : isSub ? 'font-semibold text-ink-muted' : 'font-semibold'}`}>
+              aria-current={active && !isSub ? 'page' : undefined}
+              className={`spring-btn no-underline flex items-center gap-3 rounded-2xl transition-colors ${
+                filled ? 'bg-brand text-on-brand' : active ? 'text-ink' : 'text-ink hover:bg-surface-2'
+              } ${isSub ? 'ml-6 py-2 pl-3 pr-3 border-l border-line rounded-l-none' : 'py-2.5 px-3.5'}`}>
+              <Icon size={isSub ? 17 : 21} strokeWidth={1.5} className={`flex-shrink-0 ${filled ? '' : isSub ? 'text-ink-muted' : ''}`} aria-hidden />
+              <span className={`flex-1 font-serif ${isSub ? 'text-[14px]' : 'text-[16px]'} ${
+                filled ? 'font-semibold' : active ? 'font-semibold' : isSub ? 'text-ink-muted' : ''}`}>
                 {item.label}
               </span>
               {badge > 0 && (
-                <span className={`text-[10px] font-extrabold px-[7px] py-0.5 rounded-full ${
-                  active ? 'bg-[color-mix(in_srgb,var(--on-brand)_25%,transparent)] text-on-brand' : 'bg-state-danger-bg text-state-danger'}`}>
-                  {badge}
+                <span className={`min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
+                  filled ? 'bg-[color-mix(in_srgb,var(--on-brand)_25%,transparent)] text-on-brand' : 'bg-state-danger text-page'}`}>
+                  {badge > 9 ? '9+' : badge}
                 </span>
               )}
             </Link>
@@ -190,8 +165,8 @@ export function AdminLayout() {
 
       <div className="p-3 border-t border-line">
         <button onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface-2 spring-btn">
-          <LogOut size={16} className="flex-shrink-0" />
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl font-serif text-[15px] text-ink-muted hover:text-ink hover:bg-surface-2 spring-btn">
+          <LogOut size={20} strokeWidth={1.5} className="flex-shrink-0" />
           Çıkış Yap
         </button>
       </div>
