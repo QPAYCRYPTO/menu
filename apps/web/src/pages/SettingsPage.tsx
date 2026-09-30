@@ -1,5 +1,5 @@
 // apps/web/src/pages/SettingsPage.tsx
-// İşletme ayarları — sekmeli tek form: Genel · Görünüm · İletişim · Wi-Fi · Hesap
+// İşletme ayarları — sekmeli tek form: Genel · Görünüm · Servis · İletişim · Wi-Fi · Hesap
 // - Tüm sekmeler tek formu paylaşır; altta sabit Kaydet çubuğu yalnızca değişiklik varken etkin.
 //   (Admin düzeninde sayfa belgeyle kaydığı ve içerik kutusu overflow'lu olduğu için `sticky` çalışmaz;
 //   çubuk `fixed` ve yatayda sayfa kutusunun ölçülen konumuna hizalanır.)
@@ -22,7 +22,7 @@ import { isHexColor, normalizeHex, readableTextOn } from '../lib/color';
 import { useTheme } from '../lib/theme';
 import {
   AtSign, BookUser, Camera, Copy, ExternalLink, Eye, EyeOff, KeyRound, Link2, LoaderCircle, Mail, MapPin,
-  MessageCircle, Palette, Phone, RotateCcw, Save, ShoppingBag, Store, SunMoon, TriangleAlert, UserRound, Wifi
+  MessageCircle, Palette, Phone, RotateCcw, Save, ShoppingBag, Store, SunMoon, Timer, TriangleAlert, UserRound, Wifi
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
@@ -35,16 +35,19 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type FormState = {
   name: string; description: string; logo_url: string;
   theme_color: string; bg_color: string; dark_mode: boolean; is_accepting_orders: boolean;
+  /** Metin olarak tutulur (alan boşaltılabilsin); kaydederken sayıya çevrilir */
+  late_after_minutes: string;
   contact_name: string; contact_phone: string; contact_whatsapp: string; contact_instagram: string;
   contact_email: string; address: string;
   wifi_name: string; wifi_password: string;
 };
 
-type TabKey = 'genel' | 'gorunum' | 'iletisim' | 'wifi' | 'hesap';
+type TabKey = 'genel' | 'gorunum' | 'servis' | 'iletisim' | 'wifi' | 'hesap';
 
 const TABS: { key: TabKey; label: string; icon: typeof Store; fields: (keyof FormState)[] }[] = [
   { key: 'genel', label: 'Genel', icon: Store, fields: ['name', 'description', 'logo_url'] },
-  { key: 'gorunum', label: 'Görünüm', icon: Palette, fields: ['theme_color', 'is_accepting_orders'] },
+  { key: 'gorunum', label: 'Görünüm', icon: Palette, fields: ['theme_color'] },
+  { key: 'servis', label: 'Servis', icon: Timer, fields: ['is_accepting_orders', 'late_after_minutes'] },
   { key: 'iletisim', label: 'İletişim', icon: BookUser,
     fields: ['contact_name', 'contact_phone', 'contact_whatsapp', 'contact_instagram', 'contact_email', 'address'] },
   { key: 'wifi', label: 'Wi-Fi', icon: Wifi, fields: ['wifi_name', 'wifi_password'] },
@@ -57,6 +60,7 @@ function toForm(d: BusinessSettingsResponse): FormState {
     theme_color: d.theme_color && isHexColor(d.theme_color) ? normalizeHex(d.theme_color) : '#073f46',
     bg_color: d.bg_color ?? '#F8FAFC', dark_mode: d.dark_mode ?? false,
     is_accepting_orders: d.is_accepting_orders ?? true,
+    late_after_minutes: String(d.late_after_minutes ?? 15),
     contact_name: d.contact_name ?? '', contact_phone: d.contact_phone ?? '', contact_whatsapp: d.contact_whatsapp ?? '',
     contact_instagram: d.contact_instagram ?? '', contact_email: d.contact_email ?? '', address: d.address ?? '',
     wifi_name: d.wifi_name ?? '', wifi_password: d.wifi_password ?? ''
@@ -218,6 +222,8 @@ export function SettingsPage() {
     if (form.contact_phone.trim() && !PHONE.test(form.contact_phone.trim())) return fail('Telefon numarası geçersiz.', 'iletisim');
     if (form.contact_whatsapp.trim() && !PHONE.test(form.contact_whatsapp.trim())) return fail('WhatsApp numarası geçersiz.', 'iletisim');
     if (form.contact_email.trim() && !EMAIL.test(form.contact_email.trim())) return fail('E-posta adresi geçersiz.', 'iletisim');
+    const lateMinutes = Number(form.late_after_minutes);
+    if (!Number.isInteger(lateMinutes) || lateMinutes < 1 || lateMinutes > 240) return fail('Ortalama teslim süresi 1–240 dk arasında olmalı.', 'servis');
 
     savingRef.current = true;
     setSaving(true);
@@ -235,6 +241,7 @@ export function SettingsPage() {
           bg_color: form.bg_color,
           dark_mode: form.dark_mode,
           is_accepting_orders: form.is_accepting_orders,
+          late_after_minutes: lateMinutes,
           contact_name: orNull(form.contact_name),
           contact_phone: orNull(form.contact_phone),
           contact_whatsapp: orNull(form.contact_whatsapp),
@@ -386,6 +393,38 @@ export function SettingsPage() {
                   Her cihaz kendi seçimini hatırlar; ilk açılışta cihazın sistem ayarı kullanılır.
                 </p>
               </div>
+            </Section>
+
+          </>
+        )}
+
+        {tab === 'servis' && (
+          <>
+            <Section icon={Timer} title="Ortalama Teslim Süresi">
+              <p className="text-sm text-ink-muted -mt-1">
+                Sipariş verildikten bu kadar dakika sonra hâlâ teslim edilmemişse Panel'de <strong className="text-state-danger">Gecikiyor</strong> olarak
+                kırmızımsı tonla gösterilir ve "Geciken" sayısına eklenir.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-32">
+                  <input value={form.late_after_minutes} inputMode="numeric" maxLength={3}
+                    onChange={e => set('late_after_minutes', e.target.value.replace(/[^\d]/g, ''))}
+                    className="ui-input w-full pl-4 pr-10 py-2.5 rounded-2xl text-sm font-bold" aria-label="Ortalama teslim süresi (dakika)" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-ink-muted pointer-events-none">dk</span>
+                </div>
+                {[10, 15, 20, 30].map(m => (
+                  <button key={m} type="button" onClick={() => set('late_after_minutes', String(m))}
+                    className={`px-3.5 py-2 rounded-full text-sm font-bold spring-btn ${form.late_after_minutes === String(m) ? 'ui-chip-active' : 'ui-chip'}`}>
+                    {m} dk
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const n = Number(form.late_after_minutes);
+                return form.late_after_minutes === '' || !Number.isInteger(n) || n < 1 || n > 240
+                  ? <p className="text-xs font-semibold text-state-danger">1 ile 240 dakika arasında bir değer girin.</p>
+                  : null;
+              })()}
             </Section>
 
             <Section icon={ShoppingBag} title="Sipariş Alımı">

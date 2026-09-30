@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  Armchair, Bell, ChefHat, ClipboardList, ConciergeBell, CreditCard, House, LayoutList, LogOut, Menu, QrCode, Settings,
+  Armchair, Bell, CalendarDays, ChefHat, ClipboardList, ConciergeBell, CreditCard, House, LayoutList, LogOut, Menu, QrCode, Settings,
   Users
 } from 'lucide-react';
 import type { BusinessSettingsResponse } from '@menu/shared';
@@ -43,6 +43,29 @@ function useModuleFlags(accessToken: string | null): ModuleFlags | null {
   }, [accessToken]);
 
   return flags;
+}
+
+/** Üst çubuk: canlı tarih + saat (dakikada bir güncellenir). Tablette yalnızca saat; telefonda gizli (başlığa yer kalsın). */
+function HeaderClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    // Dakika dönümüne hizalı güncelle
+    let timer = window.setTimeout(function tick() {
+      setNow(new Date());
+      timer = window.setTimeout(tick, 60_000 - (Date.now() % 60_000));
+    }, 60_000 - (Date.now() % 60_000));
+    return () => window.clearTimeout(timer);
+  }, []);
+  const date = now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const time = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className="hidden sm:flex items-center gap-2 text-ink-muted font-serif text-[15px] whitespace-nowrap" aria-label={`${date} ${time}`}>
+      <CalendarDays size={18} strokeWidth={1.5} className="hidden md:block" aria-hidden />
+      <span className="hidden md:inline">{date}</span>
+      <span className="hidden md:inline text-line" aria-hidden>|</span>
+      <span className="text-ink font-semibold tabular-nums">{time}</span>
+    </div>
+  );
 }
 
 export function AdminLayout() {
@@ -205,19 +228,20 @@ export function AdminLayout() {
                 {currentLabel}
               </h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 md:gap-3">
+              <HeaderClock />
               {pendingCount > 0 && (
                 <Link to="/admin/orders" className="no-underline">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse bg-state-danger-bg text-state-danger">
                     <div className="w-2 h-2 rounded-full bg-current" />
-                    {pendingCount} sipariş
+                    {pendingCount}<span className="hidden sm:inline"> sipariş</span>
                   </div>
                 </Link>
               )}
               {callCount > 0 && (
                 <Link to="/admin/orders" className="no-underline">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold animate-pulse bg-state-warn-bg text-state-warn">
-                    <Bell size={12} /> {callCount} çağrı
+                    <Bell size={12} /> {callCount}<span className="hidden sm:inline"> çağrı</span>
                   </div>
                 </Link>
               )}

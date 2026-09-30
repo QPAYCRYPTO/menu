@@ -97,19 +97,20 @@ const businessUpdateSchema = z.object({
   address: clearable(z.string().max(500)),
   wifi_name: clearable(z.string().max(64)),
   wifi_password: clearable(z.string().max(128)),
-  is_accepting_orders: z.boolean().optional()
+  is_accepting_orders: z.boolean().optional(),
+  late_after_minutes: z.number().int().min(1, 'Teslim süresi en az 1 dk olmalı.').max(240, 'Teslim süresi en fazla 240 dk olabilir.').optional()
 });
 
 type BusinessUpdate = z.infer<typeof businessUpdateSchema>;
 
 /** Sütun → değeri nasıl yazacağımız. Metinler HTML'den arındırılır; Wi-Fi şifresi olduğu gibi saklanır
- *  (ekranda React zaten kaçışlar, arındırma "<" gibi karakterleri bozardı). */
-const BUSINESS_COLUMNS: Array<{ key: keyof BusinessUpdate; kind: 'text' | 'raw' | 'bool' }> = [
+ *  (ekranda React zaten kaçışlar, arındırma "<" gibi karakterleri bozardı). 'value': boolean/sayı, olduğu gibi. */
+const BUSINESS_COLUMNS: Array<{ key: keyof BusinessUpdate; kind: 'text' | 'raw' | 'value' }> = [
   { key: 'name', kind: 'text' },
   { key: 'logo_url', kind: 'raw' },
   { key: 'theme_color', kind: 'raw' },
   { key: 'bg_color', kind: 'text' },
-  { key: 'dark_mode', kind: 'bool' },
+  { key: 'dark_mode', kind: 'value' },
   { key: 'description', kind: 'text' },
   { key: 'contact_name', kind: 'text' },
   { key: 'contact_phone', kind: 'text' },
@@ -119,12 +120,13 @@ const BUSINESS_COLUMNS: Array<{ key: keyof BusinessUpdate; kind: 'text' | 'raw' 
   { key: 'address', kind: 'text' },
   { key: 'wifi_name', kind: 'text' },
   { key: 'wifi_password', kind: 'raw' },
-  { key: 'is_accepting_orders', kind: 'bool' }
+  { key: 'is_accepting_orders', kind: 'value' },
+  { key: 'late_after_minutes', kind: 'value' }
 ];
 
 const BUSINESS_SETTINGS_FIELDS = `id, name, slug, logo_url, theme_color, bg_color, dark_mode,
             description, contact_name, contact_phone, contact_email, contact_whatsapp, contact_instagram,
-            address, wifi_name, wifi_password, is_accepting_orders,
+            address, wifi_name, wifi_password, is_accepting_orders, late_after_minutes,
             waiter_module_enabled, kitchen_module_enabled`;
 
 const getProductsQuerySchema = z.object({
@@ -217,7 +219,7 @@ adminRoutes.put('/business', async (req, res) => {
     const value = payload[key];
     if (value === undefined) continue; // gönderilmedi → dokunma
     let dbValue: unknown;
-    if (kind === 'bool') {
+    if (kind === 'value') {
       dbValue = value;
     } else if (value === null || value === '') {
       dbValue = null; // boşaltıldı → NULL

@@ -68,6 +68,8 @@ export interface BusinessSettingsResponse {
   wifi_password: string | null;
   /** "Sipariş alımı açık" anahtarı (şimdilik yalnızca kaydedilir) */
   is_accepting_orders: boolean;
+  /** Bu kadar dakikada teslim edilmeyen sipariş panelde "Gecikiyor" görünür (varsayılan 15) */
+  late_after_minutes: number;
   /** Süper admin tarafından açılıp kapatılan modül (kapalıysa admin menüsünde sekme görünmez) */
   waiter_module_enabled?: boolean;
   kitchen_module_enabled?: boolean;
