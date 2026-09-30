@@ -29,6 +29,7 @@ import {
 } from '../services/sessionService.js';
 import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
+import { BREAK_MINUTES, endBreak, getWaiterShiftInfo, startBreak } from '../services/staffService.js';
 
 export const waiterPublicRoutes = Router();
 
@@ -119,6 +120,58 @@ waiterPublicRoutes.post('/login', publicMenuRateLimit, async (req, res) => {
     },
     session_id: result.session_id
   });
+});
+
+// ─────────────────────────────────────────────────────────────
+// PROFİL + MOLA — personel kendi ünvanını, yetkilerini, vardiyasından kalan süreyi görür;
+// "mola kullanabilir" yetkisi varsa süre seçip molaya çıkar / döner.
+// ─────────────────────────────────────────────────────────────
+
+waiterPublicRoutes.get('/profile', requireWaiterAuth, async (req, res) => {
+  const waiter = req.waiter!;
+  const shift = await getWaiterShiftInfo(waiter.id, req.waiterSessionId);
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({
+    id: waiter.id,
+    name: waiter.name,
+    title: waiter.title,
+    permissions: waiter.permissions,
+    break_options: BREAK_MINUTES,
+    ...shift
+  });
+});
+
+const breakStartSchema = z.object({
+  minutes: z.number().int().refine(m => (BREAK_MINUTES as readonly number[]).includes(m), 'Geçersiz mola süresi.')
+});
+
+waiterPublicRoutes.post('/break/start', requireWaiterAuth, async (req, res) => {
+  const waiter = req.waiter!;
+  if (!waiter.permissions?.can_use_break) {
+    res.status(403).json({ message: 'Mola kullanma yetkiniz yok.', code: 'BREAK_NOT_ALLOWED' });
+    return;
+  }
+  const parsed = breakStartSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Geçersiz mola süresi.' });
+    return;
+  }
+  const state = await startBreak(waiter, parsed.data.minutes);
+  if (!state) {
+    res.status(409).json({ message: 'Zaten moladasınız.', code: 'ALREADY_ON_BREAK' });
+    return;
+  }
+  res.status(200).json(state);
+});
+
+waiterPublicRoutes.post('/break/end', requireWaiterAuth, async (req, res) => {
+  const waiter = req.waiter!;
+  const result = await endBreak(waiter);
+  if (!result) {
+    res.status(409).json({ message: 'Şu an molada değilsiniz.', code: 'NOT_ON_BREAK' });
+    return;
+  }
+  res.status(200).json({ on_break: false, ...result });
 });
 
 // ─────────────────────────────────────────────────────────────

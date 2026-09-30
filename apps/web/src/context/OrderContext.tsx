@@ -337,7 +337,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   console.log('[SSE] Event alındı:', data.type, data);
 
                   // ─── YENİ SİPARİŞ / ÇAĞRI ─────────────────────
-                  if (data.type === 'new_order' || data.type === 'call') {
+                  // Personel hareketleri (mola vb.): Panel sayfası kendi dinler
+                  if (data.type === 'staff_update') {
+                    window.dispatchEvent(new CustomEvent('atlasqr:staff-update', { detail: data }));
+                  }
+                  else if (data.type === 'new_order' || data.type === 'call') {
                     if (data.type === 'call') playCallSound();
                     else playOrderSound();
 

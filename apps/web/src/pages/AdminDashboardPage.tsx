@@ -3,14 +3,19 @@
 // - Üstte ölçüm kartları: Açık masa · Aktif sipariş · Geciken · Bekleyen çağrı
 // - Aktif siparişler listesi: Masa · Durum · Süre (verildiği andan beri, canlı) · Detay
 //   Süre, Ayarlar → Servis → "Ortalama teslim süresi"ni aşarsa satır "Gecikiyor" olur (kırmızımsı ton).
-// - Sağda "Dikkat gerektirenler" (Aşama 3'te personel hareketleriyle genişleyecek)
-// Veri: siparişler OrderContext'ten canlı (SSE); açık masalar /admin/sessions'tan (sipariş değişince + 30 sn'de bir).
+// - Sağda "Dikkat gerektirenler" (geciken, çağrı, başlatılmayan, mola süresi aşan, vardiyası biten…)
+//   ve "Hareketler" (personel mola çıkış/dönüşleri, canlı)
+// - Altta sabit kısayol çubuğu: serviste/molada personel sayısı + Ürün/Masa/Personel ekle, Menüyü aç
+// Veri: siparişler OrderContext'ten canlı (SSE); açık masalar /admin/sessions'tan (sipariş değişince + 30 sn'de bir);
+// personel /admin/waiters/overview'dan (mola olayı gelince + 30 sn'de bir; personel modülü açıksa).
+// Alt çubuk `fixed`: admin düzeninde sayfa belgeyle kaydığı için sticky çalışmaz; yatayda sayfa kutusuna hizalanır.
 
 import type { BusinessSettingsResponse } from '@menu/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Armchair, ArrowRight, Bell, ChevronRight, CircleAlert, ClipboardList, Clock, PackageX, TriangleAlert, UtensilsCrossed, X
+  Armchair, ArrowRight, Bell, ChevronRight, CircleAlert, ClipboardList, Clock, Coffee, ExternalLink, Hourglass, PackageX,
+  Play, Plus, TriangleAlert, UserPlus, UtensilsCrossed, X
 } from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -18,11 +23,31 @@ import { useOrders, type Order } from '../context/OrderContext';
 import { orderStatusStyle } from '../lib/orderStatus';
 
 const DEFAULT_LATE_MINUTES = 15;
+const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
+/** Vardiyası bu kadar dakikadan az kalan personel dikkat listesine düşer */
+const SHIFT_ENDING_MINUTES = 15;
 /** Bu kadar dakikadır "Bekliyor"da duran (mutfağın başlamadığı) sipariş dikkat listesine düşer */
 const UNSTARTED_MINUTES = 5;
 
 type SessionRow = { id: string; table_id: string; status: 'open' | 'merged' };
 type ProductRow = { id: string; is_active: boolean };
+type StaffMember = {
+  id: string; name: string; title: string | null;
+  on_break: boolean; break_started_at: string | null; break_ends_at: string | null;
+  shift_ends_at: string | null;
+};
+type StaffActivity = {
+  id: string; waiter_name: string; action: 'break_start' | 'break_end';
+  metadata: { minutes?: number; duration_min?: number; overdue_min?: number };
+  created_at: string;
+};
+
+function ago(iso: string, now: number): string {
+  const m = minutesSince(iso, now);
+  if (m < 1) return 'az önce';
+  if (m < 60) return `${m} dk önce`;
+  return new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
 
 function minutesSince(iso: string, now: number): number {
   return Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60_000));
@@ -54,6 +79,12 @@ export function AdminDashboardPage() {
   const [inactiveProducts, setInactiveProducts] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [detail, setDetail] = useState<Order | null>(null);
+  const [slug, setSlug] = useState('');
+  const [staffEnabled, setStaffEnabled] = useState(false);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [activity, setActivity] = useState<StaffActivity[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [barBox, setBarBox] = useState<{ left: number; width: number } | null>(null);
 
   // Süreler canlı akar
   useEffect(() => {
@@ -65,7 +96,11 @@ export function AdminDashboardPage() {
   useEffect(() => {
     if (!accessToken) return;
     apiRequest<BusinessSettingsResponse>('/admin/business', { token: accessToken })
-      .then(b => setLateAfter(b.late_after_minutes ?? DEFAULT_LATE_MINUTES))
+      .then(b => {
+        setLateAfter(b.late_after_minutes ?? DEFAULT_LATE_MINUTES);
+        setSlug(b.slug);
+        setStaffEnabled(b.waiter_module_enabled === true);
+      })
       .catch(() => {});
     apiRequest<ProductRow[]>('/admin/products?page=1&page_size=100', { token: accessToken })
       .then(list => setInactiveProducts(list.filter(p => p.is_active === false).length))
@@ -92,6 +127,40 @@ export function AdminDashboardPage() {
     return () => { cancelled = true; window.clearInterval(t); };
   }, [accessToken, orderKey]);
 
+  // Personel: mola olayı gelince (SSE) ve 30 sn'de bir tazelenir
+  useEffect(() => {
+    if (!accessToken || !staffEnabled) return;
+    let cancelled = false;
+    const load = () => apiRequest<{ staff: StaffMember[]; activity: StaffActivity[] }>('/admin/waiters/overview', { token: accessToken })
+      .then(d => { if (!cancelled) { setStaff(d.staff); setActivity(d.activity); } })
+      .catch(() => {});
+    load();
+    const t = window.setInterval(load, 30_000);
+    window.addEventListener('atlasqr:staff-update', load);
+    return () => { cancelled = true; window.clearInterval(t); window.removeEventListener('atlasqr:staff-update', load); };
+  }, [accessToken, staffEnabled]);
+
+  // Alt çubuğu sayfa kutusuyla hizala
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setBarBox(prev => (prev && prev.left === r.left && prev.width === r.width ? prev : { left: r.left, width: r.width }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
+
+  const onShift = staff.filter(s => s.shift_ends_at && !s.on_break);
+  const onBreak = staff.filter(s => s.on_break);
+  const breakOverdue = onBreak.filter(s => s.break_ends_at && new Date(s.break_ends_at).getTime() < now);
+  const shiftEnding = staff.filter(s => s.shift_ends_at
+    && new Date(s.shift_ends_at).getTime() - now < SHIFT_ENDING_MINUTES * 60_000);
+
   const lateOrders = orders.filter(o => minutesSince(o.created_at, now) >= lateAfter);
   const unstarted = orders.filter(o => o.status === 'pending' && minutesSince(o.created_at, now) >= UNSTARTED_MINUTES);
 
@@ -106,11 +175,25 @@ export function AdminDashboardPage() {
     { count: lateOrders.length, title: 'Geciken sipariş', desc: `${lateAfter} dakikayı aşan siparişler`, icon: Clock, to: '/admin/orders', tone: 'danger' as const },
     { count: callCount, title: 'Bekleyen çağrı', desc: 'Garson / hesap çağrıları', icon: Bell, to: '/admin/orders', tone: 'warn' as const },
     { count: unstarted.length, title: 'Başlatılmayan sipariş', desc: `${UNSTARTED_MINUTES} dakikadır "Bekliyor"da`, icon: CircleAlert, to: '/admin/orders', tone: 'warn' as const },
+    ...(staffEnabled ? [
+      { count: breakOverdue.length, title: 'Mola süresi aşıldı',
+        desc: breakOverdue.length ? breakOverdue.map(s => s.name).join(', ') : 'Moladan dönmeyen personel',
+        icon: Coffee, to: '/admin/waiters', tone: 'danger' as const },
+      { count: shiftEnding.length, title: 'Vardiyası bitiyor',
+        desc: shiftEnding.length ? shiftEnding.map(s => s.name).join(', ') : `${SHIFT_ENDING_MINUTES} dk içinde biten vardiya`,
+        icon: Hourglass, to: '/admin/waiters', tone: 'warn' as const }
+    ] : []),
     { count: inactiveProducts ?? 0, title: 'Satışa kapalı ürün', desc: 'Menüde gizli ürünler', icon: PackageX, to: '/admin/products', tone: 'muted' as const }
   ];
 
+  const shortcuts = [
+    { label: 'Ürün ekle', to: '/admin/products?yeni=1', icon: Plus },
+    { label: 'Masa ekle', to: '/admin/tables?yeni=1', icon: Armchair },
+    ...(staffEnabled ? [{ label: 'Personel ekle', to: '/admin/waiters?yeni=1', icon: UserPlus }] : [])
+  ];
+
   return (
-    <div className="text-ink">
+    <div ref={rootRef} className="text-ink pb-28">
       <h1 className="font-serif font-bold text-3xl md:text-4xl mb-5">Bugünkü servis</h1>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_320px] items-start">
@@ -184,6 +267,7 @@ export function AdminDashboardPage() {
           </section>
         </div>
 
+        <div className="space-y-5 min-w-0">
         {/* Dikkat gerektirenler */}
         <aside className="ui-card rounded-3xl p-4 md:p-6">
           <h2 className="font-serif font-bold text-2xl mb-2">Dikkat gerektirenler</h2>
@@ -208,6 +292,85 @@ export function AdminDashboardPage() {
             })}
           </div>
         </aside>
+
+        {/* Hareketler — personelin mola çıkış/dönüşleri (canlı) */}
+        {staffEnabled && (
+          <aside className="ui-card rounded-3xl p-4 md:p-6">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h2 className="font-serif font-bold text-2xl">Hareketler</h2>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-state-ok">
+                <span className="w-2 h-2 rounded-full bg-current animate-pulse" /> Canlı
+              </span>
+            </div>
+            {activity.length === 0 ? (
+              <p className="text-sm text-ink-muted py-4">Son 24 saatte personel hareketi yok.</p>
+            ) : (
+              <ul className="max-h-80 overflow-y-auto -mr-2 pr-2">
+                {activity.map(a => {
+                  const start = a.action === 'break_start';
+                  const overdue = !start && (a.metadata.overdue_min ?? 0) > 0;
+                  return (
+                    <li key={a.id} className="flex items-start gap-3 py-3 border-b border-line last:border-b-0">
+                      <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                        start ? 'bg-state-warn-bg text-state-warn' : 'bg-state-ok-bg text-state-ok'}`}>
+                        {start ? <Coffee size={16} strokeWidth={1.75} /> : <Play size={16} strokeWidth={1.75} />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-snug">
+                          <strong className="font-semibold">{a.waiter_name}</strong>{' '}
+                          {start ? `molaya çıktı${a.metadata.minutes ? ` (${a.metadata.minutes} dk)` : ''}` : 'moladan döndü'}
+                        </p>
+                        <p className={`text-xs mt-0.5 ${overdue ? 'text-state-danger font-semibold' : 'text-ink-muted'}`}>
+                          {ago(a.created_at, now)}
+                          {!start && a.metadata.duration_min !== undefined && ` · ${a.metadata.duration_min} dk sürdü`}
+                          {overdue && ` · ${a.metadata.overdue_min} dk gecikti`}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </aside>
+        )}
+        </div>
+      </div>
+
+      {/* Alt kısayol çubuğu */}
+      <div className="fixed bottom-0 z-30 pb-3 pt-4 bg-gradient-to-t from-[var(--bg)] from-60% to-transparent"
+        style={barBox ? { left: barBox.left, width: barBox.width } : { left: 0, right: 0 }}>
+        <div className="bg-brand text-on-brand rounded-2xl px-3 md:px-5 py-2.5 flex items-center gap-2 md:gap-4 shadow-[var(--shadow)]">
+          {staffEnabled && (
+            <Link to="/admin/waiters" className="no-underline text-on-brand flex items-center gap-2.5 min-w-0 pr-2 md:pr-4 md:border-r border-[color-mix(in_srgb,var(--on-brand)_25%,transparent)]"
+              title="Serviste / molada personel">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#7cc896] shrink-0 shadow-[0_0_0_3px_color-mix(in_srgb,#7cc896_30%,transparent)]" aria-hidden />
+              <span className="font-serif text-[15px] md:text-base whitespace-nowrap">
+                <strong className="tabular-nums">{onShift.length}</strong> serviste
+              </span>
+              {onBreak.length > 0 && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-xs opacity-80 whitespace-nowrap">
+                  <Coffee size={13} /> {onBreak.length} molada
+                </span>
+              )}
+            </Link>
+          )}
+          <div className="ml-auto flex items-center gap-1 md:gap-2">
+            {shortcuts.map(s => (
+              <Link key={s.label} to={s.to} title={s.label}
+                className="no-underline text-on-brand inline-flex items-center gap-2 px-2.5 md:px-3.5 py-2 rounded-xl hover:bg-[color-mix(in_srgb,var(--on-brand)_14%,transparent)] transition-colors">
+                <s.icon size={19} strokeWidth={1.5} aria-hidden />
+                <span className="hidden md:inline font-serif text-[15px] whitespace-nowrap">{s.label}</span>
+              </Link>
+            ))}
+            {slug && (
+              <a href={`${PUBLIC_BASE_URL}/m/${slug}`} target="_blank" rel="noopener noreferrer" title="Menüyü aç"
+                className="no-underline text-on-brand inline-flex items-center gap-2 px-2.5 md:px-3.5 py-2 rounded-xl hover:bg-[color-mix(in_srgb,var(--on-brand)_14%,transparent)] transition-colors">
+                <ExternalLink size={19} strokeWidth={1.5} aria-hidden />
+                <span className="hidden md:inline font-serif text-[15px] whitespace-nowrap">Menüyü aç</span>
+              </a>
+            )}
+          </div>
+        </div>
       </div>
 
       {detail && <OrderDetailModal order={detail} now={now} lateAfter={lateAfter} onClose={() => setDetail(null)} />}

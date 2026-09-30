@@ -3,6 +3,7 @@
 
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
@@ -37,6 +38,9 @@ export function ProductsPage() {
   const [form, setForm] = useState<ProductFormState>(initialForm);
 
   const sortedCategories = useMemo(() => [...categories].filter(c => c.is_active).sort((a, b) => a.sort_order - b.sort_order), [categories]);
+  // Panel kısayolu: /admin/products?yeni=1 → kategoriler yüklenince "Yeni Ürün" formu açılır
+  const [searchParams, setSearchParams] = useSearchParams();
+  const wantsNew = searchParams.get('yeni') === '1';
 
   function showToast(message: string, type: 'error' | 'success') {
     showToastHelper(message, type, setToast);
@@ -72,6 +76,13 @@ export function ProductsPage() {
     setForm({ ...initialForm, category_id: sortedCategories[0]?.id ?? '' });
     setIsModalOpen(true);
   }
+
+  useEffect(() => {
+    if (!wantsNew || sortedCategories.length === 0) return;
+    openCreateModal();
+    setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('yeni'); return p; }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsNew, sortedCategories.length]);
 
   function openEditModal(item: ProductResponse) {
     setEditingItem(item);

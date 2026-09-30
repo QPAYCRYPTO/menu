@@ -6,6 +6,7 @@
 // - merge_group_id ile birleşik masalar gruplanır
 
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, Armchair, Banknote, Check, Clock, CreditCard, Link2, Lock, Receipt, RefreshCw, Ticket, Timer,
   NotebookPen, Wallet, X, type LucideIcon
@@ -482,6 +483,15 @@ export function TablesPage() {
   const [tables, setTables] = useState<Table[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [newName, setNewName] = useState('');
+  // Panel kısayolu: /admin/tables?yeni=1 → "Yeni Masa Ekle" alanına odaklan
+  const [searchParams, setSearchParams] = useSearchParams();
+  const newTableInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (searchParams.get('yeni') !== '1') return;
+    newTableInputRef.current?.focus();
+    newTableInputRef.current?.scrollIntoView({ block: 'center' });
+    setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('yeni'); return p; }, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [toast, setToast] = useState<ToastState>(null);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -721,7 +731,7 @@ export function TablesPage() {
           <Armchair size={14} className="text-accent" /> Yeni Masa Ekle
         </h2>
         <div className="flex gap-3">
-          <input value={newName} onChange={e => setNewName(e.target.value)}
+          <input ref={newTableInputRef} value={newName} onChange={e => setNewName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addTable()}
             placeholder="Örn: Masa 1, Bahçe 3, VIP..."
             className="ui-input flex-1 min-w-0 px-4 py-2.5 rounded-2xl text-sm" />

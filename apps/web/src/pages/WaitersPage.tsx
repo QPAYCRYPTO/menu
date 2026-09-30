@@ -6,6 +6,7 @@
 // - Garson silme özel modal'ı kaldırıldı, ConfirmModal'a geçti
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   Waiter,
@@ -106,6 +107,15 @@ export function WaitersPage() {
     if (accessToken) loadWaiters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  // Panel kısayolu: /admin/waiters?yeni=1 → "Personel Ekle" formu açılır
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('yeni') !== '1') return;
+    openCreateForm();
+    setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('yeni'); return p; }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   function showToast(message: string, type: 'error' | 'success') {
     showToastHelper(message, type, setToast);

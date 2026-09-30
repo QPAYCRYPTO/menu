@@ -18,6 +18,7 @@ import {
   listActiveSessionsForWaiter,
   revokeWaiterSession
 } from '../services/waiterService.js';
+import { getStaffOverview } from '../services/staffService.js';
 
 export const waiterAdminRoutes = Router();
 
@@ -125,6 +126,17 @@ waiterAdminRoutes.post('/', async (req, res) => {
     }
     throw err;
   }
+});
+
+// GET /api/admin/waiters/overview
+// Panel: vardiyadaki / moladaki personel + son 24 saatin mola hareketleri
+waiterAdminRoutes.get('/overview', async (req, res) => {
+  const businessId = (req.ctx as any)?.businessId;
+  if (!businessId) {
+    throw new AppError('İşletme bulunamadı.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(await getStaffOverview(businessId));
 });
 
 // GET /api/admin/waiters/:id

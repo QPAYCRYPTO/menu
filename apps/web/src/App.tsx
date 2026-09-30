@@ -32,6 +32,7 @@ import { KitchenPage } from './pages/KitchenPage';
 import { KitchenScreenPage } from './pages/KitchenScreenPage';
 import { WaiterCallsProvider } from './context/WaiterCallsContext';
 import { WaiterCallsPage } from './pages/waiter/WaiterCallsPage';
+import { WaiterProfilePage } from './pages/waiter/WaiterProfilePage';
 
 // ✅ YENİ — Bu iki satırı ekle:
 import { HomePage } from './pages/HomePage';
@@ -120,6 +121,7 @@ export function App() {
               <Route path="/garson" element={<WaiterLayout />}>
                 <Route index element={<WaiterTablesPage />} />
                 <Route path="cagrilar" element={<WaiterCallsPage />} />
+                <Route path="profil" element={<WaiterProfilePage />} />
                 <Route path="masa/:id" element={<WaiterTableDetailPage />} />
                 <Route path="masa/:id/menu" element={<WaiterMenuPage />} />
               </Route>

@@ -304,6 +304,46 @@ export async function takeCall(token: string, tabId: string, callId: string): Pr
   return handleResponse(res);
 }
 
+// ============================================================================
+// PROFİL + MOLA
+// ============================================================================
+
+export type WaiterProfile = {
+  id: string;
+  name: string;
+  title: string | null;
+  permissions: WaiterPermissions;
+  /** Seçilebilir mola süreleri (dk) */
+  break_options: number[];
+  on_break: boolean;
+  break_started_at: string | null;
+  break_ends_at: string | null;
+  /** Bu girişin (vardiyanın) bitişi; e-posta ile girişte null */
+  shift_ends_at: string | null;
+};
+
+export async function getProfile(token: string, tabId: string): Promise<WaiterProfile> {
+  const res = await fetch(`${API_BASE_URL}/public/waiter/profile`, { headers: waiterHeaders(token, tabId), cache: 'no-store' });
+  return handleResponse<WaiterProfile>(res);
+}
+
+export async function startBreak(token: string, tabId: string, minutes: number): Promise<{ on_break: boolean; break_started_at: string; break_ends_at: string }> {
+  const res = await fetch(`${API_BASE_URL}/public/waiter/break/start`, {
+    method: 'POST',
+    headers: waiterHeaders(token, tabId),
+    body: JSON.stringify({ minutes })
+  });
+  return handleResponse(res);
+}
+
+export async function endBreak(token: string, tabId: string): Promise<{ on_break: false; duration_min: number; overdue_min: number }> {
+  const res = await fetch(`${API_BASE_URL}/public/waiter/break/end`, {
+    method: 'POST',
+    headers: waiterHeaders(token, tabId)
+  });
+  return handleResponse(res);
+}
+
 export async function listReadyOrders(token: string, tabId: string): Promise<WaiterReadyOrder[]> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/ready-orders`, {
     headers: waiterHeaders(token, tabId)
