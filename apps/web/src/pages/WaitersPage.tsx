@@ -60,22 +60,14 @@ const WAITER_STATUS: Record<WaiterStatus, { label: string; color: string; icon: 
   inactive: { label: 'Pasif',  color: 'var(--state-danger)', icon: Ban }
 };
 
-// Baş harf avatarı: isimden sabit renk (her render'da aynı) — iki temada okunur orta tonlar
-const AVATAR_COLORS = ['#c05621', '#b7791f', '#8b5cf6', '#2b6cb0', '#2f855a', '#b83280', '#4c51bf'];
-
 /** Rengin saydam tonu — hex ve var(--…) ile çalışır */
 const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
-function avatarColorFor(name: string): string {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
 
-function IconBadge({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
+/** Sade işlem ikonu (Atölye ikon dili): tek renk, ince çizgi. Renk yalnızca anlam taşıyorsa verilir (sil = kırmızı). */
+function IconBadge({ icon: Icon, color = 'currentColor' }: { icon: LucideIcon; color?: string }) {
   return (
-    <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ background: tint(color, 15), color }}>
-      <Icon size={16} />
+    <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ color }}>
+      <Icon size={18} strokeWidth={1.5} />
     </span>
   );
 }
@@ -313,9 +305,8 @@ export function WaitersPage() {
       {/* Başlık kartı */}
       <div className="ui-card rounded-[28px] p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center border"
-            style={{ background: 'var(--accent-soft)', borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)', color: 'var(--accent)' }}>
-            <Users size={20} />
+          <div className="w-11 h-11 rounded-full flex items-center justify-center bg-surface-2 border border-line text-ink">
+            <Users size={20} strokeWidth={1.5} />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight">Personel</h1>
@@ -345,7 +336,6 @@ export function WaitersPage() {
         )}
 
         {waiters.map(w => {
-          const avatarColor = avatarColorFor(w.name);
           const status = WAITER_STATUS[w.status];
           const StatusIcon = status.icon;
           return (
@@ -354,13 +344,8 @@ export function WaitersPage() {
                 w.status === 'active' ? 'bg-surface hover:bg-surface-2' : 'bg-surface-2'}`}>
 
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0 border"
-                  style={{
-                    background: tint(avatarColor, 14),
-                    borderColor: tint(avatarColor, 35),
-                    color: avatarColor,
-                    opacity: w.status === 'active' ? 1 : 0.6
-                  }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center font-serif font-bold text-lg flex-shrink-0 bg-surface-2 border border-line text-ink"
+                  style={{ opacity: w.status === 'active' ? 1 : 0.6 }}>
                   {w.name.charAt(0).toLocaleUpperCase('tr')}
                 </div>
                 <div className="min-w-0">
@@ -388,25 +373,25 @@ export function WaitersPage() {
                     <button onClick={() => setTokenModalWaiter(w)}
                       title="QR giriş kodu" aria-label="QR giriş kodu"
                       className={`${ACTION_BTN} px-3.5 gap-2`}>
-                      <IconBadge icon={QrCode} color="var(--state-ok)" />
-                      <span className="text-xs font-bold text-state-ok">QR</span>
+                      <IconBadge icon={QrCode} />
+                      <span className="text-xs font-bold">QR</span>
                     </button>
                     <button onClick={() => askRevokeActiveSessions(w)}
                       title="Aktif QR'ları iptal et" aria-label="Aktif QR'ları iptal et"
                       className={`${ACTION_BTN} w-11 justify-center`}>
-                      <IconBadge icon={Ban} color="var(--state-warn)" />
+                      <IconBadge icon={Ban} />
                     </button>
                   </>
                 )}
                 <button onClick={() => openEditForm(w)}
                   title="Düzenle" aria-label="Düzenle"
                   className={`${ACTION_BTN} w-11 justify-center`}>
-                  <IconBadge icon={Pencil} color="var(--accent)" />
+                  <IconBadge icon={Pencil} />
                 </button>
                 <button onClick={() => { setPasswordModalWaiter(w); setNewPasswordValue(''); }}
                   title="Şifre belirle/sıfırla" aria-label="Şifre belirle/sıfırla"
                   className={`${ACTION_BTN} w-11 justify-center`}>
-                  <IconBadge icon={KeyRound} color="var(--state-info)" />
+                  <IconBadge icon={KeyRound} />
                 </button>
                 <label className={`${ACTION_BTN} px-3 gap-2 cursor-pointer`} title="Durum">
                   <IconBadge icon={StatusIcon} color={status.color} />

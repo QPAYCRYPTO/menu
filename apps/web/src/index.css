@@ -158,6 +158,12 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink-muted) 45%, transparent); border-radius: 99px; }
 
+/* İkon dili (Atölye): ince çizgili, tek renk lucide ikonlar. Yalnızca varsayılan kalınlıktaki (2) ikonlar
+   inceltilir; özellikle kalın verilenler (onay tikleri vb. strokeWidth={2.5|3}) korunur.
+   Küçük boyutlarda (≤14px) okunurluk için biraz daha kalın. */
+svg.lucide[stroke-width="2"] { stroke-width: 1.5; }
+svg.lucide[stroke-width="2"]:is([width="10"], [width="11"], [width="12"], [width="13"], [width="14"]) { stroke-width: 1.75; }
+
 /* Form elemanları: native select option'ları okunur kalsın */
 select option { color: #073f46; background: #fff; }
 

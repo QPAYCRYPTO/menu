@@ -932,11 +932,10 @@ export function PublicMenuPage() {
               /* Gönderim sonrası: Garsonunuz haberdar edildi */
               <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6 flex flex-col items-center text-center fade-enter">
                 <div className="relative flex items-center justify-center my-4">
-                  <div className="absolute w-24 h-24 rounded-full animate-ping"
-                    style={{ background: withAlpha(sentType.color, 0.18), animationDuration: '2.4s' }} />
-                  <div className="relative w-20 h-20 rounded-full flex items-center justify-center"
-                    style={{ background: sentType.color, boxShadow: `0 10px 30px ${withAlpha(sentType.color, 0.35)}` }}>
-                    <CheckCircle2 size={40} color={readableTextOn(sentType.color)} />
+                  <div className="absolute w-24 h-24 rounded-full animate-ping bg-[color-mix(in_srgb,var(--biz)_18%,transparent)]"
+                    style={{ animationDuration: '2.4s' }} />
+                  <div className="relative w-20 h-20 rounded-full flex items-center justify-center ui-chip-active shadow-[var(--shadow)]">
+                    <CheckCircle2 size={40} strokeWidth={1.5} />
                   </div>
                 </div>
                 <h4 className="font-serif text-2xl font-bold">Garsonunuz haberdar edildi</h4>
@@ -970,30 +969,18 @@ export function PublicMenuPage() {
                           onClick={() => setSelectedCallType(ct.code)}
                           aria-pressed={isSelected}
                           className={`relative rounded-[22px] p-3 min-h-[98px] flex flex-col items-center justify-center gap-2 spring-btn border ${
-                            isSelected ? '' : 'bg-surface-2 border-line'}`}
-                          style={isSelected ? {
-                            background: withAlpha(ct.color, 0.12),
-                            borderColor: ct.color,
-                            boxShadow: `0 0 0 1px ${ct.color}`
-                          } : undefined}>
-                          <span className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all"
-                            style={isSelected ? {
-                              background: ct.color,
-                              color: readableTextOn(ct.color)
-                            } : {
-                              background: withAlpha(ct.color, 0.14),
-                              color: ct.color
-                            }}>
-                            <Icon size={20} />
+                            isSelected ? 'bg-surface border-[var(--biz)] shadow-[0_0_0_1px_var(--biz)]' : 'bg-surface-2 border-line'}`}>
+                          <span className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+                            isSelected ? 'ui-chip-active' : `bg-surface border border-line ${ct.critical ? 'text-state-danger' : 'text-ink'}`}`}>
+                            <Icon size={21} strokeWidth={1.5} />
                           </span>
                           <span className={`text-[12px] text-center leading-tight tracking-tight ${isSelected ? 'font-bold text-ink' : 'font-semibold text-ink-muted'}`}>
                             {ct.label}
                           </span>
                           {recentCode === ct.code && (
-                            <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                              title="Az önce iletildi"
-                              style={{ background: ct.color, color: readableTextOn(ct.color) }}>
-                              <Check size={12} />
+                            <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ui-chip-active"
+                              title="Az önce iletildi">
+                              <Check size={12} strokeWidth={2.5} />
                             </span>
                           )}
                         </button>
@@ -1025,12 +1012,7 @@ export function PublicMenuPage() {
                   <button onClick={sendCall}
                     disabled={!canSendCall || callLoading}
                     className={`w-full py-3.5 rounded-[22px] text-sm font-bold flex items-center justify-center gap-2 spring-btn border disabled:cursor-not-allowed ${
-                      selected && canSendCall && !callLoading ? '' : 'bg-surface-2 border-line text-ink-muted'}`}
-                    style={selected && canSendCall && !callLoading ? {
-                      background: selected.color,
-                      borderColor: 'transparent',
-                      color: readableTextOn(selected.color)
-                    } : undefined}>
+                      selected && canSendCall && !callLoading ? 'btn-primary' : 'bg-surface-2 border-line text-ink-muted'}`}>
                     <Bell size={16} />
                     {callLoading ? 'Gönderiliyor...' : selected ? `“${selected.label}” Çağrısını Gönder` : 'Çağrıyı Gönder'}
                   </button>

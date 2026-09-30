@@ -1,14 +1,14 @@
 // apps/web/src/components/CallTypeBadge.tsx
-// Çağrı türü ikonu — türün kendi renginde yuvarlatılmış rozet (lib/callTypes tek kaynak). Gece/gündüz uyumlu.
+// Çağrı türü ikonu — sade yuvarlak rozet, ince çizgili tek renk ikon (Atölye ikon dili).
+// Acil türler (masa silinsin, servis eksik) kırmızı. lib/callTypes tek kaynak. Gece/gündüz uyumlu.
 
 import { getCallType } from '../lib/callTypes';
-import { readableTextOn, withAlpha } from '../lib/color';
 
 export function CallTypeBadge({ callType, size = 44, filled = false }: {
   callType: string | null | undefined;
   /** Rozetin kenar uzunluğu (px); ikon bunun ~%48'i */
   size?: number;
-  /** true: türün renginde dolu rozet + beyaz ikon (seçili/vurgulu) */
+  /** true: renkli başlık zemini üzerinde (kart başlığı) — yüzey renginde dolu rozet */
   filled?: boolean;
 }) {
   const info = getCallType(callType);
@@ -16,23 +16,10 @@ export function CallTypeBadge({ callType, size = 44, filled = false }: {
   return (
     <span
       aria-hidden
-      className="flex items-center justify-center flex-shrink-0 border"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: Math.round(size * 0.32),
-        // Düz renk + okunur ikon rengi: hem gece hem gündüz temasında (ve eski koyu ekranlarda) çalışır
-        ...(filled ? {
-          background: info.color,
-          borderColor: 'transparent',
-          color: readableTextOn(info.color)
-        } : {
-          background: withAlpha(info.color, 0.15),
-          borderColor: withAlpha(info.color, 0.25),
-          color: info.color
-        })
-      }}>
-      <Icon size={Math.round(size * 0.48)} />
+      className={`flex items-center justify-center flex-shrink-0 rounded-full border border-line ${
+        filled ? 'bg-surface' : 'bg-surface-2'} ${info.critical ? 'text-state-danger' : 'text-ink'}`}
+      style={{ width: size, height: size }}>
+      <Icon size={Math.round(size * 0.46)} strokeWidth={1.5} />
     </span>
   );
 }
