@@ -345,6 +345,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   else if (data.type === 'change_request') {
                     window.dispatchEvent(new CustomEvent('atlasqr:change-request', { detail: data }));
                   }
+                  // Masa/hesap değişti (ödeme, indirim, kapatma, birleştirme…): Kasa ekranı kendi dinler
+                  else if (data.type === 'tables_changed') {
+                    window.dispatchEvent(new CustomEvent('atlasqr:tables-changed', { detail: data }));
+                  }
                   else if (data.type === 'new_order' || data.type === 'call') {
                     if (data.type === 'call') playCallSound();
                     else playOrderSound();

@@ -51,6 +51,7 @@ export type OpenOrderRequiringDecision = {
 export type CloseTableResult = {
   closed_session_ids: string[];
   unpaid_items_count: number;
+  remaining_int?: number;
   forced: boolean;
   // Doluysa masa kapanmadı: her sipariş için karar gerekiyor
   open_orders?: OpenOrderRequiringDecision[];
@@ -122,6 +123,7 @@ export async function closeTable(
     return {
       closed_session_ids: [],
       unpaid_items_count: data.unpaid_items_count ?? 0,
+      remaining_int: data.remaining_int,
       forced: false,
       open_orders: data.code === 'OPEN_ORDERS_REQUIRE_DECISION' ? data.open_orders : undefined
     };
@@ -140,6 +142,84 @@ export async function getNewOrdersSince(
     { headers: headers(token) }
   );
   return handleResponse<NewOrdersResult>(res);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KASA AŞAMA 2 — ödeme kaydı, indirim/ikram, hesap özeti
+// ─────────────────────────────────────────────────────────────────────────────
+export type LedgerMethod = 'cash' | 'card' | 'meal_card';
+
+export type LedgerPayment = {
+  id: string;
+  amount_int: number;
+  method: LedgerMethod;
+  note: string | null;
+  created_at: string;
+  item_count: number;
+  voided_at: string | null;
+  void_reason: string | null;
+  collected_by_email: string | null;
+  voided_by_email: string | null;
+};
+
+export type LedgerDiscount = {
+  id: string;
+  type: 'discount' | 'complimentary';
+  amount_int: number;
+  percent: number | null;
+  applies_to: 'session' | 'item';
+  order_item_id: string | null;
+  note: string | null;
+  created_at: string;
+  product_name: string | null;
+  item_quantity: number | null;
+  created_by_email: string | null;
+};
+
+export type SessionSummary = {
+  session_id: string;
+  table_name: string;
+  opened_at: string;
+  merge_group_id: string | null;
+  total_int: number;
+  discount_int: number;
+  paid_int: number;
+  remaining_int: number;
+  items: (BillItem & { is_complimentary: boolean })[];
+  payments: LedgerPayment[];
+  discounts: LedgerDiscount[];
+};
+
+export async function getSessionSummary(token: string, sessionId: string): Promise<SessionSummary> {
+  const res = await fetch(`${API_BASE_URL}/admin/sessions/${sessionId}/summary`, { headers: headers(token) });
+  return handleResponse<SessionSummary>(res);
+}
+
+export async function createPayment(token: string, body: {
+  session_id: string; method: LedgerMethod; amount_int?: number; item_ids?: string[]; note?: string;
+}): Promise<{ payment: LedgerPayment; ledger: { remaining_int: number } }> {
+  const res = await fetch(`${API_BASE_URL}/admin/payments`, { method: 'POST', headers: headers(token), body: JSON.stringify(body) });
+  return handleResponse(res);
+}
+
+export async function voidPayment(token: string, paymentId: string, reason: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/admin/payments/${paymentId}`, {
+    method: 'DELETE', headers: headers(token), body: JSON.stringify({ reason })
+  });
+  await handleResponse(res);
+}
+
+export async function createDiscount(token: string, body: {
+  session_id: string; type: 'discount' | 'complimentary'; applies_to: 'session' | 'item';
+  amount_int?: number; percent?: number; order_item_id?: string; note?: string;
+}): Promise<{ discount: LedgerDiscount }> {
+  const res = await fetch(`${API_BASE_URL}/admin/discounts`, { method: 'POST', headers: headers(token), body: JSON.stringify(body) });
+  return handleResponse(res);
+}
+
+export async function voidDiscount(token: string, discountId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/admin/discounts/${discountId}`, { method: 'DELETE', headers: headers(token) });
+  await handleResponse(res);
 }
 
 // Müşteri adisyon görüntüleme toggle
