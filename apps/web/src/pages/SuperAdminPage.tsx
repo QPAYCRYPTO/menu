@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { Select } from '../components/Select';
 import { useThemedPage } from '../lib/theme';
 import {
   Business,
@@ -498,11 +499,9 @@ export function SuperAdminPage() {
             <div className="p-5 md:p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">İşletme Seç</label>
-                <select value={resetForm.businessId} onChange={(e) => setResetForm(p => ({ ...p, businessId: e.target.value }))}
-                  className="ui-input w-full px-4 py-2.5 rounded-xl text-sm">
-                  <option value="">Seçin</option>
-                  {businesses.map(b => <option key={b.id} value={b.id}>{b.name} ({b.admin_email})</option>)}
-                </select>
+                <Select value={resetForm.businessId} onChange={v => setResetForm(p => ({ ...p, businessId: v }))}
+                  ariaLabel="İşletme" className="ui-input w-full px-4 py-2.5 rounded-xl text-sm"
+                  options={[{ value: '', label: 'Seçin' }, ...businesses.map(b => ({ value: b.id, label: `${b.name} (${b.admin_email})` }))]} />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-ink-muted">Yeni Şifre</label>

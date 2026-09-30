@@ -30,6 +30,7 @@ import {
   Ban, Check, CircleCheck, Clock, Copy, KeyRound, Mail, MessageCircle, Pencil, Phone, QrCode, Trash2, TriangleAlert, UserPlus, Users, X, type LucideIcon
 } from 'lucide-react';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
+import { Select } from '../components/Select';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
 const DURATION_OPTIONS = [1, 2, 4, 6, 8, 10, 12];
@@ -396,15 +397,13 @@ export function WaitersPage() {
                 </button>
                 <label className={`${ACTION_BTN} px-3 gap-2 cursor-pointer`} title="Durum">
                   <IconBadge icon={StatusIcon} color={status.color} />
-                  <select
+                  <Select
                     value={w.status}
-                    onChange={(e) => handleStatusChange(w, e.target.value as WaiterStatus)}
-                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer pr-1"
-                    style={{ color: status.color }}>
-                    <option value="active">Aktif</option>
-                    <option value="on_leave">İzinli</option>
-                    <option value="inactive">Pasif</option>
-                  </select>
+                    onChange={v => handleStatusChange(w, v)}
+                    ariaLabel="Durum"
+                    className="bg-transparent text-xs font-bold focus:outline-none pr-1"
+                    style={{ color: status.color }}
+                    options={(Object.keys(WAITER_STATUS) as WaiterStatus[]).map(k => ({ value: k, label: WAITER_STATUS[k].label }))} />
                 </label>
                 <button onClick={() => askDeleteWaiter(w)}
                   title="Sil" aria-label="Sil"

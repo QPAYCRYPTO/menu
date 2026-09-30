@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
+import { Select } from '../components/Select';
 import { Layers, Pencil, Plus, ShoppingCart, Trash2, UtensilsCrossed, X } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
@@ -168,15 +169,14 @@ export function ProductsPage() {
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="relative">
           <Layers size={12} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-          <select
+          <Select
             value={selectedCategoryId}
-            onChange={e => onCategoryFilterChange(e.target.value)}
+            onChange={onCategoryFilterChange}
+            ariaLabel="Kategori filtresi"
             className="ui-input pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium"
             style={{minWidth: 180}}
-          >
-            <option value="">Tüm Kategoriler</option>
-            {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+            options={[{ value: '', label: 'Tüm Kategoriler' }, ...sortedCategories.map(c => ({ value: c.id, label: c.name }))]}
+          />
         </div>
         <button onClick={openCreateModal}
           className="btn-primary px-5 py-2.5 rounded-2xl text-sm font-bold ml-auto flex items-center gap-2 spring-btn">
@@ -243,14 +243,13 @@ export function ProductsPage() {
             <div className="p-6 space-y-4 overflow-y-auto" style={{maxHeight: '70vh'}}>
               <div>
                 <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">Kategori</label>
-                <select
+                <Select
                   value={form.category_id}
-                  onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))}
+                  onChange={v => setForm(p => ({ ...p, category_id: v }))}
+                  ariaLabel="Kategori"
                   className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm"
-                >
-                  <option value="">Kategori seçin</option>
-                  {sortedCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                  options={[{ value: '', label: 'Kategori seçin' }, ...sortedCategories.map(c => ({ value: c.id, label: c.name }))]}
+                />
               </div>
 
               <div>

@@ -10,6 +10,7 @@ import {
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { orderStatusStyle } from '../../lib/orderStatus';
+import { Select } from '../Select';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 const PAGE_SIZE = 25;
@@ -238,21 +239,16 @@ export function OrderHistory({ refreshKey }: { refreshKey: number }) {
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <select value={status} onChange={e => setStatus(e.target.value as HistoryStatus)}
-            className="ui-input px-3 py-2 rounded-xl text-sm" aria-label="Durum">
-            {STATUS_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-          </select>
-          <select value={tableId} onChange={e => setTableId(e.target.value)}
-            className="ui-input px-3 py-2 rounded-xl text-sm" aria-label="Masa">
-            <option value="">Tüm masalar</option>
-            {data?.options.tables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select value={waiterId} onChange={e => setWaiterId(e.target.value)}
-            className="ui-input px-3 py-2 rounded-xl text-sm" aria-label="Personel">
-            <option value="">Tüm personel</option>
-            <option value="customer">Müşteri (QR)</option>
-            {data?.options.waiters.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+          <Select value={status} onChange={setStatus} ariaLabel="Durum"
+            className="ui-input px-3 py-2 rounded-xl text-sm"
+            options={STATUS_OPTIONS.map(o => ({ value: o.key, label: o.label }))} />
+          <Select value={tableId} onChange={setTableId} ariaLabel="Masa"
+            className="ui-input px-3 py-2 rounded-xl text-sm"
+            options={[{ value: '', label: 'Tüm masalar' }, ...(data?.options.tables ?? []).map(t => ({ value: t.id, label: t.name }))]} />
+          <Select value={waiterId} onChange={setWaiterId} ariaLabel="Personel"
+            className="ui-input px-3 py-2 rounded-xl text-sm"
+            options={[{ value: '', label: 'Tüm personel' }, { value: 'customer', label: 'Müşteri (QR)' },
+              ...(data?.options.waiters ?? []).map(w => ({ value: w.id, label: w.name }))]} />
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden />
             <input value={qInput} onChange={e => setQInput(e.target.value)} maxLength={60}
