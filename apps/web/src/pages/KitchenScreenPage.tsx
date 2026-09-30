@@ -25,6 +25,8 @@ type KitchenOrder = {
   note: string | null;
   created_at: string;
   items: KitchenItem[];
+  /** Onay bekleyen personel talepleri (iptal / adet azaltma) */
+  pending_changes?: Array<{ kind: 'order_cancel' | 'item_decrease'; product_name: string | null; requested_quantity: number | null }>;
 };
 
 type LoadResult = 'ok' | 'invalid' | 'offline';
@@ -336,6 +338,17 @@ export function KitchenScreenPage() {
                       <Clock size={20} /> {mins === 0 ? 'şimdi' : `${mins} dk`}
                     </div>
                   </div>
+
+                  {order.pending_changes && order.pending_changes.length > 0 && (
+                    <div className="mx-4 mt-4 rounded-2xl px-4 py-3 bg-state-danger-bg text-state-danger" style={{ borderLeft: '6px solid var(--state-danger)' }} role="alert">
+                      <div className="text-xs font-black tracking-widest flex items-center gap-1.5"><TriangleAlert size={14} /> ONAY BEKLİYOR</div>
+                      {order.pending_changes.map((c, i) => (
+                        <div key={i} className="text-xl font-black leading-snug">
+                          {c.kind === 'order_cancel' ? 'İptal talebi var — bekletin' : `${c.product_name ?? 'Ürün'} → ${c.requested_quantity} adet talebi`}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {order.note && order.note.trim() && (
                     <div className="mx-4 mt-4 rounded-2xl text-ink px-4 py-3" style={{ background: 'var(--note-bg)', borderLeft: '6px solid var(--state-warn)' }}>

@@ -49,6 +49,15 @@ export type WaiterOrderItem = {
   waiter_id: string | null;
 };
 
+/** Onay bekleyen iptal / adet azaltma talebi (yetkisiz personel) */
+export type WaiterPendingRequest = {
+  id: string;
+  kind: 'order_cancel' | 'item_decrease';
+  order_item_id: string | null;
+  requested_quantity: number | null;
+  waiter_name: string;
+};
+
 export type WaiterOrder = {
   id: string;
   status: string;
@@ -57,6 +66,7 @@ export type WaiterOrder = {
   waiter_id: string | null;
   waiter_name: string | null;
   items: WaiterOrderItem[];
+  pending_requests?: WaiterPendingRequest[];
 };
 
 export type CallTypeCode =
@@ -404,7 +414,7 @@ export async function updateItemQuantity(
   tabId: string,
   itemId: string,
   quantity: number
-): Promise<{ message: string }> {
+): Promise<{ message: string; /** true: yetki yok, admin onayına gönderildi */ pending?: boolean }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/order-items/${itemId}`, {
     method: 'PATCH',
     headers: waiterHeaders(token, tabId),
@@ -422,6 +432,8 @@ export async function cancelOrder(
 ): Promise<{
   message: string;
   session_auto_closed?: boolean;
+  /** true: yetki yok, iptal talebi admin onayına gönderildi */
+  pending?: boolean;
 }> {
   const res = await fetch(`${API_BASE_URL}/public/waiter/orders/${orderId}/cancel`, {
     method: 'POST',

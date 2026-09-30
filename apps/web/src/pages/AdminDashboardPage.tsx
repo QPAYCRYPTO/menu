@@ -21,6 +21,8 @@ import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useOrders, type Order } from '../context/OrderContext';
 import { orderStatusStyle } from '../lib/orderStatus';
+import { useChangeRequests } from '../lib/changeRequests';
+import { ChangeRequestItem } from '../components/ChangeRequestItem';
 
 const DEFAULT_LATE_MINUTES = 15;
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
@@ -85,6 +87,14 @@ export function AdminDashboardPage() {
   const [activity, setActivity] = useState<StaffActivity[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
   const [barBox, setBarBox] = useState<{ left: number; width: number } | null>(null);
+  // Yetkisiz personelin iptal / adet azaltma talepleri — Panel'den onaylanır
+  const { requests, decide, busyId } = useChangeRequests();
+  const [decisionNote, setDecisionNote] = useState('');
+  async function decideFromPanel(id: string, d: 'approve' | 'reject') {
+    try { setDecisionNote(await decide(id, d)); }
+    catch (e) { setDecisionNote(e instanceof Error ? e.message : 'İşlem başarısız.'); }
+    window.setTimeout(() => setDecisionNote(''), 4000);
+  }
 
   // Süreler canlı akar
   useEffect(() => {
@@ -173,6 +183,8 @@ export function AdminDashboardPage() {
   ];
 
   const attention = [
+    { count: requests.length, title: 'Onay bekleyen talep', desc: 'Personelin iptal / adet azaltma istekleri',
+      icon: TriangleAlert, to: '/admin/orders', tone: 'danger' as const },
     { count: lateOrders.length, title: 'Geciken sipariş', desc: `${lateAfter} dakikayı aşan siparişler`, icon: Clock, to: '/admin/orders', tone: 'danger' as const },
     { count: callCount, title: 'Bekleyen çağrı', desc: 'Garson / hesap çağrıları', icon: Bell, to: '/admin/orders', tone: 'warn' as const },
     { count: unstarted.length, title: 'Başlatılmayan sipariş', desc: `${UNSTARTED_MINUTES} dakikadır "Bekliyor"da`, icon: CircleAlert, to: '/admin/orders', tone: 'warn' as const },
@@ -269,6 +281,26 @@ export function AdminDashboardPage() {
         </div>
 
         <div className="space-y-5 min-w-0">
+        {/* Onay bekleyenler — personelin iptal / adet azaltma talepleri (yalnızca varken) */}
+        {requests.length > 0 && (
+          <aside className="ui-card rounded-3xl p-4 md:p-6" style={{ borderColor: 'var(--state-danger)' }}>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="font-serif font-bold text-2xl">Onay bekleyenler</h2>
+              <span className="min-w-6 h-6 px-2 rounded-full bg-state-danger text-page text-xs font-extrabold flex items-center justify-center">
+                {requests.length}
+              </span>
+            </div>
+            <ul className="space-y-4">
+              {requests.map(r => (
+                <li key={r.id} className="pb-4 border-b border-line last:border-b-0 last:pb-0">
+                  <ChangeRequestItem request={r} busy={busyId === r.id} onDecide={d => decideFromPanel(r.id, d)} />
+                </li>
+              ))}
+            </ul>
+            {decisionNote && <p className="text-xs font-semibold text-ink-muted mt-3">{decisionNote}</p>}
+          </aside>
+        )}
+
         {/* Dikkat gerektirenler */}
         <aside className="ui-card rounded-3xl p-4 md:p-6">
           <h2 className="font-serif font-bold text-2xl mb-2">Dikkat gerektirenler</h2>

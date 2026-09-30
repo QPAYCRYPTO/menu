@@ -36,7 +36,7 @@ const DURATION_OPTIONS = [1, 2, 4, 6, 8, 10, 12];
 const TITLE_SUGGESTIONS = ['Garson', 'Komi', 'Şef', 'Aşçı', 'Barista', 'Kasiyer', 'Müdür'];
 
 const PERMISSION_LABELS: Record<keyof WaiterPermissions, { label: string; desc: string }> = {
-  can_delete_items: { label: 'Sipariş silebilir', desc: 'Adisyondan ürün silebilir (admin onayına düşer)' },
+  can_delete_items: { label: 'Sipariş iptal / azaltma', desc: 'İşaretliyse siparişi iptal eder, adet azaltır. Değilse bu istekler admin onayına düşer.' },
   can_merge_tables: { label: 'Masa birleştirme/ayırma', desc: 'İki masayı tek adisyon yapabilir veya ayırabilir' },
   can_transfer_table: { label: 'Masa transferi', desc: 'Bir adisyonu başka bir masaya taşıyabilir' },
   can_see_other_tables: { label: 'Diğer masaları görebilir', desc: 'Başka personelin açtığı masaları da görür' },

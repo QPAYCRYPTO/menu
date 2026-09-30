@@ -167,7 +167,8 @@ const KITCHEN_EVENT_TYPES = new Set([
   'order_items_updated',
   'kitchen_order_ready',
   'kitchen_token_rotated',
-  'tables_changed'
+  'tables_changed',
+  'change_request'
 ]);
 
 kitchenRoutes.get('/stream', requireKitchenToken, (req, res) => {

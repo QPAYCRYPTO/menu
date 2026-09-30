@@ -18,6 +18,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { sessionRoutes } from './routes/sessionRoutes.js';
 import { ownerRoutes } from './routes/ownerRoutes.js';
 import { waiterAdminRoutes } from './routes/waiterAdminRoutes.js';
+import { changeRequestRoutes } from './routes/changeRequestRoutes.js';
 import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
 import { errorLogIngestRoutes, superAdminErrorRoutes } from './routes/errorLogRoutes.js';
 import { adminTableOperationsRoutes, waiterTableOperationsRoutes } from './routes/tableOperationsRoutes.js';
@@ -62,6 +63,7 @@ export function createApp() {
   app.use('/api/admin/table-operations', adminTableOperationsRoutes);
   app.use('/api/admin/payment', paymentRoutes);
   app.use('/api/admin/waiters', waiterAdminRoutes);
+  app.use('/api/admin/change-requests', changeRequestRoutes);
 
   // SONRA: Genel admin route'u (catch-all)
   app.use('/admin', adminRoutes);

@@ -11,6 +11,8 @@ import { getCallType } from '../lib/callTypes';
 import { CallTypeBadge } from '../components/CallTypeBadge';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { useChangeRequests, type ChangeRequest } from '../lib/changeRequests';
+import { ChangeRequestItem } from '../components/ChangeRequestItem';
 
 const FILTER_STORAGE_KEY = 'atlasqr:orders:filter';
 
@@ -323,13 +325,17 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
 
 type OrderCardProps = {
   order: Order;
+  /** Bu siparişe ait, onay bekleyen personel talepleri */
+  requests?: ChangeRequest[];
+  busyRequestId?: string | null;
+  onDecideRequest?: (id: string, decision: 'approve' | 'reject') => void;
   pendingUpdate?: OrderUpdate;
   onAcknowledge: () => void;
   onUpdate: (order: Order, status: Order['status']) => void;
   onCancel: (order: Order) => void;
 };
 
-function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: OrderCardProps) {
+function OrderCard({ order, requests = [], busyRequestId, onDecideRequest, pendingUpdate, onAcknowledge, onUpdate, onCancel }: OrderCardProps) {
   const isCancelled = order.status === 'cancelled';
   const reasonInfo = isCancelled ? parseReasonLabel(order.cancel_reason) : null;
   const hasUpdate = !!pendingUpdate;
@@ -350,6 +356,16 @@ function OrderCard({ order, pendingUpdate, onAcknowledge, onUpdate, onCancel }: 
           50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--state-warn) 0%, transparent); }
         }
       `}</style>
+
+      {requests.length > 0 && onDecideRequest && (
+        <div className="px-4 py-3 bg-state-danger-bg border-b border-line space-y-3">
+          <div className="text-[11px] font-extrabold uppercase tracking-wider text-state-danger">Onay bekliyor</div>
+          {requests.map(r => (
+            <ChangeRequestItem key={r.id} request={r} compact busy={busyRequestId === r.id}
+              onDecide={d => onDecideRequest(r.id, d)} />
+          ))}
+        </div>
+      )}
 
       <div className="px-4 py-3"
         style={{ background: isCancelled ? 'var(--state-danger-bg)' : 'var(--surface-2)',
@@ -540,6 +556,16 @@ export function OrdersPage() {
     showToastHelper(message, type, setToast);
   }
 
+  // Personelin onay bekleyen iptal / adet azaltma talepleri
+  const { requests: changeRequests, decide: decideRequest, busyId: busyRequestId } = useChangeRequests();
+  async function handleDecideRequest(id: string, decision: 'approve' | 'reject') {
+    try {
+      showToast(await decideRequest(id, decision), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'İşlem başarısız.', 'error');
+    }
+  }
+
   useEffect(() => {
     localStorage.setItem(FILTER_STORAGE_KEY, filter);
   }, [filter]);
@@ -662,6 +688,9 @@ export function OrdersPage() {
       <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
         {foodOrders.map(order => (
           <OrderCard key={order.id} order={order}
+            requests={changeRequests.filter(r => r.order_id === order.id)}
+            busyRequestId={busyRequestId}
+            onDecideRequest={handleDecideRequest}
             pendingUpdate={pendingUpdates.get(order.id)}
             onAcknowledge={() => acknowledgeUpdate(order.id)}
             onUpdate={handleUpdateStatus} onCancel={setCancelTarget} />

@@ -16,6 +16,8 @@ export type KitchenOrder = {
   note: string | null;
   created_at: string;
   items: Array<{ id: string; product_name: string; quantity: number; note: string | null }>;
+  /** Onay bekleyen iptal / adet azaltma talepleri — mutfak kartında uyarı */
+  pending_changes: Array<{ kind: 'order_cancel' | 'item_decrease'; product_name: string | null; requested_quantity: number | null }>;
 };
 
 export async function isKitchenModuleEnabled(businessId: string): Promise<boolean> {
@@ -111,7 +113,21 @@ export async function listKitchenOrders(businessId: string): Promise<KitchenOrde
      LIMIT 200`,
     [businessId]
   );
-  return result.rows.map(r => ({ ...r, order_no: r.order_no ?? 0 }));
+  const pending = await pool.query(
+    `SELECT r.order_id, r.kind, oi.product_name, r.requested_quantity
+     FROM order_change_requests r
+     LEFT JOIN order_items oi ON oi.id = r.order_item_id
+     WHERE r.business_id = $1 AND r.status = 'pending' AND r.order_id = ANY($2::uuid[])
+     ORDER BY r.created_at`,
+    [businessId, result.rows.map(r => r.id)]
+  );
+  return result.rows.map(r => ({
+    ...r,
+    order_no: r.order_no ?? 0,
+    pending_changes: pending.rows
+      .filter(p => p.order_id === r.id)
+      .map(p => ({ kind: p.kind, product_name: p.product_name ?? null, requested_quantity: p.requested_quantity ?? null }))
+  }));
 }
 
 /** Siparişi "hazırlanıyor" yapar. Yalnızca bu işletmenin bekleyen siparişi değişir. */

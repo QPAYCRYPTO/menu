@@ -341,6 +341,10 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   if (data.type === 'staff_update') {
                     window.dispatchEvent(new CustomEvent('atlasqr:staff-update', { detail: data }));
                   }
+                  // Onay bekleyen iptal / adet azaltma talepleri (lib/changeRequests)
+                  else if (data.type === 'change_request') {
+                    window.dispatchEvent(new CustomEvent('atlasqr:change-request', { detail: data }));
+                  }
                   else if (data.type === 'new_order' || data.type === 'call') {
                     if (data.type === 'call') playCallSound();
                     else playOrderSound();

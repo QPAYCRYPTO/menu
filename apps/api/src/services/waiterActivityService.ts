@@ -20,7 +20,10 @@ export type WaiterActionType =
   | 'break_start'
   | 'break_end'
   | 'shift_start'
-  | 'shift_end';
+  | 'shift_end'
+  | 'change_requested'       // Yetkisiz iptal / adet azaltma → admin onayına düştü
+  | 'change_approved'        // Admin talebi onayladı (uygulandı)
+  | 'change_rejected';       // Admin talebi reddetti / talep geçersizleşti
 
 export type WaiterTargetType = 'order' | 'order_item' | 'table' | 'session' | 'call';
 

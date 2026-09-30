@@ -30,6 +30,7 @@ import {
 import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
 import { BREAK_MINUTES, endBreak, getWaiterShiftInfo, recordShiftEvent, startBreak } from '../services/staffService.js';
+import { ChangeRequestError, listPendingRequests, requestItemDecrease, requestOrderCancel } from '../services/changeRequestService.js';
 
 export const waiterPublicRoutes = Router();
 
@@ -370,6 +371,14 @@ waiterPublicRoutes.get('/tables/:table_id', requireWaiterAuth, async (req, res) 
       ORDER BY o.created_at ASC
     `, [session.id]);
     orders = ordersResult.rows;
+    // Onay bekleyen iptal / adet azaltma talepleri (personel ekranında rozet)
+    const pending = await listPendingRequests(businessId, orders.map(o => o.id));
+    orders = orders.map(o => ({
+      ...o,
+      pending_requests: pending
+        .filter(p => p.order_id === o.id)
+        .map(p => ({ id: p.id, kind: p.kind, order_item_id: p.order_item_id, requested_quantity: p.requested_quantity, waiter_name: p.waiter_name }))
+    }));
   }
 
   const callsResult = await pool.query(
@@ -1082,6 +1091,22 @@ waiterPublicRoutes.patch('/order-items/:item_id', requireWaiterAuth, async (req,
       return;
     }
 
+    // Yetkisiz azaltma → admin onayına düşer (artırma serbest)
+    if (newQuantity < oldQuantity && !waiter.permissions.can_delete_items) {
+      await client.query('ROLLBACK');
+      try {
+        const request = await requestItemDecrease(waiter, itemId, newQuantity);
+        res.status(202).json({ pending: true, request_id: request.id, message: 'Azaltma talebi admin onayına gönderildi.' });
+      } catch (err) {
+        if (err instanceof ChangeRequestError) {
+          res.status(err.status).json({ message: err.message, code: err.code });
+          return;
+        }
+        throw err;
+      }
+      return;
+    }
+
     await client.query(
       `UPDATE order_items SET quantity = $1 WHERE id = $2`,
       [newQuantity, itemId]
@@ -1171,12 +1196,22 @@ waiterPublicRoutes.post('/orders/:order_id/cancel', requireWaiterAuth, async (re
   const businessId = waiter.business_id;
   const orderId = paramsParsed.data.order_id;
 
+  const { reason_code, reason_text } = bodyParsed.data;
+
+  // Yetkisiz iptal → admin onayına düşer (sipariş şimdilik değişmez)
   if (!waiter.permissions.can_delete_items) {
-    res.status(403).json({ message: 'Sipariş iptal yetkiniz yok.' });
+    try {
+      const request = await requestOrderCancel(waiter, orderId, reason_code, reason_text?.trim() || null);
+      res.status(202).json({ pending: true, request_id: request.id, message: 'İptal talebi admin onayına gönderildi.' });
+    } catch (err) {
+      if (err instanceof ChangeRequestError) {
+        res.status(err.status).json({ message: err.message, code: err.code });
+        return;
+      }
+      throw err;
+    }
     return;
   }
-
-  const { reason_code, reason_text } = bodyParsed.data;
 
   const finalReason = reason_text && reason_text.trim().length > 0
     ? `${reason_code}: ${reason_text.trim()}`

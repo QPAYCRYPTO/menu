@@ -251,6 +251,18 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Kendi talebim sonuçlandı (admin onayladı / reddetti)
+        if (data.type === 'change_request' && data.action === 'decided' && data.waiter_id && data.waiter_id === waiterIdRef.current) {
+          const what = data.kind === 'order_cancel' ? 'iptal talebin' : `${data.product_name ?? 'ürün'} azaltma talebin`;
+          const verdict = data.status === 'approved' ? 'onaylandı' : data.status === 'rejected' ? 'reddedildi' : 'geçersiz sayıldı';
+          const toast: KitchenReadyToast = {
+            id: `${data.request_id}-${Date.now()}`,
+            text: `${data.table_name || 'Masa'}: ${what} ${verdict}${data.note ? ` — ${data.note}` : ''}`
+          };
+          setReadyToasts(prev => [...prev.slice(-2), toast]);
+          window.setTimeout(() => dismissReadyToast(toast.id), KITCHEN_READY_TOAST_MS);
+        }
+
         // Kendi mola durumum değişti (bu ya da başka bir cihazdan)
         if (data.type === 'staff_update' && data.waiter_id && data.waiter_id === waiterIdRef.current) {
           if (data.action === 'break_start') setOnBreak(true);

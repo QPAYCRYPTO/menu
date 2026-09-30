@@ -11,7 +11,7 @@ import { endBreak, getProfile, startBreak, type WaiterPermissions, type WaiterPr
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 
 const PERMISSION_TEXT: Record<keyof WaiterPermissions, string> = {
-  can_delete_items: 'Siparişten ürün silebilir',
+  can_delete_items: 'Sipariş iptal / adet azaltma (değilse admin onayına gider)',
   can_merge_tables: 'Masa birleştirip ayırabilir',
   can_transfer_table: 'Masa transferi yapabilir',
   can_see_other_tables: 'Diğer personelin masalarını görebilir',
