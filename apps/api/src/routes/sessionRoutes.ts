@@ -176,6 +176,18 @@ sessionRoutes.post('/:id/close', async (req, res) => {
              WHERE id = ANY($2::uuid[]) AND business_id = $3`,
             [newSession.id, pendingIds, businessId]
           );
+          // Yeni hesabın toplamı taşınan siparişlerden (kasa listesinde doğru tutar görünsün)
+          const moved = await client.query(
+            `UPDATE table_sessions
+             SET cached_total_int = (
+               SELECT COALESCE(SUM(oi.price_int * oi.quantity), 0)
+               FROM order_items oi WHERE oi.order_id = ANY($2::uuid[])
+             )
+             WHERE id = $1
+             RETURNING cached_total_int`,
+            [newSession.id, pendingIds]
+          );
+          newSession.cached_total_int = moved.rows[0]?.cached_total_int ?? 0;
         }
 
         await client.query('COMMIT');
