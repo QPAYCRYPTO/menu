@@ -41,6 +41,8 @@ export function createApp() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Super-Admin-Secret', 'X-Tab-ID', 'X-Customer-Token', 'X-Kitchen-Token'],
+    // Excel indirmelerinde dosya adı (Content-Disposition) tarayıcıya görünür olsun
+    exposedHeaders: ['Content-Disposition'],
     maxAge: 86400
   }));
 

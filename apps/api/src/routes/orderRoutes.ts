@@ -8,6 +8,7 @@ import { pool } from '../db/postgres.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { subscriber, ORDER_CHANNEL, publishOrder, subscribeChannel, unsubscribeChannel } from '../db/redisPubSub.js';
 import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
+import { buildHistoryWorkbook, getHistoryOptions, getOrderHistory } from '../services/orderHistoryService.js';
 
 const updateOrderSchema = z.object({
   status: z.enum(['pending', 'preparing', 'ready', 'delivered'])
@@ -80,6 +81,69 @@ orderRoutes.get('/stream', (req, res) => {
     unsubscribeChannel(channel);
     clearInterval(ping);
   });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Geçmiş: filtreli liste + özet (+ filtre seçenekleri) ve Excel çıktısı
+//   GET /api/admin/orders/history?from&to&status&table_id&waiter_id&q&page&page_size
+//   GET /api/admin/orders/history/export?…&mode=orders|items&label=…  → .xlsx
+// ─────────────────────────────────────────────────────────────
+const historyQuerySchema = z.object({
+  from: z.string().datetime({ offset: true }),
+  to: z.string().datetime({ offset: true }),
+  status: z.enum(['all', 'delivered', 'cancelled', 'refunded']).default('all'),
+  table_id: z.string().uuid().optional(),
+  waiter_id: z.union([z.string().uuid(), z.literal('customer')]).optional(),
+  q: z.string().trim().max(60).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(10).max(100).default(25)
+}).refine(v => new Date(v.from) < new Date(v.to), { message: 'Tarih aralığı geçersiz.' })
+  .refine(v => new Date(v.to).getTime() - new Date(v.from).getTime() <= 400 * 86_400_000, { message: 'En fazla ~13 aylık aralık seçilebilir.' });
+
+function parseHistoryQuery(query: unknown) {
+  const parsed = historyQuerySchema.safeParse(query);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Geçersiz filtre.' } as const;
+  const d = parsed.data;
+  return {
+    filters: { from: d.from, to: d.to, status: d.status, tableId: d.table_id, waiterId: d.waiter_id, q: d.q || undefined },
+    page: d.page,
+    pageSize: d.page_size
+  } as const;
+}
+
+orderRoutes.get('/history', async (req, res) => {
+  const businessId = req.ctx!.businessId!;
+  const parsed = parseHistoryQuery(req.query);
+  if ('error' in parsed) {
+    res.status(400).json({ message: parsed.error });
+    return;
+  }
+  const [data, options] = await Promise.all([
+    getOrderHistory(businessId, parsed.filters, parsed.page, parsed.pageSize),
+    getHistoryOptions(businessId)
+  ]);
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({ ...data, page: parsed.page, page_size: parsed.pageSize, options });
+});
+
+orderRoutes.get('/history/export', async (req, res) => {
+  const businessId = req.ctx!.businessId!;
+  const parsed = parseHistoryQuery(req.query);
+  if ('error' in parsed) {
+    res.status(400).json({ message: parsed.error });
+    return;
+  }
+  const mode = req.query.mode === 'items' ? 'items' : 'orders';
+  const label = typeof req.query.label === 'string' ? req.query.label.slice(0, 200) : '';
+  const biz = await pool.query(`SELECT name FROM businesses WHERE id = $1`, [businessId]);
+  const { buffer } = await buildHistoryWorkbook(businessId, biz.rows[0]?.name ?? '', parsed.filters, mode, label);
+  const day = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
+  const toDay = day(new Date(new Date(parsed.filters.to).getTime() - 1).toISOString());
+  const fileName = `siparisler_${mode === 'items' ? 'urunler_' : ''}${day(parsed.filters.from)}_${toDay}.xlsx`;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).send(buffer);
 });
 
 // Siparişleri listele - oi.note SELECT'e eklendi
@@ -181,6 +245,8 @@ orderRoutes.put('/:id', async (req, res) => {
       `UPDATE orders 
        SET status = $1, 
            updated_at = NOW(),
+           preparing_at = CASE WHEN $1 = 'preparing' THEN COALESCE(preparing_at, NOW()) ELSE preparing_at END,
+           ready_at = CASE WHEN $1 = 'ready' THEN COALESCE(ready_at, NOW()) ELSE ready_at END,
            ${deliveredAtClause}
        WHERE id = $2 AND business_id = $3
        RETURNING id, status, table_name, type, table_id, delivered_at`,

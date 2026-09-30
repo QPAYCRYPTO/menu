@@ -137,7 +137,7 @@ export async function markKitchenOrderPreparing(
 ): Promise<{ id: string; table_id: string | null; table_name: string } | null> {
   const result = await pool.query(
     `UPDATE orders
-     SET status = 'preparing', updated_at = NOW()
+     SET status = 'preparing', updated_at = NOW(), preparing_at = COALESCE(preparing_at, NOW())
      WHERE id = $1 AND business_id = $2 AND type = 'order' AND status = 'pending'
      RETURNING id, table_id, table_name`,
     [orderId, businessId]
@@ -158,7 +158,7 @@ export async function markKitchenOrderReady(
 } | null> {
   const result = await pool.query(
     `UPDATE orders
-     SET status = 'ready', updated_at = NOW()
+     SET status = 'ready', updated_at = NOW(), ready_at = COALESCE(ready_at, NOW())
      WHERE id = $1 AND business_id = $2 AND type = 'order' AND status IN ('pending', 'preparing')
      RETURNING id, table_id, table_name`,
     [orderId, businessId]

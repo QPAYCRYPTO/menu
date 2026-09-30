@@ -4,19 +4,21 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle, Bell, CalendarDays, Check, ChevronDown, ChevronUp, ClipboardList, Clock, ConciergeBell,
-  Flame, MapPin, NotebookPen, Plus, RefreshCw, Smartphone, Timer, User, UtensilsCrossed, X
+  Flame, MapPin, NotebookPen, Plus, RefreshCw, Search, Smartphone, Timer, User, UtensilsCrossed, X
 } from 'lucide-react';
 import { ORDER_STATUS, orderStatusStyle } from '../lib/orderStatus';
 import { getCallType } from '../lib/callTypes';
 import { CallTypeBadge } from '../components/CallTypeBadge';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
+import { OrderHistory } from '../components/orders/OrderHistory';
 import { useChangeRequests, type ChangeRequest } from '../lib/changeRequests';
 import { ChangeRequestItem } from '../components/ChangeRequestItem';
 
 const FILTER_STORAGE_KEY = 'atlasqr:orders:filter';
 
-type FilterType = 'active' | 'delivered';
+/** 'active': canlı siparişler (kartlar) · 'history': Geçmiş (filtreli tablo + Excel) */
+type FilterType = 'active' | 'history';
 
 const CANCEL_REASONS: { code: CancelReasonCode; label: string; hint?: string }[] = [
   { code: 'customer_cancelled', label: 'Müşteri vazgeçti' },
@@ -537,17 +539,19 @@ function CallCard({ order, onUpdate, onCancel }: CallCardProps) {
 
 export function OrdersPage() {
   const {
-    activeOrders, refreshActive, fetchDelivered, updateOrderStatus, cancelOrder,
+    activeOrders, refreshActive, updateOrderStatus, cancelOrder,
     pendingUpdates, acknowledgeUpdate
   } = useOrders();
 
   const [filter, setFilter] = useState<FilterType>(() => {
     const saved = localStorage.getItem(FILTER_STORAGE_KEY);
-    return (saved === 'active' || saved === 'delivered') ? saved : 'active';
+    // eski kayıt: 'delivered' → Geçmiş
+    return saved === 'history' || saved === 'delivered' ? 'history' : 'active';
   });
 
-  const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([]);
-  const [loadingDelivered, setLoadingDelivered] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  // Aktif siparişlerde hızlı arama (masa ya da ürün)
+  const [activeSearch, setActiveSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
@@ -570,17 +574,6 @@ export function OrdersPage() {
     localStorage.setItem(FILTER_STORAGE_KEY, filter);
   }, [filter]);
 
-  useEffect(() => {
-    if (filter !== 'delivered') return;
-    let cancelled = false;
-    setLoadingDelivered(true);
-    fetchDelivered().then(data => {
-      if (!cancelled) setDeliveredOrders(data);
-    }).finally(() => {
-      if (!cancelled) setLoadingDelivered(false);
-    });
-    return () => { cancelled = true; };
-  }, [filter, fetchDelivered]);
 
   async function handleUpdateStatus(order: Order, status: Order['status']) {
     try {
@@ -595,10 +588,6 @@ export function OrdersPage() {
     if (!cancelTarget) return;
     await cancelOrder(cancelTarget.id, reasonCode, reasonText);
     showToast('Sipariş iptal edildi.', 'success');
-    if (filter === 'delivered') {
-      const data = await fetchDelivered();
-      setDeliveredOrders(data);
-    }
   }
 
   async function handleRefresh() {
@@ -608,8 +597,7 @@ export function OrdersPage() {
       if (filter === 'active') {
         await refreshActive();
       } else {
-        const data = await fetchDelivered();
-        setDeliveredOrders(data);
+        setHistoryRefreshKey(k => k + 1);
       }
       showToast('Liste güncellendi.', 'success');
     } finally {
@@ -617,10 +605,12 @@ export function OrdersPage() {
     }
   }
 
-  const displayedOrders = filter === 'active' ? activeOrders : deliveredOrders;
   const pendingCount = activeOrders.filter(o => o.status === 'pending').length;
   const callOrders = activeOrders.filter(o => o.type === 'call' && o.status === 'pending');
-  const foodOrders = displayedOrders.filter(o => o.type === 'order');
+  const searchTerm = activeSearch.trim().toLocaleLowerCase('tr');
+  const foodOrders = activeOrders.filter(o => o.type === 'order' && (!searchTerm
+    || o.table_name.toLocaleLowerCase('tr').includes(searchTerm)
+    || o.items.some(i => i.product_name.toLocaleLowerCase('tr').includes(searchTerm))));
   const updateCount = pendingUpdates.size;
 
   const criticalCallCount = callOrders.filter(o => {
@@ -657,9 +647,9 @@ export function OrdersPage() {
             className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'active' ? 'ui-chip-active' : 'ui-chip'}`}>
             Aktif
           </button>
-          <button onClick={() => setFilter('delivered')}
-            className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'delivered' ? 'ui-chip-active' : 'ui-chip'}`}>
-            Tamamlanan
+          <button onClick={() => setFilter('history')}
+            className={`px-4 py-2 rounded-2xl text-sm font-semibold spring-btn ${filter === 'history' ? 'ui-chip-active' : 'ui-chip'}`}>
+            Geçmiş
           </button>
           <button onClick={handleRefresh} disabled={refreshing} aria-label="Yenile" title="Yenile"
             className="ui-chip px-4 py-2 rounded-2xl text-sm font-semibold spring-btn disabled:opacity-60">
@@ -667,6 +657,16 @@ export function OrdersPage() {
           </button>
         </div>
       </div>
+
+      {filter === 'history' && <OrderHistory refreshKey={historyRefreshKey} />}
+
+      {filter === 'active' && activeOrders.some(o => o.type === 'order') && (
+        <div className="relative mb-4 max-w-sm">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden />
+          <input value={activeSearch} onChange={e => setActiveSearch(e.target.value)}
+            placeholder="Masa ya da ürün ara" className="ui-input w-full pl-9 pr-3 py-2 rounded-xl text-sm" />
+        </div>
+      )}
 
       {filter === 'active' && callOrders.length > 0 && (
         <div className="mb-6">
@@ -685,7 +685,7 @@ export function OrdersPage() {
         </div>
       )}
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+      {filter === 'active' && <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
         {foodOrders.map(order => (
           <OrderCard key={order.id} order={order}
             requests={changeRequests.filter(r => r.order_id === order.id)}
@@ -696,23 +696,17 @@ export function OrdersPage() {
             onUpdate={handleUpdateStatus} onCancel={setCancelTarget} />
         ))}
 
-        {foodOrders.length === 0 && callOrders.length === 0 && !loadingDelivered && (
+        {foodOrders.length === 0 && callOrders.length === 0 && (
           <div className="ui-card col-span-full text-center py-16 rounded-3xl"
             style={{ borderStyle: 'dashed' }}>
             <div className="mb-3 flex justify-center text-accent"><UtensilsCrossed size={36} strokeWidth={1.5} /></div>
             <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>
-              {filter === 'active' ? 'Aktif sipariş yok' : 'Tamamlanan sipariş yok'}
+              {searchTerm ? 'Aramaya uyan aktif sipariş yok' : 'Aktif sipariş yok'}
             </p>
           </div>
         )}
 
-        {loadingDelivered && (
-          <div className="col-span-full text-center py-16">
-            <div className="w-10 h-10 rounded-full border-2 border-line border-t-[var(--accent)] animate-spin mx-auto mb-3" />
-            <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>Yükleniyor...</p>
-          </div>
-        )}
-      </div>
+      </div>}
     </div>
   );
 }
