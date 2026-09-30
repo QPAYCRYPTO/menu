@@ -39,6 +39,7 @@ const permissionsSchema = z.object({
 
 const createWaiterSchema = z.object({
   name: z.string().min(1).max(100),
+  title: z.string().max(40).optional(),
   phone: z.string().max(30).optional(),
   email: z.string().email().max(200).optional().or(z.literal('')),
   password: z.string().min(8).max(100).optional().or(z.literal('')),
@@ -47,6 +48,7 @@ const createWaiterSchema = z.object({
 
 const updateWaiterSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  title: z.string().max(40).nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
   email: z.string().email().max(200).nullable().optional().or(z.literal('')),
   permissions: permissionsSchema.optional()
@@ -102,6 +104,7 @@ waiterAdminRoutes.post('/', async (req, res) => {
   const data = parsed.data;
   const input = {
     name: data.name,
+    title: data.title || undefined,
     phone: data.phone || undefined,
     email: data.email || undefined,
     password: data.password || undefined,
@@ -114,7 +117,7 @@ waiterAdminRoutes.post('/', async (req, res) => {
   } catch (err: any) {
     const msg = err?.message ?? '';
     if (msg.includes('modülü')) {
-      throw new AppError('Garson modülü bu işletme için kapalı.', 403, APP_ERROR_CODES.FORBIDDEN);
+      throw new AppError('Personel modülü bu işletme için kapalı.', 403, APP_ERROR_CODES.FORBIDDEN);
     }
     if (msg.includes('email') || msg.includes('şifre')) {
       res.status(400).json({ message: msg });
@@ -138,7 +141,7 @@ waiterAdminRoutes.get('/:id', async (req, res) => {
 
   const waiter = await getWaiterById(businessId, parsed.data.id);
   if (!waiter) {
-    res.status(404).json({ message: 'Garson bulunamadı.' });
+    res.status(404).json({ message: 'Personel bulunamadı.' });
     return;
   }
 
@@ -163,6 +166,7 @@ waiterAdminRoutes.patch('/:id', async (req, res) => {
   const data = bodyParsed.data;
   const input = {
     name: data.name,
+    title: data.title === undefined ? undefined : (data.title || null),
     phone: data.phone === undefined ? undefined : (data.phone || null),
     email: data.email === undefined ? undefined : ((data.email && data.email !== '') ? data.email : null),
     permissions: data.permissions
@@ -171,7 +175,7 @@ waiterAdminRoutes.patch('/:id', async (req, res) => {
   try {
     const waiter = await updateWaiterDetails(businessId, paramsParsed.data.id, input);
     if (!waiter) {
-      res.status(404).json({ message: 'Garson bulunamadı.' });
+      res.status(404).json({ message: 'Personel bulunamadı.' });
       return;
     }
     res.status(200).json(waiter);
@@ -202,7 +206,7 @@ waiterAdminRoutes.put('/:id/password', async (req, res) => {
 
   const ok = await setWaiterPassword(businessId, paramsParsed.data.id, bodyParsed.data.password);
   if (!ok) {
-    res.status(404).json({ message: 'Garson bulunamadı.' });
+    res.status(404).json({ message: 'Personel bulunamadı.' });
     return;
   }
 
@@ -225,7 +229,7 @@ waiterAdminRoutes.put('/:id/status', async (req, res) => {
 
   const ok = await setWaiterStatus(businessId, paramsParsed.data.id, bodyParsed.data.status);
   if (!ok) {
-    res.status(404).json({ message: 'Garson bulunamadı.' });
+    res.status(404).json({ message: 'Personel bulunamadı.' });
     return;
   }
 
@@ -252,7 +256,7 @@ waiterAdminRoutes.delete('/:id', async (req, res) => {
       res.status(400).json({ error: message, message, pending_count: result.pending_count });
       return;
     }
-    res.status(404).json({ message: 'Garson bulunamadı.' });
+    res.status(404).json({ message: 'Personel bulunamadı.' });
     return;
   }
 

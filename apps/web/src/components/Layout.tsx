@@ -107,7 +107,7 @@ export function AdminLayout() {
       icon: ConciergeBell
     },
     {
-      to: '/admin/waiters', label: 'Garsonlar', sub: false, module: 'waiter',
+      to: '/admin/waiters', label: 'Personel', sub: false, module: 'waiter',
       icon: Users
     },
     {

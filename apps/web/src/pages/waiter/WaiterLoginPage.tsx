@@ -107,9 +107,9 @@ export function WaiterLoginPage() {
             </div>
           </div>
           <h1 className="font-serif font-bold text-3xl tracking-wide">
-            Garson Girişi
+            Personel Girişi
           </h1>
-          <p className="ui-eyebrow mt-2">AtlasQR · Garson Paneli</p>
+          <p className="ui-eyebrow mt-2">AtlasQR · Personel Paneli</p>
         </div>
 
         <div className="ui-card rounded-3xl p-6">

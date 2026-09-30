@@ -89,6 +89,7 @@ waiterPublicRoutes.post('/auth', publicMenuRateLimit, async (req, res) => {
       id: result.waiter.id,
       business_id: result.waiter.business_id,
       name: result.waiter.name,
+      title: result.waiter.title,
       permissions: result.waiter.permissions
     },
     session_id: result.session_id
@@ -113,6 +114,7 @@ waiterPublicRoutes.post('/login', publicMenuRateLimit, async (req, res) => {
       id: result.waiter.id,
       business_id: result.waiter.business_id,
       name: result.waiter.name,
+      title: result.waiter.title,
       permissions: result.waiter.permissions
     },
     session_id: result.session_id
@@ -150,6 +152,7 @@ waiterPublicRoutes.post('/exchange', publicMenuRateLimit, async (req, res) => {
       id: result.waiter.id,
       business_id: result.waiter.business_id,
       name: result.waiter.name,
+      title: result.waiter.title,
       permissions: result.waiter.permissions
     },
     session_id: result.session_id

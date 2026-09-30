@@ -21,6 +21,8 @@ export type WaiterSelf = {
   id: string;
   business_id: string;
   name: string;
+  /** Ünvan (Garson, Komi, Şef…); eski oturum verisinde olmayabilir */
+  title?: string | null;
   permissions: WaiterPermissions;
 };
 
@@ -392,7 +394,7 @@ export function reasonToMessage(reason: WaiterAuthFailure['reason']): string {
     case 'revoked': return 'Bu QR iptal edilmiş. Yöneticinizle iletişime geçin.';
     case 'waiter_inactive': return 'Hesabınız pasif durumda.';
     case 'business_suspended': return 'İşletme geçici olarak hizmet dışı.';
-    case 'module_disabled': return 'Garson modülü kapalı.';
+    case 'module_disabled': return 'Personel modülü kapalı.';
     case 'invalid_credentials': return 'Email veya şifre hatalı.';
     case 'invalid_tab': return 'Oturum geçersiz. Lütfen tekrar QR ile girin.';
     case 'network_error': return 'Bağlantı hatası. Tekrar deneyin.';

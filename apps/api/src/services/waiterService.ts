@@ -34,6 +34,8 @@ export type Waiter = {
   id: string;
   business_id: string;
   name: string;
+  /** Serbest yazılan ünvan (Garson, Komi, Şef…); null = ünvansız */
+  title: string | null;
   phone: string | null;
   email: string | null;
   is_active: boolean;
@@ -77,6 +79,7 @@ function rowToWaiter(row: any): Waiter {
     id: row.id,
     business_id: row.business_id,
     name: row.name,
+    title: row.title ?? null,
     phone: row.phone ?? null,
     email: row.email ?? null,
     is_active: row.is_active,
@@ -95,6 +98,7 @@ export async function createWaiter(
   businessId: string,
   input: {
     name: string;
+    title?: string;
     phone?: string;
     email?: string;
     password?: string;
@@ -136,9 +140,9 @@ export async function createWaiter(
 
   const result = await pool.query(
     `INSERT INTO waiters
-       (id, business_id, name, phone, email, password_hash, permissions, status, is_active, created_at, updated_at)
+       (id, business_id, name, phone, email, password_hash, permissions, status, is_active, created_at, updated_at, title)
      VALUES
-       ($1, $2, $3, $4, $5, $6, $7::jsonb, 'active', TRUE, NOW(), NOW())
+       ($1, $2, $3, $4, $5, $6, $7::jsonb, 'active', TRUE, NOW(), NOW(), $8)
      RETURNING *`,
     [
       randomUUID(),
@@ -147,7 +151,8 @@ export async function createWaiter(
       input.phone?.trim() ?? null,
       input.email?.trim().toLowerCase() ?? null,
       passwordHash,
-      JSON.stringify(permissions)
+      JSON.stringify(permissions),
+      input.title?.trim() || null
     ]
   );
 
@@ -194,6 +199,7 @@ export async function updateWaiterDetails(
   waiterId: string,
   input: {
     name?: string;
+    title?: string | null;
     phone?: string | null;
     email?: string | null;
     permissions?: Partial<WaiterPermissions>;
@@ -223,6 +229,7 @@ export async function updateWaiterDetails(
        phone = $2,
        email = $3,
        permissions = $4::jsonb,
+       title = $7,
        updated_at = NOW()
      WHERE id = $5 AND business_id = $6 AND deleted_at IS NULL
      RETURNING *`,
@@ -232,7 +239,8 @@ export async function updateWaiterDetails(
       input.email !== undefined ? (input.email?.trim().toLowerCase() ?? null) : current.email,
       JSON.stringify(newPermissions),
       waiterId,
-      businessId
+      businessId,
+      input.title !== undefined ? (input.title?.trim() || null) : current.title
     ]
   );
 

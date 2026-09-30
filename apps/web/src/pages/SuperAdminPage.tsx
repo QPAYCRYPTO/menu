@@ -140,7 +140,7 @@ export function SuperAdminPage() {
     if (!accessToken) return;
     try {
       await apiToggleWaiterModule(accessToken, business.id, !business.waiter_module_enabled);
-      showToast(business.waiter_module_enabled ? 'Garson modülü kapatıldı.' : 'Garson modülü açıldı.', 'success');
+      showToast(business.waiter_module_enabled ? 'Personel modülü kapatıldı.' : 'Personel modülü açıldı.', 'success');
       await loadBusinesses();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Hata.', 'error');
@@ -278,7 +278,7 @@ export function SuperAdminPage() {
             style={{ gridTemplateColumns: '2fr 1.5fr 2fr 1fr 1fr 1fr 1.2fr 1.2fr 1.5fr', background: 'var(--surface-2)' }}>
             <div>İşletme</div><div>Slug</div><div>Admin E-posta</div>
             <div className="text-center">Owner</div><div className="text-center">Kat.</div><div className="text-center">Ürün</div>
-            <div className="text-center">Garson</div>
+            <div className="text-center">Personel</div>
             <div className="text-center">Mutfak</div>
             <div className="text-right">İşlem</div>
           </div>
@@ -318,7 +318,7 @@ export function SuperAdminPage() {
                 <button onClick={() => toggleWaiter(b)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold spring-btn inline-flex items-center gap-1"
                   style={b.waiter_module_enabled ? FLAG_ON : FLAG_OFF}
-                  title={b.waiter_module_enabled ? 'Garson modülü AÇIK' : 'Garson modülü KAPALI'}>
+                  title={b.waiter_module_enabled ? 'Personel modülü AÇIK' : 'Personel modülü KAPALI'}>
                   {b.waiter_module_enabled ? <><CircleCheck size={12} />Açık</> : <><Circle size={12} />Kapalı</>}
                 </button>
               </div>
@@ -406,7 +406,7 @@ export function SuperAdminPage() {
                 <button onClick={() => toggleWaiter(b)}
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"
                   style={b.waiter_module_enabled ? FLAG_ON : FLAG_OFF}>
-                  {b.waiter_module_enabled ? <><CircleCheck size={12} />Garson Açık</> : <><Circle size={12} />Garson Kapalı</>}
+                  {b.waiter_module_enabled ? <><CircleCheck size={12} />Personel Açık</> : <><Circle size={12} />Personel Kapalı</>}
                 </button>
                 <button onClick={() => toggleKitchen(b)}
                   className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold spring-btn inline-flex items-center justify-center gap-1"

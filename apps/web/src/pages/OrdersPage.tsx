@@ -95,7 +95,7 @@ function OrderSourceBadge({ order }: { order: Order }) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap"
         style={{ background: 'var(--accent-soft)', color: 'var(--ink)' }}
-        title={`Garson: ${order.waiter_name}`}>
+        title={`Personel: ${order.waiter_name}`}>
         <User size={12} /> {order.waiter_name}
       </span>
     );

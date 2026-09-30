@@ -1,4 +1,6 @@
 // apps/web/src/pages/WaitersPage.tsx
+// Personel (eski adıyla Garsonlar). Her personelin serbest yazılan bir ünvanı olabilir (Garson, Komi, Şef…);
+// ünvan yalnızca etikettir — yetkiler ayrıca seçilir.
 // CHANGELOG v4:
 // - Browser confirm() yerine ortak ConfirmModal komponenti
 // - Garson silme özel modal'ı kaldırıldı, ConfirmModal'a geçti
@@ -29,12 +31,14 @@ import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
 const DURATION_OPTIONS = [1, 2, 4, 6, 8, 10, 12];
+/** Ünvan için hızlı seçimler — admin istediğini de yazabilir */
+const TITLE_SUGGESTIONS = ['Garson', 'Komi', 'Şef', 'Aşçı', 'Barista', 'Kasiyer', 'Müdür'];
 
 const PERMISSION_LABELS: Record<keyof WaiterPermissions, { label: string; desc: string }> = {
   can_delete_items: { label: 'Sipariş silebilir', desc: 'Adisyondan ürün silebilir (admin onayına düşer)' },
   can_merge_tables: { label: 'Masa birleştirme/ayırma', desc: 'İki masayı tek adisyon yapabilir veya ayırabilir' },
   can_transfer_table: { label: 'Masa transferi', desc: 'Bir adisyonu başka bir masaya taşıyabilir' },
-  can_see_other_tables: { label: 'Diğer masaları görebilir', desc: 'Başka garsonun açtığı masaları da görür' },
+  can_see_other_tables: { label: 'Diğer masaları görebilir', desc: 'Başka personelin açtığı masaları da görür' },
   can_add_note: { label: 'Adisyona not ekleyebilir', desc: 'Ürünlere not ekleyebilir (az pişmiş, soğansız vb.)' },
   can_use_break: { label: 'Mola/vardiya kullanabilir', desc: 'İşe giriş / mola / çıkış butonlarını kullanır' }
 };
@@ -85,7 +89,7 @@ export function WaitersPage() {
 
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
   const [formData, setFormData] = useState({
-    name: '', phone: '', email: '', password: '',
+    name: '', title: '', phone: '', email: '', password: '',
     permissions: { ...DEFAULT_PERMISSIONS } as WaiterPermissions
   });
   const [editingWaiter, setEditingWaiter] = useState<Waiter | null>(null);
@@ -113,14 +117,14 @@ export function WaitersPage() {
       const data = await listWaiters(accessToken);
       setWaiters(data);
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Garsonlar alınamadı.', 'error');
+      showToast(e instanceof Error ? e.message : 'Personel listesi alınamadı.', 'error');
     }
   }
 
   function openCreateForm() {
     setFormMode('create');
     setEditingWaiter(null);
-    setFormData({ name: '', phone: '', email: '', password: '', permissions: { ...DEFAULT_PERMISSIONS } });
+    setFormData({ name: '', title: '', phone: '', email: '', password: '', permissions: { ...DEFAULT_PERMISSIONS } });
   }
 
   function openEditForm(w: Waiter) {
@@ -128,6 +132,7 @@ export function WaitersPage() {
     setEditingWaiter(w);
     setFormData({
       name: w.name,
+      title: w.title ?? '',
       phone: w.phone ?? '',
       email: w.email ?? '',
       password: '',
@@ -155,20 +160,22 @@ export function WaitersPage() {
       if (formMode === 'create') {
         await apiCreateWaiter(accessToken, {
           name: formData.name.trim(),
+          title: formData.title.trim() || undefined,
           phone: formData.phone.trim() || undefined,
           email: formData.email.trim() || undefined,
           password: formData.password || undefined,
           permissions: formData.permissions
         });
-        showToast('Garson eklendi.', 'success');
+        showToast('Personel eklendi.', 'success');
       } else if (editingWaiter) {
         await apiUpdateWaiter(accessToken, editingWaiter.id, {
           name: formData.name.trim(),
+          title: formData.title.trim() || null,
           phone: formData.phone.trim() || null,
           email: formData.email.trim() || null,
           permissions: formData.permissions
         });
-        showToast('Garson güncellendi.', 'success');
+        showToast('Personel güncellendi.', 'success');
       }
       closeForm();
       await loadWaiters();
@@ -222,7 +229,7 @@ export function WaitersPage() {
   function askRevokeActiveSessions(waiter: Waiter) {
     setConfirm({
       title: 'QR Oturumlarını İptal Et?',
-      message: <><strong>{waiter.name}</strong> için aktif tüm QR oturumları kapatılacak. Garson tekrar QR ile girmek için yeni QR oluşturmanız gerekir.</>,
+      message: <><strong>{waiter.name}</strong> için aktif tüm QR oturumları kapatılacak. Tekrar QR ile girmesi için yeni QR oluşturmanız gerekir.</>,
       confirmText: 'Evet, İptal Et',
       tone: 'warning',
       onConfirm: async () => {
@@ -244,7 +251,7 @@ export function WaitersPage() {
   // YENİ: Eski deleteConfirmWaiter modal'ı kaldırıldı, ConfirmModal'a geçti
   function askDeleteWaiter(waiter: Waiter) {
     setConfirm({
-      title: 'Garsonu Sil?',
+      title: 'Personeli Sil?',
       message: (
         <>
           <strong>{waiter.name}</strong> silinecek ve listeden kaldırılacak. Açık oturumları kapanır.<br/>
@@ -257,7 +264,7 @@ export function WaitersPage() {
         if (!accessToken) return;
         try {
           await apiDeleteWaiter(accessToken, waiter.id);
-          showToast('Garson silindi.', 'success');
+          showToast('Personel silindi.', 'success');
           await loadWaiters();
         } catch (e) {
           showToast(e instanceof Error ? e.message : 'Hata.', 'error');
@@ -301,15 +308,15 @@ export function WaitersPage() {
             <Users size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Garsonlar</h1>
+            <h1 className="text-xl font-bold tracking-tight">Personel</h1>
             <p className="text-xs text-ink-muted font-medium">
-              {waiters.length} garson kayıtlı • {activeCount} aktif
+              {waiters.length} kişi kayıtlı • {activeCount} aktif
             </p>
           </div>
         </div>
         <button onClick={openCreateForm}
           className="btn-primary px-5 py-2.5 rounded-2xl text-sm font-semibold flex items-center gap-2 spring-btn">
-          <UserPlus size={16} /> Yeni Garson
+          <UserPlus size={16} /> Personel Ekle
         </button>
       </div>
 
@@ -319,10 +326,10 @@ export function WaitersPage() {
             <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-surface-2 border border-line text-ink-muted">
               <Users size={26} />
             </div>
-            <p className="text-sm text-ink-muted">Henüz garson eklenmedi</p>
+            <p className="text-sm text-ink-muted">Henüz personel eklenmedi</p>
             <button onClick={openCreateForm}
               className="btn-primary mt-4 px-4 py-2 rounded-2xl text-sm font-bold spring-btn">
-              İlk Garsonu Ekle
+              İlk Personeli Ekle
             </button>
           </div>
         )}
@@ -349,6 +356,11 @@ export function WaitersPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-bold truncate">{w.name}</h3>
+                    {w.title && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-surface-2 border border-line text-ink">
+                        {w.title}
+                      </span>
+                    )}
                     {statusBadge(w.status)}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-ink-muted">
@@ -415,7 +427,7 @@ export function WaitersPage() {
           <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden my-8">
             <div className="px-6 py-4 flex items-center justify-between border-b border-line">
               <h2 className="font-serif font-bold text-lg">
-                {formMode === 'create' ? 'Yeni Garson Ekle' : `${editingWaiter?.name} — Düzenle`}
+                {formMode === 'create' ? 'Personel Ekle' : `${editingWaiter?.name} — Düzenle`}
               </h2>
               <button onClick={closeForm} aria-label="Kapat"
                 className="ui-chip w-8 h-8 rounded-full flex items-center justify-center text-xs spring-btn">
@@ -431,6 +443,28 @@ export function WaitersPage() {
                   onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
                   placeholder="Örn: Ahmet Yılmaz"
                   className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wider text-ink-muted">
+                  Ünvan
+                </label>
+                <input value={formData.title} maxLength={40}
+                  onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
+                  placeholder="Örn: Garson, Komi, Şef…"
+                  className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {TITLE_SUGGESTIONS.map(t => (
+                    <button key={t} type="button" onClick={() => setFormData(p => ({ ...p, title: t }))}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold spring-btn ${
+                        formData.title.trim().toLocaleLowerCase('tr') === t.toLocaleLowerCase('tr') ? 'ui-chip-active' : 'ui-chip'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs mt-1.5 text-ink-muted">
+                  Rozet olarak görünür; istediğiniz ünvanı yazabilirsiniz. Yetkiler aşağıda ayrıca seçilir.
+                </p>
               </div>
 
               <div>
@@ -455,7 +489,7 @@ export function WaitersPage() {
                   placeholder="ahmet@kafe.com"
                   className="ui-input w-full px-4 py-2.5 rounded-2xl text-sm" />
                 <p className="text-xs mt-1 text-ink-muted">
-                  Email verirseniz garson email+şifre ile de girebilir
+                  Email verirseniz personel email+şifre ile de girebilir
                 </p>
               </div>
 
@@ -538,7 +572,7 @@ export function WaitersPage() {
                   autoFocus />
                 {!passwordModalWaiter.email && (
                   <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--state-warn)' }}>
-                    <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" /> <span>Bu garsonun email'i yok. Şifreyle giriş için önce email eklemelisiniz.</span>
+                    <TriangleAlert size={12} className="flex-shrink-0 mt-0.5" /> <span>Bu personelin email'i yok. Şifreyle giriş için önce email eklemelisiniz.</span>
                   </p>
                 )}
               </div>

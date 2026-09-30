@@ -27,6 +27,8 @@ export type Waiter = {
   id: string;
   business_id: string;
   name: string;
+  /** Serbest yazılan ünvan (Garson, Komi, Şef…) */
+  title: string | null;
   phone: string | null;
   email: string | null;
   is_active: boolean;
@@ -83,6 +85,7 @@ export async function createWaiter(
   token: string,
   input: {
     name: string;
+    title?: string;
     phone?: string;
     email?: string;
     password?: string;
@@ -102,6 +105,7 @@ export async function updateWaiter(
   waiterId: string,
   input: {
     name?: string;
+    title?: string | null;
     phone?: string | null;
     email?: string | null;
     permissions?: Partial<WaiterPermissions>;

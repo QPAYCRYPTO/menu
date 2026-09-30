@@ -56,7 +56,7 @@ export function WaiterLayout() {
               {waiter.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="ui-eyebrow">Garson</div>
+              <div className="ui-eyebrow truncate">{waiter.title || 'Personel'}</div>
               <div className="font-serif font-bold text-lg leading-tight truncate">
                 {waiter.name}
               </div>
@@ -80,7 +80,7 @@ export function WaiterLayout() {
 
       <div className="fixed bottom-3 left-0 right-0 z-40 px-3.5">
         <nav className="mx-auto max-w-[520px] flex items-center gap-1 p-1.5 rounded-3xl bg-surface border border-line shadow-lg"
-          aria-label="Garson menüsü">
+          aria-label="Personel menüsü">
           {navItems.map(item => {
             const active = isActive(item.to, item.exact);
             return (
