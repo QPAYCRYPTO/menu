@@ -1,7 +1,8 @@
 // apps/api/src/services/paymentLedgerService.ts
 // Kasa Aşama 2 — ödeme kaydı (payments) ve indirim/ikram (discounts)
 //
-//   Toplam  = hesaptaki (iptal edilmemiş) kalemlerin toplamı
+//   Toplam  = hesaptaki TESLİM EDİLMİŞ siparişlerin kalemleri (teslim edilmeyen adisyona girmez;
+//             masa kartındaki cached_total_int ile aynı kural)
 //   İndirim = iptal edilmemiş indirim + ikram kayıtları
 //   Ödenen  = iptal edilmemiş ödemeler
 //   Kalan   = Toplam − İndirim − Ödenen
@@ -26,7 +27,7 @@ export async function computeLedger(db: Queryable, businessId: string, sessionId
     `SELECT
        (SELECT COALESCE(SUM(oi.price_int * oi.quantity), 0)
           FROM orders o JOIN order_items oi ON oi.order_id = o.id
-         WHERE o.session_id = $1 AND o.business_id = $2 AND o.type = 'order' AND o.status <> 'cancelled')::int AS total_int,
+         WHERE o.session_id = $1 AND o.business_id = $2 AND o.type = 'order' AND o.status = 'delivered')::int AS total_int,
        (SELECT COALESCE(SUM(amount_int), 0) FROM discounts
          WHERE session_id = $1 AND business_id = $2 AND voided_at IS NULL)::int AS discount_int,
        (SELECT COALESCE(SUM(amount_int), 0) FROM payments
@@ -149,7 +150,7 @@ export async function createPayment(params: {
     if (itemIds.length > 0) {
       // Ürün seçerek ödeme: kalemler bu hesaba ait, ödenmemiş ve ikram edilmemiş olmalı
       const items = await client.query(
-        `SELECT oi.id, oi.order_id, oi.is_paid, oi.price_int * oi.quantity AS line_int
+        `SELECT oi.id, oi.order_id, oi.is_paid, o.status AS order_status, oi.price_int * oi.quantity AS line_int
          FROM order_items oi JOIN orders o ON o.id = oi.order_id
          WHERE oi.id = ANY($1::uuid[]) AND o.session_id = $2 AND o.business_id = $3
            AND o.status <> 'cancelled' AND o.type = 'order'
@@ -158,6 +159,9 @@ export async function createPayment(params: {
       );
       if (items.rowCount !== itemIds.length) {
         throw new AppError('Bazı ürünler bulunamadı veya bu masaya ait değil.', 400, APP_ERROR_CODES.BAD_REQUEST);
+      }
+      if (items.rows.some((i: any) => i.order_status !== 'delivered')) {
+        throw new AppError('Teslim edilmemiş ürün tahsil edilemez.', 409, APP_ERROR_CODES.BAD_REQUEST);
       }
       if (items.rows.some((i: any) => i.is_paid)) {
         throw new AppError('Seçili ürünlerden bazıları zaten ödenmiş.', 409, APP_ERROR_CODES.BAD_REQUEST);
@@ -265,13 +269,14 @@ export async function createDiscount(params: {
     if (appliesTo === 'item') {
       if (!orderItemId) throw new AppError('Ürün seçin.', 400, APP_ERROR_CODES.BAD_REQUEST);
       const it = await client.query(
-        `SELECT oi.id, oi.is_paid, oi.price_int * oi.quantity AS line_int
+        `SELECT oi.id, oi.is_paid, o.status AS order_status, oi.price_int * oi.quantity AS line_int
          FROM order_items oi JOIN orders o ON o.id = oi.order_id
          WHERE oi.id = $1 AND o.session_id = $2 AND o.business_id = $3 AND o.status <> 'cancelled' AND o.type = 'order'`,
         [orderItemId, sessionId, businessId]
       );
       const item = it.rows[0];
       if (!item) throw new AppError('Ürün bu hesapta bulunamadı.', 404, APP_ERROR_CODES.NOT_FOUND);
+      if (item.order_status !== 'delivered') throw new AppError('Teslim edilmemiş ürüne ikram uygulanamaz.', 409, APP_ERROR_CODES.BAD_REQUEST);
       if (item.is_paid) throw new AppError('Ödenmiş ürüne indirim/ikram uygulanamaz.', 409, APP_ERROR_CODES.BAD_REQUEST);
       const comp = await complimentaryItemIds(client, businessId, sessionId);
       if (comp.has(orderItemId)) throw new AppError('Bu ürüne zaten indirim/ikram uygulanmış.', 409, APP_ERROR_CODES.BAD_REQUEST);

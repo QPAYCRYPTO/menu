@@ -455,7 +455,7 @@ function ComplimentaryDialog({ summary, onClose, onApply }: {
   onClose: () => void;
   onApply: (body: { applies_to: 'session' | 'item'; order_item_id?: string; note: string }) => Promise<void>;
 }) {
-  const candidates = summary.items.filter(i => !i.is_paid && !i.is_complimentary);
+  const candidates = summary.items.filter(i => i.order_status === 'delivered' && !i.is_paid && !i.is_complimentary);
   const [scope, setScope] = useState<'item' | 'session'>(candidates.length ? 'item' : 'session');
   const [itemId, setItemId] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -573,7 +573,7 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
       const data = await getSessionSummary(token, sessionId);
       setSummary(data);
       // Ödenmiş / ikram edilmiş / listeden çıkmış seçimleri bırak
-      const selectable = new Set(data.items.filter(i => !i.is_paid && !i.is_complimentary).map(i => i.item_id));
+      const selectable = new Set(data.items.filter(i => i.order_status === 'delivered' && !i.is_paid && !i.is_complimentary).map(i => i.item_id));
       setSelectedItems(prev => new Set([...prev].filter(id => selectable.has(id))));
       if (data.remaining_int <= 0) setSplit(null);
     } catch (e) {
@@ -592,7 +592,10 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
   }, [refreshSignal]);
 
   const remaining = Math.max(0, summary?.remaining_int ?? 0);
-  const selectableItems = summary?.items.filter(i => !i.is_paid && !i.is_complimentary) ?? [];
+  // Adisyon = teslim edilmiş siparişler; teslim bekleyenler ayrı listelenir, tahsil edilemez
+  const billItems = summary?.items.filter(i => i.order_status === 'delivered') ?? [];
+  const waitingItems = summary?.items.filter(i => i.order_status !== 'delivered') ?? [];
+  const selectableItems = billItems.filter(i => !i.is_paid && !i.is_complimentary);
   const allSelected = selectableItems.length > 0 && selectableItems.every(i => selectedItems.has(i.item_id));
   const selectedTotal = selectableItems.filter(i => selectedItems.has(i.item_id)).reduce((s, i) => s + i.price_int * i.quantity, 0);
 
@@ -825,10 +828,9 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
             </div>
 
             <div className="space-y-1.5">
-              {summary.items.map(item => {
+              {billItems.map(item => {
                 const locked = item.is_paid || item.is_complimentary;
                 const sel = selectedItems.has(item.item_id);
-                const st = item.order_status !== 'delivered' ? orderStatusStyle(item.order_status) : null;
                 return (
                   <button type="button" key={item.item_id} disabled={locked} onClick={() => toggleItem(item.item_id)}
                     aria-pressed={locked ? undefined : sel}
@@ -851,10 +853,6 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
                       <span className="block text-[15px] font-semibold">
                         <span className={locked ? 'line-through text-ink-muted' : ''}>{item.quantity}× {item.product_name}</span>
                         {item.is_complimentary && <span className="ml-2 align-middle text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cash-bg text-cash">İkram</span>}
-                        {st && !locked && (
-                          <span className="ml-2 align-middle text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: st.bg, color: st.fg }}>{st.label}</span>
-                        )}
                       </span>
                       <span className="block text-xs text-ink-muted tabular-nums">{item.quantity} × {formatPrice(item.price_int)}</span>
                       {item.note && (
@@ -865,8 +863,30 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
                   </button>
                 );
               })}
-              {summary.items.length === 0 && <p className="text-center py-8 text-ink-muted">Bu adisyonda ürün yok.</p>}
+              {billItems.length === 0 && (
+                <p className="text-center py-6 text-sm text-ink-muted">Henüz teslim edilmiş sipariş yok.</p>
+              )}
             </div>
+
+            {waitingItems.length > 0 && (
+              <div className="mt-4 space-y-1.5">
+                <div className="ui-eyebrow">Teslim bekleyen · adisyona eklenmedi</div>
+                {waitingItems.map(item => {
+                  const st = orderStatusStyle(item.order_status);
+                  return (
+                    <div key={item.item_id} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl opacity-70"
+                      style={{ border: '1.5px dashed var(--line)' }}>
+                      <span className="flex-1 min-w-0 text-sm font-semibold">
+                        {item.quantity}× {item.product_name}
+                        <span className="ml-2 align-middle text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+                      </span>
+                      <span className="text-sm tabular-nums text-ink-muted">{formatPrice(item.price_int * item.quantity)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {summary.discounts.length > 0 && (
               <div className="mt-4 space-y-1.5">
