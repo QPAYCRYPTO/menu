@@ -4,13 +4,14 @@
 //
 // Akış:
 //   1. Admin ödeme ekranını açar → getSessionBillDetails() ile adisyonu çeker
-//   2. Kişi kişi item seçer → payItems() ile tahsil eder (üzeri çizili olur)
+//   2. Tahsilat: paymentLedgerService.createPayment() (ürün seçerek ya da tutarla; payments tablosu)
 //   3. Tüm itemlar ödendi → closeTableAfterPayment() ile masayı kapatır
 //   4. Yeni sipariş geldiyse → getNewOrdersAfterPaymentStart() ile kontrol eder
 
 import { pool } from '../db/postgres.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import { findActiveSessionById } from './sessionService.js';
+import { computeLedger } from './paymentLedgerService.js';
 
 // ----------------------------------------------------------------------------
 // TİPLER
@@ -115,136 +116,6 @@ export async function getSessionBillDetails(
 }
 
 // ----------------------------------------------------------------------------
-// 2. ITEM TAHSİLATI
-// Seçili item'ları ödendi olarak işaretle.
-// Bir order'daki tüm item'lar ödendiyse orders.paid_at da güncellenir.
-// ----------------------------------------------------------------------------
-export async function payItems(params: {
-  businessId: string;
-  sessionId: string;
-  itemIds: string[];
-  paymentMethod: 'cash' | 'card' | 'other';
-}): Promise<{
-  paid_count: number;
-  remaining_int: number;
-  fully_paid_order_ids: string[];
-}> {
-  const { businessId, sessionId, itemIds, paymentMethod } = params;
-
-  if (!itemIds.length) {
-    throw new AppError('En az 1 ürün seçmelisiniz.', 400, APP_ERROR_CODES.BAD_REQUEST);
-  }
-
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    // Session kontrolü
-    const sessionResult = await client.query(
-      `SELECT id FROM table_sessions
-       WHERE id = $1 AND business_id = $2 AND status = 'open'
-       FOR UPDATE`,
-      [sessionId, businessId]
-    );
-
-    if (sessionResult.rowCount !== 1) {
-      throw new AppError('Açık oturum bulunamadı.', 404, APP_ERROR_CODES.NOT_FOUND);
-    }
-
-    // Item'ları kontrol et: aynı session'a ait, zaten ödenmemiş olmalı
-    const itemsResult = await client.query(
-      `SELECT oi.id, oi.order_id, oi.is_paid
-       FROM order_items oi
-       INNER JOIN orders o ON o.id = oi.order_id
-       WHERE oi.id = ANY($1::uuid[])
-         AND o.session_id = $2
-         AND o.business_id = $3
-         AND o.status != 'cancelled'
-       FOR UPDATE OF oi`,
-      [itemIds, sessionId, businessId]
-    );
-
-    if (itemsResult.rowCount !== itemIds.length) {
-      throw new AppError(
-        'Bazı ürünler bulunamadı veya bu masaya ait değil.',
-        400,
-        APP_ERROR_CODES.BAD_REQUEST
-      );
-    }
-
-    const alreadyPaid = itemsResult.rows.filter((i: any) => i.is_paid);
-    if (alreadyPaid.length > 0) {
-      throw new AppError(
-        'Seçili ürünlerden bazıları zaten ödenmiş.',
-        409,
-        APP_ERROR_CODES.BAD_REQUEST
-      );
-    }
-
-    // Item'ları öde
-    await client.query(
-      `UPDATE order_items
-       SET is_paid = TRUE, paid_at = NOW()
-       WHERE id = ANY($1::uuid[])`,
-      [itemIds]
-    );
-
-    // Hangi order'ların tüm item'ları ödendi? → orders.paid_at doldur
-    const affectedOrderIds = [...new Set(itemsResult.rows.map((i: any) => i.order_id))];
-
-    const fullyPaidOrderIds: string[] = [];
-
-    for (const orderId of affectedOrderIds) {
-      const unpaidResult = await client.query(
-        `SELECT COUNT(*) AS cnt
-         FROM order_items
-         WHERE order_id = $1 AND is_paid = FALSE`,
-        [orderId]
-      );
-      const unpaidCount = parseInt(unpaidResult.rows[0].cnt, 10);
-
-      if (unpaidCount === 0) {
-        await client.query(
-          `UPDATE orders
-           SET paid_at = NOW(), payment_method = $1, updated_at = NOW()
-           WHERE id = $2`,
-          [paymentMethod, orderId]
-        );
-        fullyPaidOrderIds.push(orderId);
-      }
-    }
-
-    // Kalan tutarı hesapla
-    const remainingResult = await client.query(
-      `SELECT COALESCE(SUM(oi.price_int * oi.quantity), 0) AS remaining
-       FROM orders o
-       INNER JOIN order_items oi ON oi.order_id = o.id
-       WHERE o.session_id = $1
-         AND o.business_id = $2
-         AND o.status != 'cancelled'
-         AND oi.is_paid = FALSE`,
-      [sessionId, businessId]
-    );
-
-    const remainingInt = parseInt(remainingResult.rows[0].remaining, 10);
-
-    await client.query('COMMIT');
-
-    return {
-      paid_count: itemIds.length,
-      remaining_int: remainingInt,
-      fully_paid_order_ids: fullyPaidOrderIds,
-    };
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-// ----------------------------------------------------------------------------
 // 3. MASA KAPATMA (ödeme sonrası)
 // Tüm item'lar ödendikten sonra masayı kapatır.
 // Ödenmemiş item varsa → 409 + kaç tane kaldığını döner.
@@ -277,6 +148,7 @@ export async function closeTableAfterPayment(params: {
 }): Promise<{
   closed_session_ids: string[];
   unpaid_items_count: number;
+  remaining_int: number;
   forced: boolean;
   open_orders_requiring_decision: OpenOrderRequiringDecision[];
   cancelled_orders: { order_id: string; table_name: string; reason: string }[];
@@ -301,25 +173,32 @@ export async function closeTableAfterPayment(params: {
 
     const session = sessionResult.rows[0];
 
-    // Ödenmemiş item kontrolü
-    const unpaidResult = await client.query(
-      `SELECT COUNT(*) AS cnt
-       FROM orders o
-       INNER JOIN order_items oi ON oi.order_id = o.id
-       WHERE o.session_id = $1
-         AND o.business_id = $2
-         AND o.status != 'cancelled'
-         AND oi.is_paid = FALSE`,
-      [sessionId, businessId]
-    );
-
-    const unpaidCount = parseInt(unpaidResult.rows[0].cnt, 10);
+    // Ödenmemiş tutar kontrolü (Kasa Aşama 2): kalan = toplam − indirim − ödemeler.
+    // Kalan varsa ödenmemiş (ikram edilmemiş) kalem sayısı bilgi olarak döner.
+    const ledger = await computeLedger(client, businessId, sessionId);
+    let unpaidCount = 0;
+    if (ledger.remaining_int > 0) {
+      const unpaidResult = await client.query(
+        `SELECT COUNT(*) AS cnt
+         FROM orders o
+         INNER JOIN order_items oi ON oi.order_id = o.id
+         WHERE o.session_id = $1
+           AND o.business_id = $2
+           AND o.status != 'cancelled'
+           AND o.type = 'order'
+           AND oi.is_paid = FALSE
+           AND NOT EXISTS (SELECT 1 FROM discounts d WHERE d.order_item_id = oi.id AND d.voided_at IS NULL)`,
+        [sessionId, businessId]
+      );
+      unpaidCount = Math.max(parseInt(unpaidResult.rows[0].cnt, 10), 1);
+    }
 
     if (unpaidCount > 0 && !forceClose) {
       await client.query('ROLLBACK');
       return {
         closed_session_ids: [],
         unpaid_items_count: unpaidCount,
+        remaining_int: ledger.remaining_int,
         forced: false,
         open_orders_requiring_decision: [],
         cancelled_orders: [],
@@ -366,6 +245,7 @@ export async function closeTableAfterPayment(params: {
       return {
         closed_session_ids: [],
         unpaid_items_count: unpaidCount,
+        remaining_int: ledger.remaining_int,
         forced: false,
         open_orders_requiring_decision: openOrders,
         cancelled_orders: [],
@@ -453,6 +333,7 @@ export async function closeTableAfterPayment(params: {
     return {
       closed_session_ids: sessionIdsToClose,
       unpaid_items_count: unpaidCount,
+      remaining_int: ledger.remaining_int,
       forced: forceClose,
       open_orders_requiring_decision: [],
       cancelled_orders: cancelledOrders,

@@ -13,10 +13,10 @@ import { publishOrder } from '../db/redisPubSub.js';
 import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import {
   getSessionBillDetails,
-  payItems,
   closeTableAfterPayment,
   getNewOrdersSincePaymentStart
 } from '../services/paymentService.js';
+import { createPayment } from '../services/paymentLedgerService.js';
 
 export const paymentRoutes = Router();
 paymentRoutes.use(requireAuth);
@@ -59,6 +59,7 @@ const payItemsSchema = z.object({
   payment_method: z.enum(['cash', 'card', 'other']).default('cash')
 });
 
+// Geriye uyumluluk: artık ödeme kaydı (payments) üzerinden işler
 paymentRoutes.post('/pay-items', async (req, res) => {
   const businessId = req.ctx!.businessId!;
 
@@ -67,14 +68,19 @@ paymentRoutes.post('/pay-items', async (req, res) => {
     throw new AppError('Geçersiz istek.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
 
-  const result = await payItems({
+  const result = await createPayment({
     businessId,
     sessionId: parsed.data.session_id,
+    userId: req.ctx!.userId!,
     itemIds: parsed.data.item_ids,
-    paymentMethod: parsed.data.payment_method
+    method: parsed.data.payment_method === 'other' ? 'meal_card' : parsed.data.payment_method
   });
 
-  res.status(200).json(result);
+  res.status(200).json({
+    paid_count: parsed.data.item_ids.length,
+    remaining_int: result.ledger.remaining_int,
+    fully_paid_order_ids: result.fully_paid_order_ids
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -143,6 +149,7 @@ paymentRoutes.post('/close-table', async (req, res) => {
     res.status(409).json({
       message: 'Ödenmemiş ürünler var. Önce tahsil edin veya force_close=true gönderin.',
       unpaid_items_count: result.unpaid_items_count,
+      remaining_int: result.remaining_int,
       code: 'UNPAID_ITEMS_EXIST'
     });
     return;

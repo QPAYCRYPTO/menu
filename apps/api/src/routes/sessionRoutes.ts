@@ -13,6 +13,7 @@ import { pool } from '../db/postgres.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import { getSessionWithOrders } from '../services/sessionService.js';
+import { getSessionSummary } from '../services/paymentLedgerService.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 
 export const sessionRoutes = Router();
@@ -48,6 +49,17 @@ sessionRoutes.get('/', async (req, res) => {
   `, [businessId]);
 
   res.status(200).json(result.rows);
+});
+
+// GET /api/admin/sessions/:id/summary
+// Kasa: adisyon kalemleri + ödemeler + indirimler + toplam/indirim/ödenen/kalan (sunucuda hesaplanır).
+// Birleşik (merged) hesap verilirse zincirin sonundaki açık hesap döner.
+sessionRoutes.get('/:id/summary', async (req, res) => {
+  const parsed = z.object({ id: z.string().uuid() }).safeParse(req.params);
+  if (!parsed.success) throw new AppError('Geçersiz oturum.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  const summary = await getSessionSummary(req.ctx!.businessId!, parsed.data.id);
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(summary);
 });
 
 // GET /api/admin/sessions/:id

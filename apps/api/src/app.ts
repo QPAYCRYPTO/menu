@@ -23,6 +23,7 @@ import { waiterPublicRoutes } from './routes/waiterPublicRoutes.js';
 import { errorLogIngestRoutes, superAdminErrorRoutes } from './routes/errorLogRoutes.js';
 import { adminTableOperationsRoutes, waiterTableOperationsRoutes } from './routes/tableOperationsRoutes.js';
 import { paymentRoutes } from './routes/paymentRoutes.js';
+import { discountsRoutes, paymentsRoutes } from './routes/ledgerRoutes.js';
 import { kitchenRoutes } from './routes/kitchenRoutes.js';
 
 export function createApp() {
@@ -64,6 +65,8 @@ export function createApp() {
   app.use('/api/admin/sessions', sessionRoutes);
   app.use('/api/admin/table-operations', adminTableOperationsRoutes);
   app.use('/api/admin/payment', paymentRoutes);
+  app.use('/api/admin/payments', paymentsRoutes);
+  app.use('/api/admin/discounts', discountsRoutes);
   app.use('/api/admin/waiters', waiterAdminRoutes);
   app.use('/api/admin/change-requests', changeRequestRoutes);
 

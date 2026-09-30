@@ -233,6 +233,16 @@ export async function mergeSessions(params: {
       [targetSessionId, target.table_name, sourceSessionId, businessId]
     );
 
+    // 4b. Kaynaktaki ödeme ve indirim kayıtları da hedef hesaba geçer (kalan doğru hesaplansın)
+    await client.query(
+      `UPDATE payments SET session_id = $1 WHERE session_id = $2 AND business_id = $3`,
+      [targetSessionId, sourceSessionId, businessId]
+    );
+    await client.query(
+      `UPDATE discounts SET session_id = $1 WHERE session_id = $2 AND business_id = $3`,
+      [targetSessionId, sourceSessionId, businessId]
+    );
+
     // 5. cached_total'ı target'a ekle
     await client.query(
       `UPDATE table_sessions
