@@ -199,6 +199,12 @@ export function AdminDashboardPage() {
     { count: inactiveProducts ?? 0, title: 'Satışa kapalı ürün', desc: 'Menüde gizli ürünler', icon: PackageX, to: '/admin/products', tone: 'muted' as const }
   ];
 
+  // Sağ sütun yalnızca bir şey varken yer kaplar: sıfır olan maddeler gizlenir; hiçbir şey yoksa
+  // sağ sütun hiç çizilmez ve siparişler tam genişliğe yayılır.
+  const activeAttention = attention.filter(a => a.count > 0);
+  const showActivity = staffEnabled && activity.length > 0;
+  const hasSideContent = requests.length > 0 || activeAttention.length > 0 || showActivity;
+
   const shortcuts = [
     { label: 'Ürün ekle', to: '/admin/products?yeni=1', icon: Plus },
     { label: 'Masa ekle', to: '/admin/tables?yeni=1', icon: Armchair },
@@ -209,7 +215,7 @@ export function AdminDashboardPage() {
     <div ref={rootRef} className="text-ink pb-28">
       <h1 className="font-serif font-bold text-3xl md:text-4xl mb-5">Bugünkü servis</h1>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_320px] items-start">
+      <div className={`grid gap-5 items-start ${hasSideContent ? 'xl:grid-cols-[1fr_320px]' : ''}`}>
         <div className="min-w-0 space-y-5">
           {/* Ölçüm kartları */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -280,6 +286,7 @@ export function AdminDashboardPage() {
           </section>
         </div>
 
+        {hasSideContent && (
         <div className="space-y-5 min-w-0">
         {/* Onay bekleyenler — personelin iptal / adet azaltma talepleri (yalnızca varken) */}
         {requests.length > 0 && (
@@ -301,16 +308,16 @@ export function AdminDashboardPage() {
           </aside>
         )}
 
-        {/* Dikkat gerektirenler */}
-        <aside className="ui-card rounded-3xl p-4 md:p-6">
+        {/* Dikkat gerektirenler — yalnızca sayısı olan maddeler */}
+        {activeAttention.length > 0 && (
+        <aside className="ui-card rounded-3xl p-4 md:p-6 fade-enter">
           <h2 className="font-serif font-bold text-2xl mb-2">Dikkat gerektirenler</h2>
           <div>
-            {attention.map(a => {
-              const active = a.count > 0;
-              const tone = !active ? 'text-ink-muted' : a.tone === 'danger' ? 'text-state-danger' : a.tone === 'warn' ? 'text-state-warn' : 'text-accent';
+            {activeAttention.map(a => {
+              const tone = a.tone === 'danger' ? 'text-state-danger' : a.tone === 'warn' ? 'text-state-warn' : 'text-accent';
               return (
                 <Link key={a.title} to={a.to}
-                  className={`no-underline text-ink flex items-center gap-3 py-3.5 border-b border-line last:border-b-0 group ${active ? '' : 'opacity-60'}`}>
+                  className="no-underline text-ink flex items-center gap-3 py-3.5 border-b border-line last:border-b-0 group">
                   <span className="w-11 h-11 rounded-full bg-surface-2 flex items-center justify-center shrink-0">
                     <a.icon size={20} strokeWidth={1.5} aria-hidden />
                   </span>
@@ -325,19 +332,18 @@ export function AdminDashboardPage() {
             })}
           </div>
         </aside>
+        )}
 
-        {/* Hareketler — personelin mola çıkış/dönüşleri (canlı) */}
-        {staffEnabled && (
-          <aside className="ui-card rounded-3xl p-4 md:p-6">
+        {/* Hareketler — personel giriş/çıkış ve molaları (canlı; yalnızca hareket varken) */}
+        {showActivity && (
+          <aside className="ui-card rounded-3xl p-4 md:p-6 fade-enter">
             <div className="flex items-center justify-between gap-2 mb-2">
               <h2 className="font-serif font-bold text-2xl">Hareketler</h2>
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-state-ok">
                 <span className="w-2 h-2 rounded-full bg-current animate-pulse" /> Canlı
               </span>
             </div>
-            {activity.length === 0 ? (
-              <p className="text-sm text-ink-muted py-4">Son 24 saatte personel hareketi yok. Personel giriş linkiyle girince burada görünür.</p>
-            ) : (
+            {(
               <ul className="max-h-80 overflow-y-auto -mr-2 pr-2">
                 {activity.map(a => {
                   const isBreakEnd = a.action === 'break_end';
@@ -371,6 +377,7 @@ export function AdminDashboardPage() {
           </aside>
         )}
         </div>
+        )}
       </div>
 
       {/* Alt kısayol çubuğu */}
