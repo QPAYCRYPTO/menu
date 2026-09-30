@@ -14,6 +14,7 @@ import {
   WaiterStatus,
   WaiterTokenResponse,
   DEFAULT_PERMISSIONS,
+  PERMISSION_TEMPLATES,
   listWaiters,
   createWaiter as apiCreateWaiter,
   updateWaiter as apiUpdateWaiter,
@@ -36,12 +37,12 @@ const DURATION_OPTIONS = [1, 2, 4, 6, 8, 10, 12];
 const TITLE_SUGGESTIONS = ['Garson', 'Komi', 'Şef', 'Aşçı', 'Barista', 'Kasiyer', 'Müdür'];
 
 const PERMISSION_LABELS: Record<keyof WaiterPermissions, { label: string; desc: string }> = {
-  can_delete_items: { label: 'Sipariş iptal / azaltma', desc: 'İşaretliyse siparişi iptal eder, adet azaltır. Değilse bu istekler admin onayına düşer.' },
-  can_merge_tables: { label: 'Masa birleştirme/ayırma', desc: 'İki masayı tek adisyon yapabilir veya ayırabilir' },
-  can_transfer_table: { label: 'Masa transferi', desc: 'Bir adisyonu başka bir masaya taşıyabilir' },
-  can_see_other_tables: { label: 'Diğer masaları görebilir', desc: 'Başka personelin açtığı masaları da görür' },
-  can_add_note: { label: 'Adisyona not ekleyebilir', desc: 'Ürünlere not ekleyebilir (az pişmiş, soğansız vb.)' },
-  can_use_break: { label: 'Mola/vardiya kullanabilir', desc: 'İşe giriş / mola / çıkış butonlarını kullanır' }
+  can_refund: { label: 'İade yapabilir', desc: 'Mutfak başladıktan sonra (Hazırlanıyor / Hazır) iptal ve adet azaltma doğrudan uygulanır. Kapalıysa admin onayına düşer. Mutfak başlamadan iptal herkese serbesttir.' },
+  can_see_other_tables: { label: 'Başkasının masasını görebilir', desc: 'Başka personelin açtığı masaları listede ve detayda görür' },
+  can_edit_other_tables: { label: 'Başkasının masasında işlem yapabilir', desc: 'Başka personelin masasına sipariş ekler, adet değiştirir, iptal eder, taşır' },
+  can_transfer_table: { label: 'Masa taşıyabilir', desc: 'Adisyonu başka bir boş masaya taşır' },
+  can_merge_tables: { label: 'Masa birleştirip ayırabilir', desc: 'İki masayı tek adisyon yapar veya ayırır' },
+  can_use_break: { label: 'Mola kullanabilir', desc: 'Profilinden süre seçip molaya çıkar' }
 };
 
 function whatsappLink(phone: string, loginUrl: string, waiterName: string, businessName: string) {
@@ -504,6 +505,23 @@ export function WaitersPage() {
                 <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-ink-muted">
                   Yetkiler
                 </label>
+                {/* Hazır şablonlar: yetkileri doldurur, sonra tek tek değiştirilebilir */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {PERMISSION_TEMPLATES.map(t => {
+                    const active = (Object.keys(t.permissions) as (keyof WaiterPermissions)[])
+                      .every(k => formData.permissions[k] === t.permissions[k]);
+                    return (
+                      <button key={t.key} type="button" title={t.desc}
+                        onClick={() => setFormData(p => ({ ...p, permissions: { ...t.permissions } }))}
+                        className={`px-2 py-2 rounded-2xl text-xs font-bold spring-btn ${active ? 'ui-chip-active' : 'ui-chip'}`}>
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-ink-muted mb-3">
+                  Şablon seç, gerekirse aşağıdan değiştir. Sipariş almak, not yazmak, çağrı almak ve teslim etmek her personelde açıktır.
+                </p>
                 <div className="space-y-2">
                   {(Object.keys(PERMISSION_LABELS) as (keyof WaiterPermissions)[]).map(key => (
                     <label key={key}

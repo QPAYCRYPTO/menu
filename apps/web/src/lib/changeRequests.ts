@@ -39,12 +39,12 @@ export function describeRequest(r: ChangeRequest): { title: string; detail: stri
   if (r.kind === 'order_cancel') {
     const reason = r.reason_code ? REASON_LABELS[r.reason_code] ?? r.reason_code : '';
     return {
-      title: `${r.table_name} · sipariş iptali`,
+      title: `${r.table_name} · sipariş iadesi`,
       detail: [reason, r.reason_text].filter(Boolean).join(' — ')
     };
   }
   return {
-    title: `${r.table_name} · adet azaltma`,
+    title: `${r.table_name} · iade (adet azaltma)`,
     detail: `${r.product_name ?? 'Ürün'}: ${r.old_quantity} → ${r.requested_quantity} adet`
   };
 }

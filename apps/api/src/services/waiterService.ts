@@ -12,23 +12,40 @@ import { pool } from '../db/postgres.js';
 
 export type WaiterStatus = 'active' | 'on_leave' | 'inactive';
 
+/** Personel yetkileri — kurallar: services/staffPermissions.ts */
 export type WaiterPermissions = {
-  can_delete_items: boolean;
-  can_merge_tables: boolean;
-  can_transfer_table: boolean;
+  /** Mutfak başladıktan sonra iptal/azaltma (iade) doğrudan; yoksa admin onayına düşer */
+  can_refund: boolean;
   can_see_other_tables: boolean;
-  can_add_note: boolean;
+  /** Başka personelin masasında sipariş/adet/iptal/taşıma */
+  can_edit_other_tables: boolean;
+  can_transfer_table: boolean;
+  can_merge_tables: boolean;
   can_use_break: boolean;
 };
 
+/** Yeni personel = "Garson" şablonu */
 export const DEFAULT_PERMISSIONS: WaiterPermissions = {
-  can_delete_items: false,
-  can_merge_tables: false,
-  can_transfer_table: false,
+  can_refund: false,
   can_see_other_tables: true,
-  can_add_note: true,
+  can_edit_other_tables: false,
+  can_transfer_table: true,
+  can_merge_tables: false,
   can_use_break: true
 };
+
+/** Veritabanındaki yetkiyi tamamlar; 020 öncesi kayıt (can_delete_items) da doğru okunur */
+function normalizePermissions(raw: any): WaiterPermissions {
+  const p = raw ?? {};
+  return {
+    can_refund: p.can_refund ?? p.can_delete_items ?? DEFAULT_PERMISSIONS.can_refund,
+    can_see_other_tables: p.can_see_other_tables ?? DEFAULT_PERMISSIONS.can_see_other_tables,
+    can_edit_other_tables: p.can_edit_other_tables ?? true,
+    can_transfer_table: p.can_transfer_table ?? DEFAULT_PERMISSIONS.can_transfer_table,
+    can_merge_tables: p.can_merge_tables ?? DEFAULT_PERMISSIONS.can_merge_tables,
+    can_use_break: p.can_use_break ?? DEFAULT_PERMISSIONS.can_use_break
+  };
+}
 
 export type Waiter = {
   id: string;
@@ -84,7 +101,7 @@ function rowToWaiter(row: any): Waiter {
     email: row.email ?? null,
     is_active: row.is_active,
     status: row.status,
-    permissions: row.permissions ?? DEFAULT_PERMISSIONS,
+    permissions: normalizePermissions(row.permissions),
     created_at: row.created_at,
     updated_at: row.updated_at
   };

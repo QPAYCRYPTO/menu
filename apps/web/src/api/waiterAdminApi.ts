@@ -5,23 +5,36 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrme
 
 export type WaiterStatus = 'active' | 'on_leave' | 'inactive';
 
+/** Personel yetkileri (piyasa modeli). Kurallar: api/src/services/staffPermissions.ts */
 export type WaiterPermissions = {
-  can_delete_items: boolean;
-  can_merge_tables: boolean;
-  can_transfer_table: boolean;
+  /** Mutfak başladıktan sonra iptal/azaltma (iade) doğrudan; yoksa admin onayına düşer */
+  can_refund: boolean;
   can_see_other_tables: boolean;
-  can_add_note: boolean;
+  /** Başka personelin masasında sipariş / adet / iptal / taşıma */
+  can_edit_other_tables: boolean;
+  can_transfer_table: boolean;
+  can_merge_tables: boolean;
   can_use_break: boolean;
 };
 
-export const DEFAULT_PERMISSIONS: WaiterPermissions = {
-  can_delete_items: false,
-  can_merge_tables: false,
-  can_transfer_table: false,
-  can_see_other_tables: true,
-  can_add_note: true,
-  can_use_break: true
-};
+/** Hazır yetki şablonları (Toast / SambaPOS'taki rol ayrımına göre); admin sonra tek tek değiştirebilir */
+export const PERMISSION_TEMPLATES: { key: string; label: string; desc: string; permissions: WaiterPermissions }[] = [
+  {
+    key: 'komi', label: 'Komi', desc: 'Servise yardım: iade onaya, başkasının masasında işlem yok',
+    permissions: { can_refund: false, can_see_other_tables: true, can_edit_other_tables: false, can_transfer_table: false, can_merge_tables: false, can_use_break: true }
+  },
+  {
+    key: 'garson', label: 'Garson', desc: 'Kendi masaları: iade onaya, masa taşıyabilir',
+    permissions: { can_refund: false, can_see_other_tables: true, can_edit_other_tables: false, can_transfer_table: true, can_merge_tables: false, can_use_break: true }
+  },
+  {
+    key: 'sef', label: 'Şef Garson', desc: 'Salon sorumlusu: iade dahil tüm işlemler',
+    permissions: { can_refund: true, can_see_other_tables: true, can_edit_other_tables: true, can_transfer_table: true, can_merge_tables: true, can_use_break: true }
+  }
+];
+
+/** Yeni personel = "Garson" şablonu */
+export const DEFAULT_PERMISSIONS: WaiterPermissions = { ...PERMISSION_TEMPLATES[1].permissions };
 
 export type Waiter = {
   id: string;

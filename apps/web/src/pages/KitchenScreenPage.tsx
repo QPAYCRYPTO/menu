@@ -344,7 +344,7 @@ export function KitchenScreenPage() {
                       <div className="text-xs font-black tracking-widest flex items-center gap-1.5"><TriangleAlert size={14} /> ONAY BEKLİYOR</div>
                       {order.pending_changes.map((c, i) => (
                         <div key={i} className="text-xl font-black leading-snug">
-                          {c.kind === 'order_cancel' ? 'İptal talebi var — bekletin' : `${c.product_name ?? 'Ürün'} → ${c.requested_quantity} adet talebi`}
+                          {c.kind === 'order_cancel' ? 'İade talebi var — bekletin' : `${c.product_name ?? 'Ürün'} → ${c.requested_quantity} adet talebi`}
                         </div>
                       ))}
                     </div>

@@ -11,7 +11,7 @@ import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { useLiveRefresh } from '../../context/WaiterCallsContext';
 import { WaiterTable, listTables } from '../../api/waiterPublicApi';
 import { waiterMoveSession, waiterMergeSessions } from '../../api/tableOperationsApi';
-import { AlertTriangle, ArrowLeftRight, Armchair, Bell, ClipboardList, Link2, Plus, RefreshCw, Timer, UtensilsCrossed, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Armchair, Bell, ClipboardList, Link2, Plus, RefreshCw, Timer, UtensilsCrossed, Wallet, UserRound } from 'lucide-react';
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
 
@@ -344,6 +344,12 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
           <h3 className="font-serif font-bold text-xl leading-tight mb-2">
             {table.name}
           </h3>
+          {table.owner && (
+            <div className="text-[11px] font-semibold text-ink-muted -mt-1 mb-2 truncate inline-flex items-center gap-1 max-w-full">
+              <UserRound size={11} aria-hidden /> <span className="truncate">{table.owner.name}</span>
+              {table.can_edit === false && <span className="opacity-70">· görüntüleme</span>}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
             {hasCall
               ? <StatePill tone="danger">Çağrı</StatePill>
@@ -369,7 +375,7 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
       </Link>
 
       {/* Operasyon butonları */}
-      {isOccupied && (canTransfer || canMerge) && (
+      {isOccupied && table.can_edit !== false && (canTransfer || canMerge) && (
         <div className="px-3.5 py-2 border-t border-line flex gap-1.5">
           {canTransfer && (
             <button onClick={e => { e.preventDefault(); onMove(); }}

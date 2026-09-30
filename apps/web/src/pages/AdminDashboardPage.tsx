@@ -183,7 +183,7 @@ export function AdminDashboardPage() {
   ];
 
   const attention = [
-    { count: requests.length, title: 'Onay bekleyen talep', desc: 'Personelin iptal / adet azaltma istekleri',
+    { count: requests.length, title: 'Onay bekleyen talep', desc: 'Personelin iade (mutfak başladıktan sonra iptal/azaltma) istekleri',
       icon: TriangleAlert, to: '/admin/orders', tone: 'danger' as const },
     { count: lateOrders.length, title: 'Geciken sipariş', desc: `${lateAfter} dakikayı aşan siparişler`, icon: Clock, to: '/admin/orders', tone: 'danger' as const },
     { count: callCount, title: 'Bekleyen çağrı', desc: 'Garson / hesap çağrıları', icon: Bell, to: '/admin/orders', tone: 'warn' as const },

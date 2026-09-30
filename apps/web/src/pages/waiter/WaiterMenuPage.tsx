@@ -113,9 +113,8 @@ export function WaiterMenuPage() {
         setSelectedCatId(menuData.categories[0].id);
       }
 
-      const activeOrder = tableData.orders.find(
-        o => o.status === 'pending' || o.status === 'preparing'
-      );
+      // Yalnızca mutfağın henüz başlamadığı ("Bekliyor") siparişe eklenir; başladıysa yeni sipariş = yeni mutfak fişi
+      const activeOrder = tableData.orders.find(o => o.status === 'pending');
       if (activeOrder) {
         setActiveOrderId(activeOrder.id);
       }

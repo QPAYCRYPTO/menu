@@ -253,7 +253,7 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
 
         // Kendi talebim sonuçlandı (admin onayladı / reddetti)
         if (data.type === 'change_request' && data.action === 'decided' && data.waiter_id && data.waiter_id === waiterIdRef.current) {
-          const what = data.kind === 'order_cancel' ? 'iptal talebin' : `${data.product_name ?? 'ürün'} azaltma talebin`;
+          const what = data.kind === 'order_cancel' ? 'iade talebin' : `${data.product_name ?? 'ürün'} iade talebin`;
           const verdict = data.status === 'approved' ? 'onaylandı' : data.status === 'rejected' ? 'reddedildi' : 'geçersiz sayıldı';
           const toast: KitchenReadyToast = {
             id: `${data.request_id}-${Date.now()}`,

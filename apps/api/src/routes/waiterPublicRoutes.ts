@@ -31,6 +31,9 @@ import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
 import { BREAK_MINUTES, endBreak, getWaiterShiftInfo, recordShiftEvent, startBreak } from '../services/staffService.js';
 import { ChangeRequestError, listPendingRequests, requestItemDecrease, requestOrderCancel } from '../services/changeRequestService.js';
+import {
+  assertCanActOnOrder, assertCanActOnSession, canActOnTable, canSeeTable, getSessionOwner, isBeforeKitchen
+} from '../services/staffPermissions.js';
 
 export const waiterPublicRoutes = Router();
 
@@ -261,9 +264,16 @@ waiterPublicRoutes.get('/tables', requireWaiterAuth, async (req, res) => {
        WHERE o2.session_id = s.id
          AND o2.status NOT IN ('cancelled')
          AND o2.type = 'order'
-      ) AS order_count
+      ) AS order_count,
+      owner.id AS owner_id, owner.name AS owner_name
     FROM tables t
     LEFT JOIN table_sessions s ON s.table_id = t.id AND s.status = 'open'
+    -- Masa sahibi: bu adisyonda ilk siparişi alan personel
+    LEFT JOIN LATERAL (
+      SELECT w.id, w.name FROM orders o3 JOIN waiters w ON w.id = o3.waiter_id
+      WHERE o3.session_id = s.id AND o3.type = 'order' AND o3.status <> 'cancelled' AND o3.waiter_id IS NOT NULL
+      ORDER BY o3.created_at ASC LIMIT 1
+    ) owner ON TRUE
     WHERE t.business_id = $1 AND t.is_active = TRUE
     ORDER BY t.sort_order ASC, t.name ASC
   `, [businessId]);
@@ -300,10 +310,15 @@ waiterPublicRoutes.get('/tables', requireWaiterAuth, async (req, res) => {
     return row;
   }));
 
-  res.status(200).json(rows.map(row => ({
+  const me = req.waiter!;
+  const visible = rows.filter(row => canSeeTable(me, row.owner_id ? { id: row.owner_id, name: row.owner_name } : null));
+
+  res.status(200).json(visible.map(row => ({
     id: row.id,
     name: row.name,
     sort_order: row.sort_order,
+    owner: row.owner_id ? { id: row.owner_id, name: row.owner_name } : null,
+    can_edit: canActOnTable(me, row.owner_id ? { id: row.owner_id, name: row.owner_name } : null),
     session_id: row.session_id,
     opened_at: row.opened_at,
     total_int: row.cached_total_int ?? 0,
@@ -340,6 +355,11 @@ waiterPublicRoutes.get('/tables/:table_id', requireWaiterAuth, async (req, res) 
 
   // Birleşik masa ise zincirin sonundaki açık session (hedef masanın adisyonu)
   const session = await findActiveSession(businessId, tableId);
+  const owner = session ? await getSessionOwner(session.id) : null;
+  if (!canSeeTable(req.waiter!, owner)) {
+    res.status(403).json({ message: `Bu masa ${owner!.name} personelinde.` });
+    return;
+  }
 
   let orders: any[] = [];
   if (session) {
@@ -401,7 +421,9 @@ waiterPublicRoutes.get('/tables/:table_id', requireWaiterAuth, async (req, res) 
       total_int: session.cached_total_int
     } : null,
     orders,
-    active_calls: callsResult.rows
+    active_calls: callsResult.rows,
+    owner,
+    can_edit: canActOnTable(req.waiter!, owner)
   });
 });
 
@@ -813,6 +835,8 @@ waiterPublicRoutes.post('/tables/:table_id/orders', requireWaiterAuth, async (re
     await client.query('BEGIN');
 
     const session = await resolveActiveSession(businessId, table.id, client);
+    // Başka personelin masasına sipariş → işlem yetkisi gerekir
+    await assertCanActOnSession(waiter, session?.id);
 
     const orderResult = await client.query(
       `INSERT INTO orders
@@ -963,6 +987,13 @@ waiterPublicRoutes.post('/orders/:order_id/items', requireWaiterAuth, async (req
       res.status(409).json({ message: 'Kapanmış siparişe ürün eklenemez.' });
       return;
     }
+    // Mutfak başladıysa ürünler yeni sipariş (yeni mutfak fişi) olarak gönderilmeli
+    if (!isBeforeKitchen(order.status)) {
+      await client.query('ROLLBACK');
+      res.status(409).json({ message: 'Mutfak bu siparişe başladı; yeni ürünleri yeni sipariş olarak gönder.', code: 'KITCHEN_STARTED' });
+      return;
+    }
+    await assertCanActOnSession(waiter, order.session_id);
 
     const addedItems: Array<{
       product_name: string;
@@ -1091,12 +1122,15 @@ waiterPublicRoutes.patch('/order-items/:item_id', requireWaiterAuth, async (req,
       return;
     }
 
-    // Yetkisiz azaltma → admin onayına düşer (artırma serbest)
-    if (newQuantity < oldQuantity && !waiter.permissions.can_delete_items) {
+    // Başka personelin masası → işlem yetkisi gerekir
+    await assertCanActOnSession(waiter, item.session_id);
+
+    // Azaltma: mutfak başlamadıysa herkese serbest; başladıysa İADE → yetki yoksa admin onayına düşer
+    if (newQuantity < oldQuantity && !isBeforeKitchen(item.order_status) && !waiter.permissions.can_refund) {
       await client.query('ROLLBACK');
       try {
         const request = await requestItemDecrease(waiter, itemId, newQuantity);
-        res.status(202).json({ pending: true, request_id: request.id, message: 'Azaltma talebi admin onayına gönderildi.' });
+        res.status(202).json({ pending: true, request_id: request.id, message: 'İade talebi admin onayına gönderildi (mutfak başladığı için).' });
       } catch (err) {
         if (err instanceof ChangeRequestError) {
           res.status(err.status).json({ message: err.message, code: err.code });
@@ -1198,11 +1232,16 @@ waiterPublicRoutes.post('/orders/:order_id/cancel', requireWaiterAuth, async (re
 
   const { reason_code, reason_text } = bodyParsed.data;
 
-  // Yetkisiz iptal → admin onayına düşer (sipariş şimdilik değişmez)
-  if (!waiter.permissions.can_delete_items) {
+  await assertCanActOnOrder(waiter, orderId);
+
+  // İptal: mutfak başlamadıysa herkese serbest; başladıysa İADE → yetki yoksa admin onayına düşer
+  const statusRow = await pool.query(`SELECT status FROM orders WHERE id = $1 AND business_id = $2`, [orderId, businessId]);
+  const currentStatus: string | undefined = statusRow.rows[0]?.status;
+  if (currentStatus && currentStatus !== 'delivered' && currentStatus !== 'cancelled'
+      && !isBeforeKitchen(currentStatus) && !waiter.permissions.can_refund) {
     try {
       const request = await requestOrderCancel(waiter, orderId, reason_code, reason_text?.trim() || null);
-      res.status(202).json({ pending: true, request_id: request.id, message: 'İptal talebi admin onayına gönderildi.' });
+      res.status(202).json({ pending: true, request_id: request.id, message: 'İade talebi admin onayına gönderildi (mutfak başladığı için).' });
     } catch (err) {
       if (err instanceof ChangeRequestError) {
         res.status(err.status).json({ message: err.message, code: err.code });

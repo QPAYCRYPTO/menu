@@ -11,11 +11,11 @@ import { endBreak, getProfile, startBreak, type WaiterPermissions, type WaiterPr
 import { useWaiterAuth } from '../../context/WaiterAuthContext';
 
 const PERMISSION_TEXT: Record<keyof WaiterPermissions, string> = {
-  can_delete_items: 'Sipariş iptal / adet azaltma (değilse admin onayına gider)',
+  can_refund: 'İade (mutfak başladıktan sonra iptal/azaltma) — değilse admin onayına gider',
   can_merge_tables: 'Masa birleştirip ayırabilir',
   can_transfer_table: 'Masa transferi yapabilir',
-  can_see_other_tables: 'Diğer personelin masalarını görebilir',
-  can_add_note: 'Siparişe not ekleyebilir',
+  can_see_other_tables: 'Başkasının masasını görebilir',
+  can_edit_other_tables: 'Başkasının masasında işlem yapabilir',
   can_use_break: 'Mola kullanabilir'
 };
 

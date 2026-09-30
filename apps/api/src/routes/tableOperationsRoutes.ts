@@ -17,6 +17,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { requireWaiterAuth } from '../middleware/waiterAuth.js';
 import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
+import { assertCanActOnOrder, assertCanActOnSession } from '../services/staffPermissions.js';
 import {
   moveSession,
   mergeSessions,
@@ -164,6 +165,8 @@ waiterTableOperationsRoutes.post('/move', async (req, res) => {
   if (!parsed.success) {
     throw new AppError('Geçersiz istek.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
+  // Başka personelin masası → işlem yetkisi gerekir
+  await assertCanActOnSession(req.waiter!, parsed.data.session_id);
 
   const result = await moveSession({
     businessId: actor.businessId,
@@ -189,6 +192,8 @@ waiterTableOperationsRoutes.post('/merge', async (req, res) => {
   if (!parsed.success) {
     throw new AppError('Geçersiz istek.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
+  await assertCanActOnSession(req.waiter!, parsed.data.source_session_id);
+  await assertCanActOnSession(req.waiter!, parsed.data.target_session_id);
 
   const result = await mergeSessions({
     businessId: actor.businessId,
@@ -214,6 +219,8 @@ waiterTableOperationsRoutes.post('/transfer-orders', async (req, res) => {
   if (!parsed.success) {
     throw new AppError('Geçersiz istek.', 400, APP_ERROR_CODES.BAD_REQUEST);
   }
+  for (const orderId of parsed.data.order_ids) await assertCanActOnOrder(req.waiter!, orderId);
+  await assertCanActOnSession(req.waiter!, parsed.data.target_session_id);
 
   const result = await transferOrders({
     businessId: actor.businessId,

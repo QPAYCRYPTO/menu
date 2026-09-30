@@ -12,7 +12,7 @@ import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { useLiveRefresh } from '../../context/WaiterCallsContext';
 import { getCallType } from '../../lib/callTypes';
 import { CallTypeBadge } from '../../components/CallTypeBadge';
-import { AlertTriangle, Hourglass, ArrowLeft, Armchair, Check, ChevronLeft, ClipboardList, Lightbulb, Minus, NotebookPen, Plus, RefreshCw, Smartphone, User, UtensilsCrossed, XCircle } from 'lucide-react';
+import { AlertTriangle, Eye, Hourglass, ArrowLeft, Armchair, Check, ChevronLeft, ClipboardList, Lightbulb, Minus, NotebookPen, Plus, RefreshCw, Smartphone, User, UtensilsCrossed, XCircle } from 'lucide-react';
 import { orderStatusStyle } from '../../lib/orderStatus';
 import {
   WaiterTableDetail,
@@ -42,6 +42,8 @@ export function WaiterTableDetailPage() {
   const [cancelModal, setCancelModal] = useState<{
     orderId: string;
     orderLabel: string;
+    /** 'cancel': mutfak başlamadı (serbest) · 'refund': mutfak başladı (iade) · 'refund_request': iade → onaya */
+    mode: 'cancel' | 'refund' | 'refund_request';
   } | null>(null);
   const [cancelReason, setCancelReason] = useState<CancelReasonCode>('customer_cancelled');
   const [cancelText, setCancelText] = useState('');
@@ -97,8 +99,8 @@ export function WaiterTableDetailPage() {
     }
   }
 
-  function openCancelModal(orderId: string, orderLabel: string) {
-    setCancelModal({ orderId, orderLabel });
+  function openCancelModal(orderId: string, orderLabel: string, mode: 'cancel' | 'refund' | 'refund_request') {
+    setCancelModal({ orderId, orderLabel, mode });
     setCancelReason('customer_cancelled');
     setCancelText('');
   }
@@ -163,7 +165,17 @@ export function WaiterTableDetailPage() {
     );
   }
 
-  const canCancelOrders = waiter?.permissions.can_delete_items ?? false;
+  // Piyasa modeli: mutfak başlamadan ("Bekliyor") iptal herkese serbest; başladıktan sonra İADE →
+  // "iade" yetkisi yoksa admin onayına düşer. Başka personelin masasında işlem yetkisi yoksa salt okunur.
+  const canRefund = waiter?.permissions.can_refund ?? false;
+  const canEdit = data.can_edit !== false;
+  const cancelModeFor = (status: string): 'cancel' | 'refund' | 'refund_request' =>
+    status === 'pending' ? 'cancel' : canRefund ? 'refund' : 'refund_request';
+  const CANCEL_TEXT = {
+    cancel: { button: 'Siparişi İptal Et', title: 'Sipariş İptal', hint: 'Mutfak henüz başlamadı; iptal hemen uygulanır. Sebep kaydedilir.', submit: 'Siparişi İptal Et' },
+    refund: { button: 'İade Et', title: 'İade', hint: 'Mutfak bu siparişe başladı; işlem iade olarak kaydedilir.', submit: 'İade Et' },
+    refund_request: { button: 'İade Talebi Gönder', title: 'İade Talebi', hint: 'Mutfak bu siparişe başladı. İade yetkin yok: talep admin onayına gider, onaylanana kadar sipariş aynen kalır.', submit: 'Talebi Gönder' }
+  } as const;
 
   return (
     <div className="text-ink" style={{ paddingBottom: 100 }}>
@@ -189,6 +201,15 @@ export function WaiterTableDetailPage() {
           <RefreshCw size={14} aria-hidden />
         </button>
       </div>
+
+      {!canEdit && data.owner && (
+        <div className="ui-card rounded-2xl px-4 py-3 mb-3 flex items-start gap-2.5 bg-surface-2">
+          <Eye size={16} className="shrink-0 mt-0.5 text-ink-muted" aria-hidden />
+          <p className="text-sm">
+            Bu masa <strong>{data.owner.name}</strong> personelinde. <span className="text-ink-muted">Sadece görüntüleyebilirsin; başkasının masasında işlem yetkin yok.</span>
+          </p>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────── */}
       {/* ÇAĞRILAR — call_type ile zenginleştirilmiş      */}
@@ -317,7 +338,7 @@ export function WaiterTableDetailPage() {
                       </div>
                       {pendingCancel && (
                         <div className="px-4 py-2 text-xs font-bold bg-state-danger-bg text-state-danger flex items-center gap-1.5 border-b border-line">
-                          <Hourglass size={13} aria-hidden /> İptal talebi admin onayında · {pendingCancel.waiter_name}
+                          <Hourglass size={13} aria-hidden /> İade talebi admin onayında · {pendingCancel.waiter_name}
                         </div>
                       )}
                       <div className="px-4 py-2">
@@ -340,12 +361,12 @@ export function WaiterTableDetailPage() {
                                 )}
                               </div>
 
-                              {isEditable ? (
+                              {isEditable && canEdit ? (
                                 <div className="flex items-center gap-1.5 bg-surface-2 p-1 rounded-xl border border-line">
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
                                     disabled={item.quantity <= 1 || !!pendingDecrease(item.id)}
-                                    title={!canCancelOrders ? 'Azaltma admin onayına gider' : undefined}
+                                    title={order.status !== 'pending' && !canRefund ? 'Mutfak başladı: azaltma iade sayılır, admin onayına gider' : undefined}
                                     className="btn-outline w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn"
                                     style={{
                                       opacity: item.quantity <= 1 || pendingDecrease(item.id) ? 0.3 : 1
@@ -380,12 +401,12 @@ export function WaiterTableDetailPage() {
                         )}
                       </div>
 
-                      {isEditable && !pendingCancel && (
+                      {isEditable && canEdit && !pendingCancel && (
                         <div className="px-4 py-2.5 border-t border-line">
                           <button
-                            onClick={() => openCancelModal(order.id, orderLabel)}
+                            onClick={() => openCancelModal(order.id, orderLabel, cancelModeFor(order.status))}
                             className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5 bg-state-danger-bg text-state-danger">
-                            <XCircle size={14} aria-hidden /> {canCancelOrders ? 'Siparişi İptal Et' : 'İptal Talebi Gönder'}
+                            <XCircle size={14} aria-hidden /> {CANCEL_TEXT[cancelModeFor(order.status)].button}
                           </button>
                         </div>
                       )}
@@ -414,13 +435,13 @@ export function WaiterTableDetailPage() {
         </div>
       )}
 
-      <div className="fixed bottom-[92px] left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
+      {canEdit && <div className="fixed bottom-[92px] left-4 right-4 z-30 mx-auto" style={{ maxWidth: 480 }}>
         <button
           onClick={() => navigate(`/garson/masa/${id}/menu`)}
           className="btn-primary w-full py-3.5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 spring-btn">
           <Plus size={14} aria-hidden /> Sipariş Al
         </button>
-      </div>
+      </div>}
 
       {cancelModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center ui-scrim fade-enter">
@@ -429,12 +450,10 @@ export function WaiterTableDetailPage() {
             <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3" />
             <div className="px-5 pt-3 pb-3 border-b border-line">
               <h3 className="font-serif font-bold text-lg flex items-center gap-2" style={{ color: 'var(--state-danger)' }}>
-                <XCircle size={18} aria-hidden /> {canCancelOrders ? 'Sipariş İptal' : 'İptal Talebi'} — {cancelModal.orderLabel}
+                <XCircle size={18} aria-hidden /> {CANCEL_TEXT[cancelModal.mode].title} — {cancelModal.orderLabel}
               </h3>
               <p className="text-xs mt-1 text-ink-muted">
-                {canCancelOrders
-                  ? 'İptal sebebini seç. Bu işlem loglanır.'
-                  : 'İptal yetkin yok: talep admin onayına gider, onaylanana kadar sipariş aynen kalır.'}
+                {CANCEL_TEXT[cancelModal.mode].hint}
               </p>
             </div>
             <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '60vh' }}>
@@ -487,7 +506,7 @@ export function WaiterTableDetailPage() {
                 disabled={cancelling}
                 className="flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50"
                 style={{ background: 'var(--state-danger)', color: 'var(--bg)' }}>
-                {cancelling ? 'Gönderiliyor...' : canCancelOrders ? 'Siparişi İptal Et' : 'Talebi Gönder'}
+                {cancelling ? 'Gönderiliyor...' : CANCEL_TEXT[cancelModal.mode].submit}
               </button>
             </div>
           </div>

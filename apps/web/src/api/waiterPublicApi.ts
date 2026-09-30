@@ -8,12 +8,15 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
+/** Personel yetkileri (piyasa modeli). Kurallar: api/src/services/staffPermissions.ts */
 export type WaiterPermissions = {
-  can_delete_items: boolean;
-  can_merge_tables: boolean;
-  can_transfer_table: boolean;
+  /** Mutfak başladıktan sonra iptal/azaltma (iade) doğrudan; yoksa admin onayına düşer */
+  can_refund: boolean;
   can_see_other_tables: boolean;
-  can_add_note: boolean;
+  /** Başka personelin masasında sipariş / adet / iptal / taşıma */
+  can_edit_other_tables: boolean;
+  can_transfer_table: boolean;
+  can_merge_tables: boolean;
   can_use_break: boolean;
 };
 
@@ -37,6 +40,10 @@ export type WaiterTable = {
   order_count: number;
   has_active_session: boolean;
   merge_group_id: string | null;
+  /** Masa sahibi: bu adisyonda ilk siparişi alan personel */
+  owner?: { id: string; name: string } | null;
+  /** Bu personel masada işlem yapabilir mi (başkasının masası + yetki) */
+  can_edit?: boolean;
 };
 
 export type WaiterOrderItem = {
@@ -107,6 +114,8 @@ export type WaiterTableDetail = {
   session: { id: string; opened_at: string; total_int: number } | null;
   orders: WaiterOrder[];
   active_calls: WaiterCall[];
+  owner?: { id: string; name: string } | null;
+  can_edit?: boolean;
 };
 
 export type WaiterMenuCategory = {

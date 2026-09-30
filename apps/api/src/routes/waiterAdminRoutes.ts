@@ -30,11 +30,11 @@ waiterAdminRoutes.use(requireAdmin);
 // ─────────────────────────────────────────────────────────────
 
 const permissionsSchema = z.object({
-  can_delete_items: z.boolean().optional(),
-  can_merge_tables: z.boolean().optional(),
-  can_transfer_table: z.boolean().optional(),
+  can_refund: z.boolean().optional(),
   can_see_other_tables: z.boolean().optional(),
-  can_add_note: z.boolean().optional(),
+  can_edit_other_tables: z.boolean().optional(),
+  can_transfer_table: z.boolean().optional(),
+  can_merge_tables: z.boolean().optional(),
   can_use_break: z.boolean().optional()
 });
 

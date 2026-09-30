@@ -1,9 +1,10 @@
 // apps/api/src/services/changeRequestService.ts
 // Onaya düşen sipariş değişiklikleri (Aşama 4)
 //
-// "Sipariş silebilir" (can_delete_items) yetkisi olmayan personel:
-//   - siparişi iptal etmek isterse  → order_cancel talebi
+// Mutfak başladıktan sonra (Hazırlanıyor/Hazır) iptal/azaltma = İADE. "İade" (can_refund) yetkisi olmayan personel:
+//   - siparişi iade etmek isterse  → order_cancel talebi
 //   - bir kalemin adedini azaltmak isterse → item_decrease talebi
+// (Mutfak başlamadan iptal/azaltma herkese serbest; talep oluşmaz — staffPermissions.ts)
 // Talep oluşunca sipariş DEĞİŞMEZ; admin onaylarsa uygulanır, reddederse aynen kalır.
 // Her adım işletme kanalına 'change_request' olayı olarak yayınlanır (admin paneli, personel, mutfak).
 import { pool } from '../db/postgres.js';
@@ -65,7 +66,7 @@ export async function requestOrderCancel(
      RETURNING id, created_at`,
     [waiter.business_id, orderId, reasonCode, reasonText, waiter.id, waiter.name]
   );
-  if (inserted.rowCount !== 1) throw new ChangeRequestError(409, 'Bu sipariş için zaten bekleyen bir iptal talebi var.', 'ALREADY_REQUESTED');
+  if (inserted.rowCount !== 1) throw new ChangeRequestError(409, 'Bu sipariş için zaten bekleyen bir iade talebi var.', 'ALREADY_REQUESTED');
 
   const request: ChangeRequest = {
     id: inserted.rows[0].id, kind: 'order_cancel', order_id: orderId, order_item_id: null,
@@ -106,7 +107,7 @@ export async function requestItemDecrease(waiter: WaiterRef, itemId: string, new
      RETURNING id, created_at`,
     [waiter.business_id, it.order_id, itemId, it.quantity, newQuantity, waiter.id, waiter.name]
   );
-  if (inserted.rowCount !== 1) throw new ChangeRequestError(409, 'Bu ürün için zaten bekleyen bir azaltma talebi var.', 'ALREADY_REQUESTED');
+  if (inserted.rowCount !== 1) throw new ChangeRequestError(409, 'Bu ürün için zaten bekleyen bir iade talebi var.', 'ALREADY_REQUESTED');
 
   const request: ChangeRequest = {
     id: inserted.rows[0].id, kind: 'item_decrease', order_id: it.order_id, order_item_id: itemId,
