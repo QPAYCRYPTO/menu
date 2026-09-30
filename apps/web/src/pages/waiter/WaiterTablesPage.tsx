@@ -399,7 +399,7 @@ function WaiterTableCard({ table, canTransfer, canMerge, onMove, onMerge }: {
 
 // ─── ANA SAYFA ────────────────────────────────────────────────────────────────
 export function WaiterTablesPage() {
-  const { waiter, token, tabId, logout } = useWaiterAuth();
+  const { waiter, token, tabId } = useWaiterAuth();
   const [tables, setTables] = useState<WaiterTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<ToastState>(null);
@@ -428,7 +428,7 @@ export function WaiterTablesPage() {
       const data = await listTables(token, tabId);
       setTables(data);
     } catch (e) {
-      if (e instanceof Error && e.message.includes('reason')) { logout(); return; }
+      if (e instanceof Error && e.message.includes('reason')) return; // Oturum geçersiz: WaiterAuthContext 401 olayıyla zaten kapatır (nedeni giriş ekranında gösterilir)
       if (!silent) showToast(e instanceof Error ? e.message : 'Masalar alınamadı.', 'error');
     } finally {
       if (!silent) setLoading(false);

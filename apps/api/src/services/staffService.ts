@@ -6,6 +6,9 @@
 // - Vardiya: personelin aktif giriş oturumunun (waiter_sessions) bitiş zamanı — admin QR/link üretirken
 //   seçtiği süre (1–12 saat).
 // - Her mola başlangıcı/bitişi waiter_activity_log'a yazılır ve işletme kanalına canlı olay gider.
+// - "Serviste": geçerli giriş linki olan VE linkle giriş yapmış (açık sekmesi olan) personel. Link üretmek
+//   tek başına yetmez; personel "Çıkış" yapınca ya da vardiya süresi dolunca servisten düşer.
+//   Giriş/çıkış anları 'shift_start' / 'shift_end' olarak kaydedilir.
 import { pool } from '../db/postgres.js';
 import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from './waiterActivityService.js';
@@ -22,7 +25,7 @@ export type StaffMember = BreakState & {
   id: string;
   name: string;
   title: string | null;
-  /** Aktif giriş oturumunun bitişi; null = şu an vardiyada değil (geçerli giriş linki yok) */
+  /** Giriş yapılmış aktif oturumun bitişi; null = şu an serviste değil (giriş yok ya da süre doldu) */
   shift_ends_at: string | null;
 };
 
@@ -30,7 +33,7 @@ export type StaffActivity = {
   id: string;
   waiter_id: string | null;
   waiter_name: string;
-  action: 'break_start' | 'break_end';
+  action: 'break_start' | 'break_end' | 'shift_start' | 'shift_end';
   metadata: Record<string, unknown>;
   created_at: string;
 };
@@ -126,7 +129,24 @@ export async function endBreak(waiter: WaiterRef): Promise<{ duration_min: numbe
   return { duration_min, overdue_min };
 }
 
-/** Admin paneli: aktif durumdaki personel (vardiya + mola) ve son 24 saatin mola hareketleri */
+/** Personel linkle giriş yaptı (oturumun ilk sekmesi) ya da son sekmesinden çıkış yaptı.
+ *  Açık kalmış mola (ör. molada çıkış yapıldı / link yenilendi) kapatılır: yeni vardiya temiz başlar. */
+export async function recordShiftEvent(action: 'shift_start' | 'shift_end', waiter: WaiterRef): Promise<void> {
+  await pool.query(
+    `UPDATE waiters SET break_started_at = NULL, break_ends_at = NULL
+     WHERE id = $1 AND business_id = $2 AND break_started_at IS NOT NULL`,
+    [waiter.id, waiter.business_id]
+  );
+  await logWaiterActivity({ businessId: waiter.business_id, waiterId: waiter.id, waiterName: waiter.name, action });
+  publishOrder(waiter.business_id, {
+    type: 'staff_update',
+    action,
+    waiter_id: waiter.id,
+    waiter_name: waiter.name
+  }).catch(() => {});
+}
+
+/** Admin paneli: aktif durumdaki personel (vardiya + mola) ve son 24 saatin personel hareketleri */
 export async function getStaffOverview(businessId: string): Promise<{ staff: StaffMember[]; activity: StaffActivity[] }> {
   const staffResult = await pool.query(
     `SELECT w.id, w.name, w.title, w.break_started_at, w.break_ends_at,
@@ -134,6 +154,7 @@ export async function getStaffOverview(businessId: string): Promise<{ staff: Sta
      FROM waiters w
      LEFT JOIN waiter_sessions s
        ON s.waiter_id = w.id AND s.revoked_at IS NULL AND s.expires_at > NOW()
+      AND EXISTS (SELECT 1 FROM waiter_session_tabs t WHERE t.session_id = s.id AND t.revoked_at IS NULL)
      WHERE w.business_id = $1 AND w.deleted_at IS NULL AND w.status = 'active'
      GROUP BY w.id
      ORDER BY w.name`,
@@ -145,7 +166,7 @@ export async function getStaffOverview(businessId: string): Promise<{ staff: Sta
     `SELECT id, waiter_id, waiter_name, action, metadata,
             (created_at AT TIME ZONE current_setting('TimeZone')) AS created_at
      FROM waiter_activity_log
-     WHERE business_id = $1 AND action IN ('break_start', 'break_end')
+     WHERE business_id = $1 AND action IN ('break_start', 'break_end', 'shift_start', 'shift_end')
        AND created_at > NOW() - INTERVAL '24 hours'
      ORDER BY created_at DESC
      LIMIT 30`,

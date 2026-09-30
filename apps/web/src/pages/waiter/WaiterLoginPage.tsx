@@ -15,12 +15,12 @@ import { AlertTriangle, ArrowLeft, ChefHat } from 'lucide-react';
 
 export function WaiterLoginPage() {
   const { token: urlToken } = useParams<{ token?: string }>();
-  const { isAuthenticated, isChecking, loginWithToken } = useWaiterAuth();
+  const { isAuthenticated, isChecking, loginWithToken, endReason } = useWaiterAuth();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<'auto' | 'email'>(urlToken ? 'auto' : 'email');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => (endReason ? reasonToMessage(endReason) : null));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

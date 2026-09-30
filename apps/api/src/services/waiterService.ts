@@ -63,7 +63,7 @@ export type WaiterWithToken = {
 };
 
 export type WaiterAuthResult =
-  | { ok: true; waiter: Waiter; session_id: string | null }
+  | { ok: true; waiter: Waiter; session_id: string | null; /** exchange: bu oturumda başka açık sekme yoktu (servise giriş) */ first_tab?: boolean }
   | { ok: false; reason: 'invalid_token' | 'expired' | 'revoked' | 'waiter_inactive' | 'business_suspended' | 'module_disabled' | 'invalid_credentials' | 'invalid_tab' };
 
 function hashToken(token: string): string {
@@ -621,6 +621,13 @@ export async function registerSessionTab(
   if (row.business_active !== true) return { ok: false, reason: 'business_suspended' };
   if (row.waiter_module_enabled !== true) return { ok: false, reason: 'module_disabled' };
 
+  // Servise giriş mi, yoksa açık oturumun yenilenmesi mi? (sayfa yenileme/yeniden açma aynı tab_id ile gelir)
+  const openTabs = await pool.query(
+    `SELECT 1 FROM waiter_session_tabs WHERE session_id = $1 AND revoked_at IS NULL LIMIT 1`,
+    [row.session_id]
+  );
+  const firstTab = (openTabs.rowCount ?? 0) === 0;
+
   // Tab kaydını yarat veya mevcut tab varsa güncelle
   // Eğer tab_id daha önce başka bir session'a kayıtlıysa, eski kaydı revoke et
   await pool.query(
@@ -653,7 +660,8 @@ export async function registerSessionTab(
   return {
     ok: true,
     waiter: rowToWaiter(row),
-    session_id: row.session_id
+    session_id: row.session_id,
+    first_tab: firstTab
   };
 }
 
@@ -725,13 +733,31 @@ export async function authenticateWaiterByTokenAndTab(
 /**
  * Bir tab'ı revoke et (logout).
  */
-export async function revokeSessionTab(tabId: string): Promise<boolean> {
+/**
+ * Sekmeyi kapatır (Çıkış). Oturumun son açık sekmesiyse personel servisten çıkmış sayılır:
+ * `last_tab` + personel bilgisi döner (çağıran "çıkış yaptı" kaydı/olayı üretir).
+ */
+export async function revokeSessionTab(tabId: string): Promise<
+  | { revoked: false }
+  | { revoked: true; last_tab: boolean; waiter: { id: string; business_id: string; name: string } }
+> {
   const result = await pool.query(
-    `UPDATE waiter_session_tabs
+    `UPDATE waiter_session_tabs t
      SET revoked_at = NOW()
-     WHERE tab_id = $1 AND revoked_at IS NULL
-     RETURNING id`,
+     FROM waiters w
+     WHERE t.tab_id = $1 AND t.revoked_at IS NULL AND w.id = t.waiter_id
+     RETURNING t.session_id, w.id AS waiter_id, w.business_id, w.name`,
     [tabId]
   );
-  return (result.rowCount ?? 0) > 0;
+  if ((result.rowCount ?? 0) === 0) return { revoked: false };
+  const row = result.rows[0];
+  const remaining = await pool.query(
+    `SELECT 1 FROM waiter_session_tabs WHERE session_id = $1 AND revoked_at IS NULL LIMIT 1`,
+    [row.session_id]
+  );
+  return {
+    revoked: true,
+    last_tab: (remaining.rowCount ?? 0) === 0,
+    waiter: { id: row.waiter_id, business_id: row.business_id, name: row.name }
+  };
 }

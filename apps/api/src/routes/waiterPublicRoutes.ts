@@ -29,7 +29,7 @@ import {
 } from '../services/sessionService.js';
 import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
-import { BREAK_MINUTES, endBreak, getWaiterShiftInfo, startBreak } from '../services/staffService.js';
+import { BREAK_MINUTES, endBreak, getWaiterShiftInfo, recordShiftEvent, startBreak } from '../services/staffService.js';
 
 export const waiterPublicRoutes = Router();
 
@@ -199,6 +199,12 @@ waiterPublicRoutes.post('/exchange', publicMenuRateLimit, async (req, res) => {
     return;
   }
 
+  // Oturumun ilk sekmesi → personel servise girdi (sayfa yenileme/yeniden açma sayılmaz)
+  // (beklenir: açık kalmış mola temizlensin ki profil ilk okumada doğru görünsün)
+  if (result.first_tab) {
+    await recordShiftEvent('shift_start', result.waiter).catch(() => {});
+  }
+
   res.status(200).json({
     ok: true,
     waiter: {
@@ -227,7 +233,11 @@ waiterPublicRoutes.post('/logout', async (req, res) => {
     return;
   }
 
-  await revokeSessionTab(parsed.data.tab_id);
+  const revoked = await revokeSessionTab(parsed.data.tab_id);
+  // Son açık sekmesi de kapandıysa personel servisten çıktı
+  if (revoked.revoked && revoked.last_tab) {
+    recordShiftEvent('shift_end', revoked.waiter).catch(() => {});
+  }
   res.status(200).json({ ok: true });
 });
 

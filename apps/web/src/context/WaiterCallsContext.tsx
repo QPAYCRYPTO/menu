@@ -64,7 +64,13 @@ const CALLS_FALLBACK_POLL_MS = 30_000;
 const WaiterCallsContext = createContext<WaiterCallsContextValue | null>(null);
 
 export function WaiterCallsProvider({ children }: { children: ReactNode }) {
-  const { token, tabId, isAuthenticated } = useWaiterAuth();
+  const { token, tabId, isAuthenticated, waiter, onBreak, setOnBreak } = useWaiterAuth();
+  // Molada: ses ve açılır bildirim yok, çağrılar/hazır siparişler listede görünmeye devam eder.
+  // SSE bağlantısı yeniden kurulmasın diye ref ile okunur.
+  const mutedRef = useRef(onBreak);
+  mutedRef.current = onBreak;
+  const waiterIdRef = useRef(waiter?.id);
+  waiterIdRef.current = waiter?.id;
   const [calls, setCalls] = useState<WaiterActiveCall[]>([]);
   const [readyOrders, setReadyOrders] = useState<WaiterReadyOrder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -239,8 +245,16 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
             if (prev.some(c => c.id === newCall.id)) return prev;
             return [...prev, newCall];
           });
-          // Ses çal
-          try { (audioRef.current as any)?.play?.(); } catch {}
+          // Ses çal (molada sessiz)
+          if (!mutedRef.current) {
+            try { (audioRef.current as any)?.play?.(); } catch {}
+          }
+        }
+
+        // Kendi mola durumum değişti (bu ya da başka bir cihazdan)
+        if (data.type === 'staff_update' && data.waiter_id && data.waiter_id === waiterIdRef.current) {
+          if (data.action === 'break_start') setOnBreak(true);
+          if (data.action === 'break_end') setOnBreak(false);
         }
 
         // Çağrı alındı (kim aldıysa fark etmez, listeden sil)
@@ -255,10 +269,12 @@ export function WaiterCallsProvider({ children }: { children: ReactNode }) {
             id: `${data.order_id}-${Date.now()}`,
             text: `🍽️ ${data.table_name || 'Masa'} hazır${summary ? ` — ${summary}` : ''}`
           };
-          setReadyToasts(prev => [...prev.slice(-2), toast]);
           refreshReady();
-          window.setTimeout(() => dismissReadyToast(toast.id), KITCHEN_READY_TOAST_MS);
-          try { (audioRef.current as any)?.playReady?.(); } catch {}
+          if (!mutedRef.current) {
+            setReadyToasts(prev => [...prev.slice(-2), toast]);
+            window.setTimeout(() => dismissReadyToast(toast.id), KITCHEN_READY_TOAST_MS);
+            try { (audioRef.current as any)?.playReady?.(); } catch {}
+          }
         }
 
         // Sipariş durumu değişti (admin hazır/teslim yaptı, başka garson teslim etti, iptal) → hazır listesi

@@ -53,7 +53,7 @@ const FAVORITES_CAT_ID = '__favorites__';
 
 export function WaiterMenuPage() {
   const { id: tableId } = useParams<{ id: string }>();
-  const { token, tabId, waiter, logout } = useWaiterAuth();
+  const { token, tabId, waiter } = useWaiterAuth();
   const navigate = useNavigate();
 
   const [tableName, setTableName] = useState<string>('');
@@ -121,7 +121,7 @@ export function WaiterMenuPage() {
       }
     } catch (e) {
       if (e instanceof Error && e.message.includes('reason')) {
-        logout();
+        // Oturum geçersiz: WaiterAuthContext 401 olayıyla zaten kapatır (nedeni giriş ekranında gösterilir)
         return;
       }
       showToast(e instanceof Error ? e.message : 'Menü alınamadı.', 'error');

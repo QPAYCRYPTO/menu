@@ -14,8 +14,8 @@ import type { BusinessSettingsResponse } from '@menu/shared';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Armchair, ArrowRight, Bell, ChevronRight, CircleAlert, ClipboardList, Clock, Coffee, ExternalLink, Hourglass, PackageX,
-  Play, Plus, TriangleAlert, UserPlus, UtensilsCrossed, X
+  Armchair, ArrowRight, Bell, ChevronRight, CircleAlert, ClipboardList, Clock, Coffee, ExternalLink, Hourglass, LogIn, LogOut,
+  PackageX, Play, Plus, TriangleAlert, UserPlus, UtensilsCrossed, X
 } from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -37,7 +37,7 @@ type StaffMember = {
   shift_ends_at: string | null;
 };
 type StaffActivity = {
-  id: string; waiter_name: string; action: 'break_start' | 'break_end';
+  id: string; waiter_name: string; action: 'break_start' | 'break_end' | 'shift_start' | 'shift_end';
   metadata: { minutes?: number; duration_min?: number; overdue_min?: number };
   created_at: string;
 };
@@ -155,8 +155,9 @@ export function AdminDashboardPage() {
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
   }, []);
 
+  // Yalnızca vardiyadaki (giriş yapmış) personel sayılır; oturumu biten birinin eski mola kaydı sayılmaz
   const onShift = staff.filter(s => s.shift_ends_at && !s.on_break);
-  const onBreak = staff.filter(s => s.on_break);
+  const onBreak = staff.filter(s => s.shift_ends_at && s.on_break);
   const breakOverdue = onBreak.filter(s => s.break_ends_at && new Date(s.break_ends_at).getTime() < now);
   const shiftEnding = staff.filter(s => s.shift_ends_at
     && new Date(s.shift_ends_at).getTime() - now < SHIFT_ENDING_MINUTES * 60_000);
@@ -303,26 +304,30 @@ export function AdminDashboardPage() {
               </span>
             </div>
             {activity.length === 0 ? (
-              <p className="text-sm text-ink-muted py-4">Son 24 saatte personel hareketi yok.</p>
+              <p className="text-sm text-ink-muted py-4">Son 24 saatte personel hareketi yok. Personel giriş linkiyle girince burada görünür.</p>
             ) : (
               <ul className="max-h-80 overflow-y-auto -mr-2 pr-2">
                 {activity.map(a => {
-                  const start = a.action === 'break_start';
-                  const overdue = !start && (a.metadata.overdue_min ?? 0) > 0;
+                  const isBreakEnd = a.action === 'break_end';
+                  const overdue = isBreakEnd && (a.metadata.overdue_min ?? 0) > 0;
+                  const look = {
+                    break_start: { icon: Coffee, cls: 'bg-state-warn-bg text-state-warn', text: `molaya çıktı${a.metadata.minutes ? ` (${a.metadata.minutes} dk)` : ''}` },
+                    break_end: { icon: Play, cls: 'bg-state-ok-bg text-state-ok', text: 'moladan döndü' },
+                    shift_start: { icon: LogIn, cls: 'bg-state-ok-bg text-state-ok', text: 'servise girdi' },
+                    shift_end: { icon: LogOut, cls: 'bg-surface-2 text-ink-muted', text: 'çıkış yaptı' }
+                  }[a.action];
                   return (
                     <li key={a.id} className="flex items-start gap-3 py-3 border-b border-line last:border-b-0">
-                      <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                        start ? 'bg-state-warn-bg text-state-warn' : 'bg-state-ok-bg text-state-ok'}`}>
-                        {start ? <Coffee size={16} strokeWidth={1.75} /> : <Play size={16} strokeWidth={1.75} />}
+                      <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${look.cls}`}>
+                        <look.icon size={16} strokeWidth={1.75} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm leading-snug">
-                          <strong className="font-semibold">{a.waiter_name}</strong>{' '}
-                          {start ? `molaya çıktı${a.metadata.minutes ? ` (${a.metadata.minutes} dk)` : ''}` : 'moladan döndü'}
+                          <strong className="font-semibold">{a.waiter_name}</strong> {look.text}
                         </p>
                         <p className={`text-xs mt-0.5 ${overdue ? 'text-state-danger font-semibold' : 'text-ink-muted'}`}>
                           {ago(a.created_at, now)}
-                          {!start && a.metadata.duration_min !== undefined && ` · ${a.metadata.duration_min} dk sürdü`}
+                          {isBreakEnd && a.metadata.duration_min !== undefined && ` · ${a.metadata.duration_min} dk sürdü`}
                           {overdue && ` · ${a.metadata.overdue_min} dk gecikti`}
                         </p>
                       </div>

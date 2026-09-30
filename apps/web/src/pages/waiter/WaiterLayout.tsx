@@ -9,10 +9,10 @@ import { useWaiterAuth } from '../../context/WaiterAuthContext';
 import { useWaiterCalls } from '../../context/WaiterCallsContext';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { useThemedPage } from '../../lib/theme';
-import { Bell, LogOut, User, UtensilsCrossed } from 'lucide-react';
+import { Bell, BellOff, LogOut, User, UtensilsCrossed } from 'lucide-react';
 
 export function WaiterLayout() {
-  const { waiter, isAuthenticated, isChecking, logout } = useWaiterAuth();
+  const { waiter, isAuthenticated, isChecking, logout, onBreak } = useWaiterAuth();
   const { calls, readyOrders } = useWaiterCalls();
   const location = useLocation();
   useThemedPage();
@@ -57,6 +57,11 @@ export function WaiterLayout() {
             </div>
             <div className="min-w-0">
               <div className="ui-eyebrow truncate">{waiter.title || 'Personel'}</div>
+              {onBreak && (
+                <Link to="/garson/profil" className="no-underline inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-state-warn-bg text-state-warn">
+                  <BellOff size={11} aria-hidden /> Molada · bildirimler sessiz
+                </Link>
+              )}
               <div className="font-serif font-bold text-lg leading-tight truncate">
                 {waiter.name}
               </div>

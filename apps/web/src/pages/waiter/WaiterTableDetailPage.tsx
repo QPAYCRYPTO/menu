@@ -31,7 +31,7 @@ function formatPrice(priceInt: number): string {
 
 export function WaiterTableDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { token, tabId, waiter, logout } = useWaiterAuth();
+  const { token, tabId, waiter } = useWaiterAuth();
   const navigate = useNavigate();
 
   const [data, setData] = useState<WaiterTableDetail | null>(null);
@@ -74,7 +74,7 @@ export function WaiterTableDetailPage() {
       setData(result);
     } catch (e) {
       if (e instanceof Error && e.message.includes('reason')) {
-        logout();
+        // Oturum geçersiz: WaiterAuthContext 401 olayıyla zaten kapatır (nedeni giriş ekranında gösterilir)
         return;
       }
       if (!silent) setError(e instanceof Error ? e.message : 'Masa detayı alınamadı.');

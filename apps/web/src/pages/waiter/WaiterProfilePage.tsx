@@ -31,7 +31,7 @@ function formatSpan(totalSec: number): string {
 }
 
 export function WaiterProfilePage() {
-  const { token, tabId } = useWaiterAuth();
+  const { token, tabId, setOnBreak } = useWaiterAuth();
   const [profile, setProfile] = useState<WaiterProfile | null>(null);
   const [error, setError] = useState('');
   const [minutes, setMinutes] = useState(10);
@@ -61,6 +61,7 @@ export function WaiterProfilePage() {
     setNotice('');
     try {
       await startBreak(token, tabId, minutes);
+      setOnBreak(true);
       await load();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Molaya çıkılamadı.');
@@ -76,6 +77,7 @@ export function WaiterProfilePage() {
     setNotice('');
     try {
       const r = await endBreak(token, tabId);
+      setOnBreak(false);
       setNotice(r.overdue_min > 0
         ? `Tekrar hoş geldin. Molan planlanandan ${r.overdue_min} dk uzun sürdü.`
         : 'Tekrar hoş geldin, iyi servisler!');
@@ -168,7 +170,7 @@ export function WaiterProfilePage() {
           </>
         ) : (
           <>
-            <p className="text-sm text-ink-muted mt-1 mb-3">Süre seç, molaya çık. Dönünce "Moladan dön"e bas.</p>
+            <p className="text-sm text-ink-muted mt-1 mb-3">Süre seç, molaya çık. Moladayken çağrı ve "hazır" bildirimleri sessiz olur (listede görünmeye devam eder). Dönünce "Moladan dön"e bas.</p>
             <div className="grid grid-cols-4 gap-2">
               {profile.break_options.map(m => (
                 <button key={m} onClick={() => setMinutes(m)} aria-pressed={minutes === m}

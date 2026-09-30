@@ -178,9 +178,16 @@ function waiterHeaders(token: string, tabId: string) {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    // Oturum sunucuda geçersiz (süre doldu, link iptal/yenilendi…) → WaiterAuthContext oturumu kapatır.
+    // Mesaj 'reason:' ile başlar: sayfalardaki eski `includes('reason')` kontrolleri de çalışır.
+    const reason = (data as { reason?: string }).reason ?? 'invalid_tab';
+    window.dispatchEvent(new CustomEvent('atlasqr:waiter-unauthorized', { detail: { reason } }));
+    throw new Error(`reason:${reason}`);
+  }
   if (!res.ok) {
-    throw new Error(data.message ?? 'Bir hata oluştu.');
+    throw new Error((data as { message?: string }).message ?? 'Bir hata oluştu.');
   }
   return data as T;
 }
@@ -430,8 +437,8 @@ export async function cancelOrder(
 export function reasonToMessage(reason: WaiterAuthFailure['reason']): string {
   switch (reason) {
     case 'invalid_token': return 'Geçersiz giriş linki. Yöneticinizden yeni QR isteyin.';
-    case 'expired': return 'QR süresi dolmuş. Yöneticinizden yeni QR isteyin.';
-    case 'revoked': return 'Bu QR iptal edilmiş. Yöneticinizle iletişime geçin.';
+    case 'expired': return 'Vardiya süren doldu. Yöneticinden yeni giriş linki iste.';
+    case 'revoked': return 'Giriş linkin yenilendi ya da iptal edildi. Yöneticinden yeni linki iste.';
     case 'waiter_inactive': return 'Hesabınız pasif durumda.';
     case 'business_suspended': return 'İşletme geçici olarak hizmet dışı.';
     case 'module_disabled': return 'Personel modülü kapalı.';
