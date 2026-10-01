@@ -36,6 +36,8 @@ export type Order = {
   items: OrderItem[];
   /** Mutfak başladıktan sonra iptal edilen kalemler (kim / neden) */
   cancellations?: CancellationEntry[];
+  /** Mutfağın henüz "Gördüm" demediği değişiklikler (null: mutfak gördü) */
+  kitchen_notice?: Array<{ tone: string; text: string; at: string }> | null;
 };
 
 export type CancelReasonCode =
@@ -205,14 +207,36 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  /**
+   * Sunucudaki güncel listeyi uygular ve "değişiklik" kartlarını sunucuyla eşitler:
+   * sipariş artık aktif değilse ya da mutfak (Bekliyor/Hazırlanıyor) bildirimi "Gördüm" ile kapattıysa kart kalkar.
+   */
+  const applyOrders = useCallback((fresh: Order[]) => {
+    setActiveOrders(fresh);
+    const byId = new Map(fresh.map(o => [o.id, o]));
+    setPendingUpdates(prev => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const id of prev.keys()) {
+        const o = byId.get(id);
+        const kitchenSaw = o && ['pending', 'preparing'].includes(o.status) && !o.kitchen_notice;
+        if (!o || kitchenSaw) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   const refreshActive = useCallback(async () => {
     const token = tokenRef.current;
     if (!token) return;
     try {
       const data = await apiRequest<Order[]>('/admin/orders', { token });
-      setActiveOrders(data);
+      applyOrders(data);
     } catch {}
-  }, []);
+  }, [applyOrders]);
 
   const fetchDelivered = useCallback(async (): Promise<Order[]> => {
     const token = tokenRef.current;
@@ -294,7 +318,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (!token) return;
       try {
         const fresh = await apiRequest<Order[]>('/admin/orders', { token });
-        setActiveOrders(fresh);
+        applyOrders(fresh);
       } catch {}
     }
 
@@ -347,6 +371,11 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
                   // Onay bekleyen iptal / adet azaltma talepleri (lib/changeRequests)
                   else if (data.type === 'change_request') {
                     window.dispatchEvent(new CustomEvent('atlasqr:change-request', { detail: data }));
+                  }
+                  // Mutfak "Gördüm" dedi → admin'deki değişiklik kartı da kalkar
+                  else if (data.type === 'kitchen_notice_ack') {
+                    if (data.order_id) acknowledgeUpdate(data.order_id);
+                    await refetchOrders();
                   }
                   // Masa/hesap değişti (ödeme, indirim, kapatma, birleştirme…): Kasa ekranı kendi dinler
                   else if (data.type === 'tables_changed') {

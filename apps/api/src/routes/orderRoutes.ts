@@ -160,6 +160,7 @@ orderRoutes.get('/', async (req, res) => {
       o.cancelled_at, o.cancel_reason,
       o.waiter_id,
       w.name AS waiter_name,
+      o.kitchen_notice,
       COALESCE(
         json_agg(
           json_build_object(

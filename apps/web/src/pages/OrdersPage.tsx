@@ -564,7 +564,7 @@ export function OrdersPage() {
   }
 
   // Personelin onay bekleyen iptal / adet azaltma talepleri
-  const { requests: changeRequests, decide: decideRequest, busyId: busyRequestId } = useChangeRequests();
+  const { requests: changeRequests, decide: decideRequest, busyId: busyRequestId, reload: reloadRequests } = useChangeRequests();
   async function handleDecideRequest(id: string, decision: 'approve' | 'reject') {
     try {
       showToast(await decideRequest(id, decision), 'success');
@@ -598,7 +598,7 @@ export function OrdersPage() {
     setRefreshing(true);
     try {
       if (filter === 'active') {
-        await refreshActive();
+        await Promise.all([refreshActive(), reloadRequests()]);
       } else {
         setHistoryRefreshKey(k => k + 1);
       }
