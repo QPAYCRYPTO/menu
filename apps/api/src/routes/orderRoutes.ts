@@ -9,6 +9,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { subscriber, ORDER_CHANNEL, publishOrder, subscribeChannel, unsubscribeChannel } from '../db/redisPubSub.js';
 import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
 import { buildHistoryWorkbook, getHistoryOptions, getOrderHistory } from '../services/orderHistoryService.js';
+import { listCancellations, recordWholeOrderCancellation } from '../services/itemCancellationService.js';
 
 const updateOrderSchema = z.object({
   status: z.enum(['pending', 'preparing', 'ready', 'delivered'])
@@ -190,7 +191,9 @@ orderRoutes.get('/', async (req, res) => {
   query += ` GROUP BY o.id, w.name ORDER BY o.created_at DESC LIMIT 100`;
 
   const result = await pool.query(query, params);
-  res.status(200).json(result.rows);
+  // Mutfak başladıktan sonra iptal edilen kalemler (kartta "İptal edilen" olarak görünür)
+  const cancellations = await listCancellations(pool, businessId, result.rows.map((r: any) => r.id));
+  res.status(200).json(result.rows.map((r: any) => ({ ...r, cancellations: cancellations.get(r.id) ?? [] })));
 });
 
 // Sipariş durumunu güncelle
@@ -361,6 +364,12 @@ orderRoutes.post('/:id/cancel', async (req, res) => {
        RETURNING id, status, table_name, type, cancel_reason, cancelled_at`,
       [userId, finalReason, id, businessId]
     );
+
+    const admin = await client.query(`SELECT email FROM users WHERE id = $1`, [userId]);
+    await recordWholeOrderCancellation(client, {
+      businessId, orderId: id, previousStatus: order.status, reasonCode: reason_code, reasonText: reason_text ?? null,
+      actor: { userId, name: admin.rows[0]?.email ?? 'Yönetici' }
+    });
 
     if (wasDelivered && order.session_id) {
       const totalResult = await client.query(

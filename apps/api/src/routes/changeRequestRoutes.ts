@@ -34,7 +34,9 @@ for (const decision of ['approve', 'reject'] as const) {
         req.ctx!.businessId!, req.ctx!.userId!, params.data.id, decision, body.data.note || null
       );
       const message = result.status === 'approved'
-        ? (result.request.kind === 'order_cancel' ? 'İade onaylandı, sipariş iptal edildi.' : 'İade onaylandı, adet güncellendi.')
+        ? (result.request.kind === 'order_cancel' ? 'İade onaylandı, sipariş iptal edildi.'
+          : result.request.kind === 'items_cancel' ? 'İptal onaylandı, seçilen ürünler iptal edildi.'
+          : 'İade onaylandı, adet güncellendi.')
         : result.status === 'rejected'
           ? 'Talep reddedildi.'
           : 'Sipariş bu arada değiştiği için talep geçersiz sayıldı.';

@@ -12,12 +12,20 @@ export type KitchenOrder = {
   id: string;
   order_no: number;
   table_name: string;
-  status: 'pending' | 'preparing';
+  /** cancelled: iptal edildi ama mutfak henüz "Gördüm" demedi */
+  status: 'pending' | 'preparing' | 'cancelled';
   note: string | null;
   created_at: string;
   items: Array<{ id: string; product_name: string; quantity: number; note: string | null }>;
   /** Onay bekleyen iptal / adet azaltma talepleri — mutfak kartında uyarı */
-  pending_changes: Array<{ kind: 'order_cancel' | 'item_decrease'; product_name: string | null; requested_quantity: number | null }>;
+  pending_changes: Array<{
+    kind: 'order_cancel' | 'item_decrease' | 'items_cancel';
+    product_name: string | null;
+    requested_quantity: number | null;
+    items: Array<{ product_name: string; quantity: number }> | null;
+  }>;
+  /** Mutfağın "Gördüm" demesi gereken değişiklikler (doluyken kart yanıp söner) */
+  kitchen_notice: Array<{ tone: 'edit' | 'cancel' | 'request' | 'info'; text: string; at: string }> | null;
 };
 
 export async function isKitchenModuleEnabled(businessId: string): Promise<boolean> {
@@ -82,7 +90,8 @@ export async function resolveKitchenToken(token: string): Promise<{ businessId: 
   return { businessId: result.rows[0].id, businessName: result.rows[0].name };
 }
 
-/** Mutfakta görünen siparişler: bekleyen + hazırlanan (çağrılar hariç), eskiden yeniye */
+/** Mutfakta görünen siparişler: bekleyen + hazırlanan (çağrılar hariç), eskiden yeniye.
+ *  İptal edilip mutfağın henüz görmediği siparişler de (son 12 saat) "Gördüm" denene kadar kalır. */
 export async function listKitchenOrders(businessId: string): Promise<KitchenOrder[]> {
   const result = await pool.query(
     `WITH numbered AS (
@@ -94,7 +103,7 @@ export async function listKitchenOrders(businessId: string): Promise<KitchenOrde
          AND o.type = 'order'
          AND o.created_at >= NOW() - INTERVAL '2 days'
      )
-     SELECT o.id, n.order_no::int AS order_no, o.table_name, o.status, o.note, o.created_at,
+     SELECT o.id, n.order_no::int AS order_no, o.table_name, o.status, o.note, o.created_at, o.kitchen_notice,
             COALESCE(
               json_agg(
                 json_build_object('id', oi.id, 'product_name', oi.product_name, 'quantity', oi.quantity, 'note', oi.note)
@@ -107,14 +116,15 @@ export async function listKitchenOrders(businessId: string): Promise<KitchenOrde
      LEFT JOIN order_items oi ON oi.order_id = o.id
      WHERE o.business_id = $1
        AND o.type = 'order'
-       AND o.status IN ('pending', 'preparing')
+       AND (o.status IN ('pending', 'preparing')
+            OR (o.status = 'cancelled' AND o.kitchen_notice IS NOT NULL AND o.cancelled_at > NOW() - INTERVAL '12 hours'))
      GROUP BY o.id, n.order_no
      ORDER BY o.created_at ASC
      LIMIT 200`,
     [businessId]
   );
   const pending = await pool.query(
-    `SELECT r.order_id, r.kind, oi.product_name, r.requested_quantity
+    `SELECT r.order_id, r.kind, oi.product_name, r.requested_quantity, r.items
      FROM order_change_requests r
      LEFT JOIN order_items oi ON oi.id = r.order_item_id
      WHERE r.business_id = $1 AND r.status = 'pending' AND r.order_id = ANY($2::uuid[])
@@ -126,8 +136,24 @@ export async function listKitchenOrders(businessId: string): Promise<KitchenOrde
     order_no: r.order_no ?? 0,
     pending_changes: pending.rows
       .filter(p => p.order_id === r.id)
-      .map(p => ({ kind: p.kind, product_name: p.product_name ?? null, requested_quantity: p.requested_quantity ?? null }))
+      .map(p => ({
+        kind: p.kind,
+        product_name: p.product_name ?? null,
+        requested_quantity: p.requested_quantity ?? null,
+        items: Array.isArray(p.items) ? p.items.map((i: any) => ({ product_name: i.product_name, quantity: i.quantity })) : null
+      }))
   }));
+}
+
+/** Mutfak "Gördüm": bildirimleri temizler. İptal edilmiş sipariş de böylece ekrandan düşer. */
+export async function acknowledgeKitchenNotice(businessId: string, orderId: string): Promise<boolean> {
+  const r = await pool.query(
+    `UPDATE orders SET kitchen_notice = NULL, kitchen_notice_at = NULL
+     WHERE id = $1 AND business_id = $2 AND kitchen_notice IS NOT NULL
+     RETURNING id`,
+    [orderId, businessId]
+  );
+  return (r.rowCount ?? 0) > 0;
 }
 
 /** Siparişi "hazırlanıyor" yapar. Yalnızca bu işletmenin bekleyen siparişi değişir. */

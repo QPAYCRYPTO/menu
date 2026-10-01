@@ -15,6 +15,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { ORDER_CHANNEL, publishOrder, subscribeChannel, subscriber, unsubscribeChannel } from '../db/redisPubSub.js';
 import {
   getActiveKitchenToken,
+  acknowledgeKitchenNotice,
   isKitchenModuleEnabled,
   listKitchenOrders,
   markKitchenOrderPreparing,
@@ -121,6 +122,20 @@ kitchenRoutes.patch('/orders/:id/start', requireKitchenToken, async (req, res) =
   res.status(200).json({ ok: true, order_id: updated.id, status: 'preparing' });
 });
 
+// Mutfak "Gördüm": değişiklik bildirimini kapatır (kart yanıp sönmeyi bırakır)
+kitchenRoutes.post('/orders/:id/ack', requireKitchenToken, async (req, res) => {
+  const idParsed = z.string().uuid().safeParse(req.params.id);
+  if (!idParsed.success) {
+    res.status(400).json({ message: 'Geçersiz sipariş id.' });
+    return;
+  }
+  const { businessId } = kitchenOf(res);
+  await acknowledgeKitchenNotice(businessId, idParsed.data);
+  // Diğer mutfak ekranları da tazelensin
+  publishOrder(businessId, { type: 'kitchen_notice_ack', order_id: idParsed.data }).catch(() => {});
+  res.status(200).json({ ok: true });
+});
+
 kitchenRoutes.patch('/orders/:id/ready', requireKitchenToken, async (req, res) => {
   const idParsed = z.string().uuid().safeParse(req.params.id);
   if (!idParsed.success) {
@@ -168,7 +183,8 @@ const KITCHEN_EVENT_TYPES = new Set([
   'kitchen_order_ready',
   'kitchen_token_rotated',
   'tables_changed',
-  'change_request'
+  'change_request',
+  'kitchen_notice_ack'
 ]);
 
 kitchenRoutes.get('/stream', requireKitchenToken, (req, res) => {

@@ -30,7 +30,8 @@ import {
 import { publishOrder } from '../db/redisPubSub.js';
 import { logWaiterActivity } from '../services/waiterActivityService.js';
 import { BREAK_MINUTES, endBreak, getWaiterShiftInfo, recordShiftEvent, startBreak } from '../services/staffService.js';
-import { ChangeRequestError, listPendingRequests, requestItemDecrease, requestOrderCancel } from '../services/changeRequestService.js';
+import { ChangeRequestError, listPendingRequests, requestItemsCancel, requestOrderCancel } from '../services/changeRequestService.js';
+import { addKitchenNotice, cancelOrderItems, fullReason, KITCHEN_VISIBLE_STATUSES, recordWholeOrderCancellation } from '../services/itemCancellationService.js';
 import {
   assertCanActOnOrder, assertCanActOnSession, canActOnTable, canSeeTable, getSessionOwner, isBeforeKitchen
 } from '../services/staffPermissions.js';
@@ -397,7 +398,10 @@ waiterPublicRoutes.get('/tables/:table_id', requireWaiterAuth, async (req, res) 
       ...o,
       pending_requests: pending
         .filter(p => p.order_id === o.id)
-        .map(p => ({ id: p.id, kind: p.kind, order_item_id: p.order_item_id, requested_quantity: p.requested_quantity, waiter_name: p.waiter_name }))
+        .map(p => ({
+          id: p.id, kind: p.kind, order_item_id: p.order_item_id, requested_quantity: p.requested_quantity,
+          waiter_name: p.waiter_name, items: p.items ?? null
+        }))
     }));
   }
 
@@ -1049,6 +1053,8 @@ waiterPublicRoutes.post('/orders/:order_id/items', requireWaiterAuth, async (req
       userAgent: req.get('user-agent')
     }, client);
 
+    await addKitchenNotice(client, orderId, addedItems.map(i => ({ tone: 'edit' as const, text: `Eklendi: ${i.quantity}× ${i.product_name}` })));
+
     await client.query('COMMIT');
 
     await publishOrder(businessId, {
@@ -1125,19 +1131,14 @@ waiterPublicRoutes.patch('/order-items/:item_id', requireWaiterAuth, async (req,
     // Başka personelin masası → işlem yetkisi gerekir
     await assertCanActOnSession(waiter, item.session_id);
 
-    // Azaltma: mutfak başlamadıysa herkese serbest; başladıysa İADE → yetki yoksa admin onayına düşer
-    if (newQuantity < oldQuantity && !isBeforeKitchen(item.order_status) && !waiter.permissions.can_refund) {
+    // Azaltma: mutfak başlamadıysa düzeltmedir (serbest). Başladıysa iptal sayılır → İptal penceresinden,
+    // ürün ve sebep seçilerek yapılır (kayda geçer; yetki yoksa admin onayına düşer).
+    if (newQuantity < oldQuantity && !isBeforeKitchen(item.order_status)) {
       await client.query('ROLLBACK');
-      try {
-        const request = await requestItemDecrease(waiter, itemId, newQuantity);
-        res.status(202).json({ pending: true, request_id: request.id, message: 'İade talebi admin onayına gönderildi (mutfak başladığı için).' });
-      } catch (err) {
-        if (err instanceof ChangeRequestError) {
-          res.status(err.status).json({ message: err.message, code: err.code });
-          return;
-        }
-        throw err;
-      }
+      res.status(409).json({
+        message: 'Mutfak bu siparişe başladı. Azaltmak için İptal\'den ürünü ve sebebi seçin.',
+        code: 'KITCHEN_STARTED'
+      });
       return;
     }
 
@@ -1145,6 +1146,9 @@ waiterPublicRoutes.patch('/order-items/:item_id', requireWaiterAuth, async (req,
       `UPDATE order_items SET quantity = $1 WHERE id = $2`,
       [newQuantity, itemId]
     );
+    if (KITCHEN_VISIBLE_STATUSES.includes(item.order_status)) {
+      await addKitchenNotice(client, item.order_id, [{ tone: 'edit', text: `${item.product_name}: ${oldQuantity} → ${newQuantity}` }]);
+    }
 
     await logWaiterActivity({
       businessId,
@@ -1320,6 +1324,11 @@ waiterPublicRoutes.post('/orders/:order_id/cancel', requireWaiterAuth, async (re
       userAgent: req.get('user-agent')
     }, client);
 
+    await recordWholeOrderCancellation(client, {
+      businessId, orderId, previousStatus: order.status, reasonCode: reason_code, reasonText: reason_text ?? null,
+      actor: { waiterId: waiter.id, name: waiter.name }
+    });
+
     let sessionAutoClosed = false;
     if (order.session_id) {
       sessionAutoClosed = await maybeAutoCloseSession(order.session_id, businessId, client);
@@ -1337,6 +1346,126 @@ waiterPublicRoutes.post('/orders/:order_id/cancel', requireWaiterAuth, async (re
 
     res.status(200).json({
       message: 'Sipariş iptal edildi.',
+      session_auto_closed: sessionAutoClosed
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// ÜRÜN BAZLI İPTAL
+//   POST /orders/:order_id/cancel-items { items: [{ order_item_id, quantity }], reason_code, reason_text? }
+//   Mutfak başlamadıysa düzeltme (serbest, kayda geçmez). Başladıysa iptal: iade yetkisi varsa uygulanır
+//   ve kayda geçer; yoksa admin onayına düşer (202). Seçim siparişin tamamıysa sipariş bütünüyle iptal olur.
+// ─────────────────────────────────────────────────────────────
+const cancelItemsSchema = z.object({
+  items: z.array(z.object({
+    order_item_id: z.string().uuid(),
+    quantity: z.number().int().min(1).max(99)
+  })).min(1).max(50),
+  reason_code: z.enum(cancelReasonCodes),
+  reason_text: z.string().max(500).optional()
+}).refine(
+  (data) => data.reason_code !== 'other' || (data.reason_text !== undefined && data.reason_text.trim().length >= 3),
+  { message: "'Diğer' sebebi için açıklama zorunludur (en az 3 karakter).", path: ['reason_text'] }
+);
+
+waiterPublicRoutes.post('/orders/:order_id/cancel-items', requireWaiterAuth, async (req, res) => {
+  const paramsParsed = orderIdParams.safeParse(req.params);
+  const bodyParsed = cancelItemsSchema.safeParse(req.body);
+  if (!paramsParsed.success) {
+    throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
+  }
+  if (!bodyParsed.success) {
+    res.status(400).json({ message: bodyParsed.error.issues[0].message });
+    return;
+  }
+
+  const waiter = req.waiter!;
+  const businessId = waiter.business_id;
+  const orderId = paramsParsed.data.order_id;
+  const { items, reason_code } = bodyParsed.data;
+  const reasonText = bodyParsed.data.reason_text?.trim() || null;
+
+  await assertCanActOnOrder(waiter, orderId);
+
+  const statusRow = await pool.query(`SELECT status FROM orders WHERE id = $1 AND business_id = $2`, [orderId, businessId]);
+  const currentStatus: string | undefined = statusRow.rows[0]?.status;
+  if (currentStatus && currentStatus !== 'delivered' && currentStatus !== 'cancelled'
+      && !isBeforeKitchen(currentStatus) && !waiter.permissions.can_refund) {
+    try {
+      const request = await requestItemsCancel(waiter, orderId, items, reason_code, reasonText);
+      res.status(202).json({ pending: true, request_id: request.id, message: 'İptal talebi admin onayına gönderildi (mutfak başladığı için).' });
+    } catch (err) {
+      if (err instanceof ChangeRequestError) {
+        res.status(err.status).json({ message: err.message, code: err.code });
+        return;
+      }
+      throw err;
+    }
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await cancelOrderItems(client, {
+      businessId, orderId, items, reasonCode: reason_code, reasonText,
+      actor: { waiterId: waiter.id, name: waiter.name }
+    });
+
+    await logWaiterActivity({
+      businessId,
+      waiterId: waiter.id,
+      waiterName: waiter.name,
+      action: 'items_cancelled',
+      targetType: 'order',
+      targetId: orderId,
+      targetName: `${result.order.table_name} - Ürün iptal`,
+      metadata: {
+        table_name: result.order.table_name,
+        items,
+        changes: result.changes,
+        whole_order: result.wholeCancelled,
+        reason_code,
+        reason_text: reasonText,
+        previous_status: result.previousStatus
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    }, client);
+
+    let sessionAutoClosed = false;
+    if (result.wholeCancelled && result.order.session_id) {
+      sessionAutoClosed = await maybeAutoCloseSession(result.order.session_id, businessId, client);
+    }
+    await client.query('COMMIT');
+
+    if (result.wholeCancelled) {
+      await publishOrder(businessId, {
+        type: 'order_cancelled',
+        order_id: orderId,
+        table_name: result.order.table_name,
+        order_type: result.order.type,
+        reason: fullReason(reason_code, reasonText)
+      });
+    } else {
+      await publishOrder(businessId, {
+        type: 'order_items_updated',
+        order_id: orderId,
+        table_name: result.order.table_name,
+        waiter_name: waiter.name,
+        changes: result.changes
+      });
+    }
+
+    res.status(200).json({
+      message: result.wholeCancelled ? 'Sipariş iptal edildi.' : 'Seçilen ürünler iptal edildi.',
+      whole_order: result.wholeCancelled,
       session_auto_closed: sessionAutoClosed
     });
   } catch (error) {

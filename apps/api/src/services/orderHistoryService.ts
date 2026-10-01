@@ -40,6 +40,11 @@ export type HistoryRow = {
   refund_requested_by: string | null;
   total_int: number;
   items: Array<{ product_name: string; quantity: number; price_int: number; note: string | null }>;
+  /** Mutfak başladıktan sonra iptal edilen kalemler (kim / neden / ne zaman) */
+  cancellations: Array<{
+    product_name: string; quantity: number; price_int: number; reason_code: string; reason_text: string | null;
+    order_status: string; whole_order: boolean; actor_name: string; approved_by_email: string | null; created_at: string;
+  }>;
 };
 
 export type HistorySummary = {
@@ -152,7 +157,15 @@ export async function getOrderHistory(
             COALESCE(t.total_int, 0)::int AS total_int,
             COALESCE((SELECT json_agg(json_build_object('product_name', oi.product_name, 'quantity', oi.quantity,
                                                         'price_int', oi.price_int, 'note', oi.note) ORDER BY oi.created_at)
-                      FROM order_items oi WHERE oi.order_id = f.id), '[]') AS items
+                      FROM order_items oi WHERE oi.order_id = f.id), '[]') AS items,
+            COALESCE((SELECT json_agg(json_build_object('product_name', c.product_name, 'quantity', c.quantity,
+                                                        'price_int', c.price_int, 'reason_code', c.reason_code,
+                                                        'reason_text', c.reason_text, 'order_status', c.order_status,
+                                                        'whole_order', c.whole_order, 'actor_name', c.actor_name,
+                                                        'approved_by_email', cu.email, 'created_at', c.created_at)
+                                      ORDER BY c.created_at)
+                      FROM order_item_cancellations c LEFT JOIN users cu ON cu.id = c.approved_by
+                      WHERE c.order_id = f.id), '[]') AS cancellations
      FROM filtered f
      LEFT JOIN totals t ON t.order_id = f.id
      LEFT JOIN waiters w ON w.id = f.waiter_id
@@ -232,6 +245,7 @@ export async function buildHistoryWorkbook(
       { header: 'Durum', key: 'status', width: 9 },
       { header: 'Teslim Süresi (dk)', key: 'deliveryMin', width: 17 },
       { header: 'İptal / İade Gerekçesi', key: 'reason', width: 32 },
+      { header: 'İptal Edilen Ürünler', key: 'cancelled', width: 44 },
       { header: 'Not', key: 'note', width: 24 }
     ];
     for (const r of rows) {
@@ -242,7 +256,12 @@ export async function buildHistoryWorkbook(
         qty: r.items.reduce((s, i) => s + i.quantity, 0),
         total: r.total_int / 100, status: statusLabel(r),
         deliveryMin: r.status === 'delivered' ? minutesBetween(r.created_at, r.delivered_at) : null,
-        reason: r.status === 'cancelled' ? reasonLabel(r.cancel_reason) : '', note: r.note ?? ''
+        reason: r.status === 'cancelled' ? reasonLabel(r.cancel_reason) : '',
+        cancelled: r.cancellations
+          .filter(c => !c.whole_order)
+          .map(c => `${c.quantity}× ${c.product_name} (${reasonLabel(c.reason_text ? `${c.reason_code}: ${c.reason_text}` : c.reason_code)} · ${c.actor_name})`)
+          .join(', '),
+        note: r.note ?? ''
       });
     }
     headerStyle(ws);

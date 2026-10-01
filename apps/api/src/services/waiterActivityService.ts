@@ -11,6 +11,7 @@ export type WaiterActionType =
   | 'item_added'             // Mevcut siparişe ürün ekledi
   | 'item_quantity_changed'  // Adet değiştirdi
   | 'item_deleted'           // Ürün sildi
+  | 'items_cancelled'        // Seçilen ürünleri iptal etti (ürün bazlı iptal)
   | 'item_note_added'        // Not ekledi
   | 'table_transferred'      // Masa transferi
   | 'tables_merged'          // Masa birleştirdi
