@@ -13,7 +13,7 @@ import { pool } from '../db/postgres.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { publishTablesChangedOnSuccess } from '../middleware/realtime.js';
 import { getSessionWithOrders } from '../services/sessionService.js';
-import { getSessionSummary } from '../services/paymentLedgerService.js';
+import { computeLedger, getSessionSummary } from '../services/paymentLedgerService.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 
 export const sessionRoutes = Router();
@@ -140,6 +140,18 @@ sessionRoutes.post('/:id/close', async (req, res) => {
 
     const pendingCount = pendingResult.rowCount ?? 0;
     const pendingIds = pendingResult.rows.map((r: any) => r.id);
+
+    // Kalan tutar sıfırlanmadan hesap kapanmaz (yeni hesaba taşıma dahil)
+    const ledger = await computeLedger(client, businessId, id);
+    if (ledger.remaining_int > 0) {
+      await client.query('ROLLBACK');
+      res.status(409).json({
+        message: 'Kalan tutar sıfırlanmadan hesap kapatılamaz. Tahsil edin, ikram ya da indirim uygulayın.',
+        code: 'BALANCE_DUE',
+        remaining_int: ledger.remaining_int
+      });
+      return;
+    }
 
     // Pending varsa action'a göre davran
     if (pendingCount > 0) {

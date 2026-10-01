@@ -144,10 +144,10 @@ paymentRoutes.post('/close-table', async (req, res) => {
     }
   }
 
-  // Ödenmemiş item var ve force_close=false → 409 döner, kapanmaz
-  if (result.closed_session_ids.length === 0 && !parsed.data.force_close) {
+  // Kalan tutar var → 409, kapanmaz (tahsil edin, ikram ya da indirim uygulayın)
+  if (result.closed_session_ids.length === 0) {
     res.status(409).json({
-      message: 'Ödenmemiş ürünler var. Önce tahsil edin veya force_close=true gönderin.',
+      message: 'Kalan tutar sıfırlanmadan hesap kapatılamaz. Tahsil edin, ikram ya da indirim uygulayın.',
       unpaid_items_count: result.unpaid_items_count,
       remaining_int: result.remaining_int,
       code: 'UNPAID_ITEMS_EXIST'

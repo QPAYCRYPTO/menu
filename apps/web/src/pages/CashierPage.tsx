@@ -708,14 +708,10 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
         setDecisions(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))));
         return;
       }
-      if (result.closed_session_ids.length === 0 && !force) {
-        setConfirm({
-          title: 'Ödenmemiş tutar var',
-          message: <><strong>{formatPrice(result.remaining_int ?? remaining)}</strong> tahsil edilmedi. Yine de hesabı kapatmak istiyor musunuz?</>,
-          confirmText: 'Evet, kapat',
-          tone: 'warning',
-          onConfirm: () => handleCloseTable(true)
-        });
+      if (result.closed_session_ids.length === 0) {
+        // Kalan tutar sıfırlanmadan hesap kapanmaz (sunucu da reddeder)
+        onToast(`${formatPrice(result.remaining_int ?? remaining)} kaldı. Tahsil edin, ikram ya da indirim uygulayın.`, 'error');
+        await load();
         return;
       }
       onToast('Hesap kapatıldı.', 'success');
@@ -742,6 +738,8 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
 
   // Tahsil edilecek tutar varken birincil eylem "Tahsil Et", yoksa "Hesabı Kapat"
   const payIsPrimary = amountInt > 0 && remaining > 0;
+  // Hesap yalnızca kalan sıfırken kapanır: tahsilat, ikram ya da indirimle
+  const canClose = remaining <= 0;
   const primaryBtn = 'bg-cash text-on-cash border border-transparent';
   const softBtn = 'bg-cash-bg text-ink border border-[var(--cash)]';
 
@@ -1064,11 +1062,17 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
                 className={`py-4 rounded-2xl text-base font-bold spring-btn flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed ${payIsPrimary ? primaryBtn : softBtn}`}>
                 {paying ? 'İşleniyor…' : <><Wallet size={18} /> Tahsil Et</>}
               </button>
-              <button onClick={() => handleCloseTable()} disabled={closing}
-                className={`py-4 rounded-2xl text-base font-bold spring-btn flex items-center justify-center gap-2 disabled:opacity-45 ${payIsPrimary ? softBtn : primaryBtn}`}>
+              <button onClick={() => handleCloseTable()} disabled={closing || !canClose}
+                title={canClose ? undefined : 'Kalan tutar sıfırlanmadan hesap kapanmaz'}
+                className={`py-4 rounded-2xl text-base font-bold spring-btn flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed ${payIsPrimary || !canClose ? softBtn : primaryBtn}`}>
                 {closing ? 'Kapatılıyor…' : <><Check size={18} strokeWidth={2.5} /> Hesabı Kapat</>}
               </button>
             </div>
+            {!canClose && (
+              <p className="text-xs text-ink-muted text-center -mt-1">
+                Hesabı kapatmak için kalan <strong className="text-ink tabular-nums">{formatPrice(remaining)}</strong> sıfırlanmalı: tahsil edin, ikram ya da indirim uygulayın.
+              </p>
+            )}
           </div>
         </div>
       ) : null}

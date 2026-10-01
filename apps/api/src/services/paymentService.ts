@@ -193,7 +193,9 @@ export async function closeTableAfterPayment(params: {
       unpaidCount = Math.max(parseInt(unpaidResult.rows[0].cnt, 10), 1);
     }
 
-    if (unpaidCount > 0 && !forceClose) {
+    // Kalan tutar sıfırlanmadan (tahsilat / ikram / indirim) hesap kapanmaz — forceClose bunu aşamaz;
+    // forceClose yalnızca teslim edilmemiş siparişler için verilen kararları uygular.
+    if (unpaidCount > 0) {
       await client.query('ROLLBACK');
       return {
         closed_session_ids: [],
