@@ -12,6 +12,7 @@ import { CallTypeBadge } from '../components/CallTypeBadge';
 import { useOrders, Order, OrderItem, OrderChange, OrderUpdate, CancelReasonCode } from '../context/OrderContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { OrderHistory } from '../components/orders/OrderHistory';
+import { CancelledItems } from '../components/orders/CancelledItems';
 import { useChangeRequests, type ChangeRequest } from '../lib/changeRequests';
 import { ChangeRequestItem } from '../components/ChangeRequestItem';
 
@@ -418,6 +419,8 @@ function OrderCard({ order, requests = [], busyRequestId, onDecideRequest, pendi
             )}
           </div>
         ))}
+
+        <CancelledItems entries={order.cancellations ?? []} compact />
 
         {order.note && (
           <div className="mt-2 px-3 py-2 rounded-xl text-xs bg-state-warn-bg text-state-warn font-semibold">

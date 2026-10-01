@@ -5,6 +5,8 @@
 // - "Diğer" türü için müşteri açıklaması gösteriliyor
 // - Birden fazla çağrı varsa hepsi ayrı kart
 // - Atölye tasarımı: gece/gündüz uyumlu (ui-card, durum renkleri --state-*); iptal butonu temaya uyan kırmızı
+// - Ürün bazlı iptal: İptal penceresinde ürünler (adetleriyle) seçilir; hepsi seçiliyse sipariş bütünüyle iptal.
+//   "−" yalnızca mutfak başlamadan (Bekliyor) — sonrası iptal sayılır, pencereden sebep seçilerek yapılır.
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -20,7 +22,9 @@ import {
   CancelReasonCode,
   getTableDetail,
   updateItemQuantity,
-  cancelOrder
+  cancelOrder,
+  cancelOrderItems,
+  type WaiterOrder
 } from '../../api/waiterPublicApi';
 
 type ToastState = { message: string; type: 'error' | 'success' } | null;
@@ -40,11 +44,13 @@ export function WaiterTableDetailPage() {
   const [toast, setToast] = useState<ToastState>(null);
 
   const [cancelModal, setCancelModal] = useState<{
-    orderId: string;
+    order: WaiterOrder;
     orderLabel: string;
     /** 'cancel': mutfak başlamadı (serbest) · 'refund': mutfak başladı (iade) · 'refund_request': iade → onaya */
     mode: 'cancel' | 'refund' | 'refund_request';
   } | null>(null);
+  /** İptal edilecek adet (kalem id → adet); 0 = seçili değil */
+  const [cancelQty, setCancelQty] = useState<Record<string, number>>({});
   const [cancelReason, setCancelReason] = useState<CancelReasonCode>('customer_cancelled');
   const [cancelText, setCancelText] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -99,8 +105,9 @@ export function WaiterTableDetailPage() {
     }
   }
 
-  function openCancelModal(orderId: string, orderLabel: string, mode: 'cancel' | 'refund' | 'refund_request') {
-    setCancelModal({ orderId, orderLabel, mode });
+  function openCancelModal(order: WaiterOrder, orderLabel: string, mode: 'cancel' | 'refund' | 'refund_request') {
+    setCancelModal({ order, orderLabel, mode });
+    setCancelQty({});
     setCancelReason('customer_cancelled');
     setCancelText('');
   }
@@ -113,22 +120,28 @@ export function WaiterTableDetailPage() {
       return;
     }
 
+    const items = cancelModal.order.items
+      .filter(i => (cancelQty[i.id] ?? 0) > 0)
+      .map(i => ({ order_item_id: i.id, quantity: cancelQty[i.id] }));
+    if (items.length === 0) {
+      showToast('İptal edilecek ürünü seçin.', 'error');
+      return;
+    }
+    const whole = cancelModal.order.items.every(i => (cancelQty[i.id] ?? 0) >= i.quantity);
+
     setCancelling(true);
     try {
-      const result = await cancelOrder(
-        token,
-        tabId,
-        cancelModal.orderId,
-        cancelReason,
-        cancelText.trim() || undefined
-      );
+      // Tamamı seçildiyse mevcut sipariş iptali; değilse ürün bazlı iptal
+      const result = whole
+        ? await cancelOrder(token, tabId, cancelModal.order.id, cancelReason, cancelText.trim() || undefined)
+        : await cancelOrderItems(token, tabId, cancelModal.order.id, items, cancelReason, cancelText.trim() || undefined);
 
       showToast(
         result.pending
           ? result.message
           : result.session_auto_closed
             ? 'Sipariş iptal edildi · Masa boş'
-            : 'Sipariş iptal edildi',
+            : whole ? 'Sipariş iptal edildi' : 'Seçilen ürünler iptal edildi',
         'success'
       );
 
@@ -304,7 +317,7 @@ export function WaiterTableDetailPage() {
                   const isEditable = ['pending', 'preparing', 'ready'].includes(order.status);
                   const isDelivered = order.status === 'delivered';
                   const orderLabel = `#${idx + 1}`;
-                  const pendingCancel = order.pending_requests?.find(p => p.kind === 'order_cancel');
+                  const pendingCancel = order.pending_requests?.find(p => p.kind === 'order_cancel' || p.kind === 'items_cancel');
                   const pendingDecrease = (itemId: string) =>
                     order.pending_requests?.find(p => p.kind === 'item_decrease' && p.order_item_id === itemId);
 
@@ -338,7 +351,10 @@ export function WaiterTableDetailPage() {
                       </div>
                       {pendingCancel && (
                         <div className="px-4 py-2 text-xs font-bold bg-state-danger-bg text-state-danger flex items-center gap-1.5 border-b border-line">
-                          <Hourglass size={13} aria-hidden /> İade talebi admin onayında · {pendingCancel.waiter_name}
+                          <Hourglass size={13} aria-hidden />
+                          {pendingCancel.kind === 'items_cancel'
+                            ? <>İptal talebi admin onayında: {(pendingCancel.items ?? []).map(i => `${i.quantity}× ${i.product_name}`).join(', ')} · {pendingCancel.waiter_name}</>
+                            : <>İade talebi admin onayında · {pendingCancel.waiter_name}</>}
                         </div>
                       )}
                       <div className="px-4 py-2">
@@ -361,12 +377,11 @@ export function WaiterTableDetailPage() {
                                 )}
                               </div>
 
-                              {isEditable && canEdit ? (
+                              {order.status === 'pending' && canEdit ? (
                                 <div className="flex items-center gap-1.5 bg-surface-2 p-1 rounded-xl border border-line">
                                   <button
                                     onClick={() => handleQuantityChange(item.id, item.quantity, -1)}
                                     disabled={item.quantity <= 1 || !!pendingDecrease(item.id)}
-                                    title={order.status !== 'pending' && !canRefund ? 'Mutfak başladı: azaltma iade sayılır, admin onayına gider' : undefined}
                                     className="btn-outline w-9 h-9 rounded-lg font-bold text-sm flex items-center justify-center spring-btn"
                                     style={{
                                       opacity: item.quantity <= 1 || pendingDecrease(item.id) ? 0.3 : 1
@@ -404,7 +419,7 @@ export function WaiterTableDetailPage() {
                       {isEditable && canEdit && !pendingCancel && (
                         <div className="px-4 py-2.5 border-t border-line">
                           <button
-                            onClick={() => openCancelModal(order.id, orderLabel, cancelModeFor(order.status))}
+                            onClick={() => openCancelModal(order, orderLabel, cancelModeFor(order.status))}
                             className="w-full min-h-[38px] py-2 rounded-full text-xs font-bold spring-btn flex items-center justify-center gap-1.5 bg-state-danger-bg text-state-danger">
                             <XCircle size={14} aria-hidden /> {CANCEL_TEXT[cancelModeFor(order.status)].button}
                           </button>
@@ -458,6 +473,52 @@ export function WaiterTableDetailPage() {
             </div>
             <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '60vh' }}>
               <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">İptal edilecek ürünler</span>
+                  <button type="button"
+                    onClick={() => {
+                      const all = cancelModal.order.items.every(i => (cancelQty[i.id] ?? 0) >= i.quantity);
+                      setCancelQty(all ? {} : Object.fromEntries(cancelModal.order.items.map(i => [i.id, i.quantity])));
+                    }}
+                    className="text-xs font-bold px-2 py-1" style={{ color: 'var(--state-danger)' }}>
+                    {cancelModal.order.items.every(i => (cancelQty[i.id] ?? 0) >= i.quantity) ? 'Seçimi kaldır' : 'Tümünü seç'}
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {cancelModal.order.items.map(item => {
+                    const q = cancelQty[item.id] ?? 0;
+                    const on = q > 0;
+                    const setQ = (v: number) => setCancelQty(prev => ({ ...prev, [item.id]: Math.max(0, Math.min(item.quantity, v)) }));
+                    return (
+                      <div key={item.id} className="flex items-center gap-2.5 p-2.5 min-h-[48px] rounded-2xl"
+                        style={{
+                          background: on ? 'var(--state-danger-bg)' : 'var(--surface-2)',
+                          border: '1px solid ' + (on ? 'var(--state-danger)' : 'var(--line)')
+                        }}>
+                        <button type="button" onClick={() => setQ(on ? 0 : item.quantity)} aria-pressed={on}
+                          className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+                          <span className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                            style={{ background: on ? 'var(--state-danger)' : 'var(--surface)', border: `1.5px solid ${on ? 'var(--state-danger)' : 'var(--ink-muted)'}` }}>
+                            {on && <Check size={12} strokeWidth={3} style={{ color: 'var(--bg)' }} aria-hidden />}
+                          </span>
+                          <span className="text-sm font-semibold truncate">{item.quantity}× {item.product_name}</span>
+                        </button>
+                        {item.quantity > 1 && (
+                          <div className="flex items-center gap-1 bg-surface p-0.5 rounded-lg border border-line flex-shrink-0">
+                            <button type="button" onClick={() => setQ(q - 1)} disabled={q <= 0} aria-label={`${item.product_name} iptal adedini azalt`}
+                              className="w-8 h-8 rounded-md flex items-center justify-center disabled:opacity-30"><Minus size={13} aria-hidden /></button>
+                            <span className="w-5 text-center text-sm font-extrabold tabular-nums">{q}</span>
+                            <button type="button" onClick={() => setQ(q + 1)} disabled={q >= item.quantity} aria-label={`${item.product_name} iptal adedini artır`}
+                              className="w-8 h-8 rounded-md flex items-center justify-center disabled:opacity-30"><Plus size={13} aria-hidden /></button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-[11px] font-bold mb-2 uppercase tracking-wider text-ink-muted">
                   İptal Sebebi
                 </label>
@@ -503,7 +564,7 @@ export function WaiterTableDetailPage() {
                 Vazgeç
               </button>
               <button onClick={handleCancelOrder}
-                disabled={cancelling}
+                disabled={cancelling || !cancelModal.order.items.some(i => (cancelQty[i.id] ?? 0) > 0)}
                 className="flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50"
                 style={{ background: 'var(--state-danger)', color: 'var(--bg)' }}>
                 {cancelling ? 'Gönderiliyor...' : CANCEL_TEXT[cancelModal.mode].submit}

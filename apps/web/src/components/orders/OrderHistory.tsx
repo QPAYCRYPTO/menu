@@ -10,6 +10,7 @@ import {
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { orderStatusStyle } from '../../lib/orderStatus';
+import { CancelledItems, type CancellationEntry } from './CancelledItems';
 import { Select } from '../Select';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
@@ -36,6 +37,7 @@ type HistoryRow = {
   refund_requested_by: string | null;
   total_int: number;
   items: Array<{ product_name: string; quantity: number; price_int: number; note: string | null }>;
+  cancellations: CancellationEntry[];
 };
 
 type HistoryResponse = {
@@ -344,6 +346,11 @@ export function OrderHistory({ refreshKey }: { refreshKey: number }) {
                       <td className="px-3 py-3 hidden md:table-cell whitespace-nowrap">{r.waiter_name ?? <span className="text-ink-muted">Müşteri (QR)</span>}</td>
                       <td className="px-3 py-3 hidden lg:table-cell text-ink-muted max-w-[320px] truncate">
                         {r.items.map(i => `${i.quantity}× ${i.product_name}`).join(', ')}
+                        {r.status !== 'cancelled' && r.cancellations.length > 0 && (
+                          <span className="ml-1.5 text-[11px] font-bold text-state-danger">
+                            · {r.cancellations.reduce((s, c) => s + c.quantity, 0)} ürün iptal
+                          </span>
+                        )}
                       </td>
                       <td className={`px-3 py-3 text-right tabular-nums whitespace-nowrap font-semibold ${r.status === 'cancelled' ? 'line-through text-ink-muted' : ''}`}>{money(r.total_int)}</td>
                       <td className="px-3 py-3"><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${st.cls}`}>{st.label}</span></td>
@@ -432,6 +439,7 @@ function HistoryDetail({ row, onClose }: { row: HistoryRow; onClose: () => void 
             </li>
           ))}
         </ul>
+        {row.status !== 'cancelled' && <CancelledItems entries={row.cancellations.filter(c => !c.whole_order)} />}
         {row.note && <p className="mt-3 px-3 py-2 rounded-xl text-sm font-semibold bg-state-warn-bg text-state-warn">{row.note}</p>}
         <div className="flex items-center justify-between mt-3">
           <span className="text-sm text-ink-muted">Toplam</span>
@@ -443,7 +451,13 @@ function HistoryDetail({ row, onClose }: { row: HistoryRow; onClose: () => void 
             <div className="font-bold text-state-danger">{row.is_refund ? 'İade' : 'İptal'} · {reasonLabel(row.cancel_reason) || 'Gerekçe yok'}</div>
             {row.refund_requested_by && <div className="text-ink-muted">İade talep eden: <strong className="text-ink">{row.refund_requested_by}</strong></div>}
             {row.cancelled_by_email && <div className="text-ink-muted">{row.refund_requested_by ? 'Onaylayan' : 'İptal eden'}: <strong className="text-ink">{row.cancelled_by_email}</strong></div>}
+            {!row.cancelled_by_email && !row.refund_requested_by && row.cancellations.find(c => c.whole_order) && (
+              <div className="text-ink-muted">İptal eden: <strong className="text-ink">{row.cancellations.find(c => c.whole_order)!.actor_name}</strong></div>
+            )}
           </div>
+        )}
+        {row.status === 'cancelled' && row.cancellations.some(c => !c.whole_order) && (
+          <CancelledItems title="Önceden iptal edilen ürünler" entries={row.cancellations.filter(c => !c.whole_order)} />
         )}
       </div>
     </div>

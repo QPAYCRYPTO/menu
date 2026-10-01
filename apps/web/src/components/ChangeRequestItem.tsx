@@ -11,7 +11,7 @@ export function ChangeRequestItem({ request, busy, onDecide, compact = false }: 
   compact?: boolean;
 }) {
   const { title, detail } = describeRequest(request);
-  const Icon = request.kind === 'order_cancel' ? XCircle : MinusCircle;
+  const Icon = request.kind === 'item_decrease' ? MinusCircle : XCircle;
   return (
     <div className="flex items-start gap-3">
       <span className="w-9 h-9 rounded-full bg-state-danger-bg text-state-danger flex items-center justify-center shrink-0">
@@ -20,7 +20,7 @@ export function ChangeRequestItem({ request, busy, onDecide, compact = false }: 
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-snug">
           <strong className="font-semibold">{request.waiter_name}</strong>{' '}
-          <span className="text-ink-muted">{compact ? (request.kind === 'order_cancel' ? 'iade istiyor' : 'iade (adet azaltma) istiyor') : 'onay istiyor'}</span>
+          <span className="text-ink-muted">{compact ? (request.kind === 'order_cancel' ? 'iade istiyor' : request.kind === 'items_cancel' ? 'ürün iptali istiyor' : 'iade (adet azaltma) istiyor') : 'onay istiyor'}</span>
         </p>
         {!compact && <p className="font-serif font-semibold text-[15px] leading-tight mt-0.5">{title}</p>}
         {detail && <p className="text-xs text-ink-muted mt-0.5 break-words">{detail}</p>}

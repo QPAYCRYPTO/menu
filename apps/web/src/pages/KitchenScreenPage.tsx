@@ -4,9 +4,11 @@
 // Canlı akış (SSE) + yeni siparişte ses; bağlantı koparsa "Çevrimdışı" rozeti, dönünce yeniden yükler.
 // Atölye tasarımı: gece/gündüz temasına uyar (bg-page / bg-surface / text-ink), başlıkta güneş/ay düğmesi.
 // Durum rozetleri diğer ekranlarla aynı: Bekliyor amber (--state-warn), Hazırlanıyor mavi (--state-info).
+// Değişiklik bildirimi (ekleme, adet, iptal, iptal talebi): kart yanıp söner, mutfak "Gördüm" deyince durur.
+// İptal edilen sipariş de "Gördüm" denene kadar ekranda kalır (üstü çizili).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowRight, Check, ChefHat, Clock, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
+import { ArrowRight, BellRing, Check, ChefHat, Clock, Eye, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useThemedPage } from '../lib/theme';
 
@@ -17,17 +19,42 @@ const FALLBACK_POLL_MS = 30_000;
 const LATE_MINUTES = 10;
 
 type KitchenItem = { id: string; product_name: string; quantity: number; note: string | null };
+type NoticeTone = 'edit' | 'cancel' | 'request' | 'info';
 type KitchenOrder = {
   id: string;
   order_no: number;
   table_name: string;
-  status: 'pending' | 'preparing';
+  status: 'pending' | 'preparing' | 'cancelled';
   note: string | null;
   created_at: string;
   items: KitchenItem[];
   /** Onay bekleyen personel talepleri (iptal / adet azaltma) */
-  pending_changes?: Array<{ kind: 'order_cancel' | 'item_decrease'; product_name: string | null; requested_quantity: number | null }>;
+  pending_changes?: Array<{
+    kind: 'order_cancel' | 'item_decrease' | 'items_cancel';
+    product_name: string | null;
+    requested_quantity: number | null;
+    items?: Array<{ product_name: string; quantity: number }> | null;
+  }>;
+  /** "Gördüm" denene kadar gösterilen değişiklikler */
+  kitchen_notice?: Array<{ tone: NoticeTone; text: string; at: string }> | null;
 };
+
+// Bildirim tonu → renk: düzeltme amber, iptal kırmızı, talep turuncu-kırmızı, bilgi mavi
+const NOTICE_COLOR: Record<NoticeTone, string> = {
+  edit: 'var(--state-warn)',
+  cancel: 'var(--state-danger)',
+  request: 'var(--state-danger)',
+  info: 'var(--state-info)'
+};
+function noticeColor(lines: Array<{ tone: NoticeTone }>): string {
+  if (lines.some(l => l.tone === 'cancel')) return NOTICE_COLOR.cancel;
+  if (lines.some(l => l.tone === 'request')) return NOTICE_COLOR.request;
+  if (lines.some(l => l.tone === 'edit')) return NOTICE_COLOR.edit;
+  return NOTICE_COLOR.info;
+}
+
+/** Siparişte değişiklik olduğunu bildiren olaylar (ayrı, alçak tonlu ses) */
+const CHANGE_EVENTS = new Set(['order_items_added', 'order_items_updated', 'order_cancelled', 'change_request']);
 
 type LoadResult = 'ok' | 'invalid' | 'offline';
 
@@ -54,6 +81,24 @@ function playNewOrderSound() {
     osc.connect(gain).connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.3);
+  });
+}
+
+function playChangeSound() {
+  const ctx = getAudio();
+  if (!ctx || ctx.state !== 'running') return;
+  [660, 520, 660].forEach((freq, i) => {
+    const t = ctx.currentTime + i * 0.16;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.16);
   });
 }
 
@@ -142,6 +187,7 @@ export function KitchenScreenPage() {
       try {
         const data = JSON.parse(e.data) as { type: string };
         if (data.type === 'new_order') playNewOrderSound();
+        else if (CHANGE_EVENTS.has(data.type)) playChangeSound();
       } catch {
         // yoksay
       }
@@ -232,6 +278,32 @@ export function KitchenScreenPage() {
     }
   }
 
+  /** "Gördüm": bildirimi kapat (iptal edilmiş kart ekrandan kalkar) */
+  async function acknowledge(order: KitchenOrder) {
+    setBusyIds(prev => new Set(prev).add(order.id));
+    setOrders(prev => order.status === 'cancelled'
+      ? prev.filter(o => o.id !== order.id)
+      : prev.map(o => (o.id === order.id ? { ...o, kitchen_notice: null } : o)));
+    try {
+      const res = await fetch(`${API_BASE_URL}/kitchen/orders/${order.id}/ack?t=${encodeURIComponent(token)}`, { method: 'POST' });
+      if (res.status === 401) setState('invalid');
+      else if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      setOrders(prev => [...prev.filter(o => o.id !== order.id), order].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      ));
+      setOffline(true);
+    } finally {
+      setBusyIds(prev => {
+        const next = new Set(prev);
+        next.delete(order.id);
+        return next;
+      });
+    }
+  }
+
+  const activeCount = orders.filter(o => o.status !== 'cancelled').length;
+
   // ── Geçersiz link ─────────────────────────────────────────────────────────
   if (invalid) {
     return (
@@ -268,7 +340,7 @@ export function KitchenScreenPage() {
           <div className="ui-eyebrow truncate">{businessName}</div>
         </div>
         <div className="px-4 h-12 rounded-2xl bg-surface-2 border border-line flex items-center gap-2 text-xl font-black">
-          <span className="tabular-nums">{orders.length}</span>
+          <span className="tabular-nums">{activeCount}</span>
           <span className="text-base font-bold text-ink-muted">sipariş</span>
         </div>
 
@@ -312,15 +384,19 @@ export function KitchenScreenPage() {
           <div className="grid gap-4 items-start" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
             {orders.map(order => {
               const mins = minutesSince(order.created_at, now);
-              const late = mins >= LATE_MINUTES;
+              const cancelled = order.status === 'cancelled';
+              const late = !cancelled && mins >= LATE_MINUTES;
               const preparing = order.status === 'preparing';
+              const notice = order.kitchen_notice ?? [];
+              const blink = notice.length > 0 ? noticeColor(notice) : null;
               return (
                 <article key={order.id}
-                  className="rounded-3xl border-2 bg-surface flex flex-col overflow-hidden shadow-[var(--shadow)]"
-                  // Sol şerit durumu gösterir (Bekliyor amber, Hazırlanıyor mavi); geciken kartın çerçevesi kırmızı
+                  className={`rounded-3xl border-2 bg-surface flex flex-col overflow-hidden shadow-[var(--shadow)] ${blink ? 'kitchen-blink' : ''}`}
+                  // Sol şerit durumu gösterir (Bekliyor amber, Hazırlanıyor mavi, İptal kırmızı); geciken kartın çerçevesi kırmızı
                   style={{
-                    borderColor: late ? 'var(--state-danger)' : 'var(--line)',
-                    borderLeft: `10px solid ${preparing ? 'var(--state-info)' : 'var(--state-warn)'}`
+                    borderColor: blink ?? (late ? 'var(--state-danger)' : 'var(--line)'),
+                    borderLeft: `10px solid ${cancelled ? 'var(--state-danger)' : preparing ? 'var(--state-info)' : 'var(--state-warn)'}`,
+                    ['--blink-color' as string]: blink ? `color-mix(in srgb, ${blink} 55%, transparent)` : undefined
                   }}>
                   <div className={`px-4 py-3 flex items-start justify-between gap-3 border-b border-line ${late ? 'bg-state-danger-bg' : 'bg-surface-2'}`}>
                     <div className="min-w-0">
@@ -328,9 +404,10 @@ export function KitchenScreenPage() {
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <span className="text-lg font-bold text-ink-muted">#{order.order_no || '—'}</span>
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${
-                          order.status === 'preparing' ? 'bg-state-info-bg text-state-info' : 'bg-state-warn-bg text-state-warn'}`}>
+                          cancelled ? 'bg-state-danger-bg text-state-danger'
+                            : order.status === 'preparing' ? 'bg-state-info-bg text-state-info' : 'bg-state-warn-bg text-state-warn'}`}>
                           <span className="w-2 h-2 rounded-full bg-current" />
-                          {order.status === 'preparing' ? 'Hazırlanıyor' : 'Bekliyor'}
+                          {cancelled ? 'İptal edildi' : order.status === 'preparing' ? 'Hazırlanıyor' : 'Bekliyor'}
                         </span>
                       </div>
                     </div>
@@ -339,12 +416,31 @@ export function KitchenScreenPage() {
                     </div>
                   </div>
 
+                  {notice.length > 0 && (
+                    <div className="mx-4 mt-4 rounded-2xl px-4 py-3" role="alert"
+                      style={{ background: `color-mix(in srgb, ${blink} 14%, var(--surface))`, borderLeft: `6px solid ${blink}` }}>
+                      <div className="text-xs font-black tracking-widest flex items-center gap-1.5" style={{ color: blink! }}>
+                        <BellRing size={14} /> DEĞİŞİKLİK
+                      </div>
+                      {notice.map((n, i) => (
+                        <div key={i} className="text-xl font-black leading-snug mt-0.5" style={{ color: NOTICE_COLOR[n.tone] }}>{n.text}</div>
+                      ))}
+                      <button onClick={() => acknowledge(order)} disabled={busyIds.has(order.id)}
+                        className="mt-3 w-full h-14 rounded-2xl text-xl font-black flex items-center justify-center gap-2 disabled:opacity-50 spring-btn"
+                        style={{ background: blink!, color: 'var(--bg)' }}>
+                        <Eye size={24} /> Gördüm
+                      </button>
+                    </div>
+                  )}
+
                   {order.pending_changes && order.pending_changes.length > 0 && (
                     <div className="mx-4 mt-4 rounded-2xl px-4 py-3 bg-state-danger-bg text-state-danger" style={{ borderLeft: '6px solid var(--state-danger)' }} role="alert">
                       <div className="text-xs font-black tracking-widest flex items-center gap-1.5"><TriangleAlert size={14} /> ONAY BEKLİYOR</div>
                       {order.pending_changes.map((c, i) => (
                         <div key={i} className="text-xl font-black leading-snug">
-                          {c.kind === 'order_cancel' ? 'İade talebi var — bekletin' : `${c.product_name ?? 'Ürün'} → ${c.requested_quantity} adet talebi`}
+                          {c.kind === 'order_cancel' ? 'İade talebi var — bekletin'
+                            : c.kind === 'items_cancel' ? `İptal talebi: ${(c.items ?? []).map(i => `${i.quantity}× ${i.product_name}`).join(', ')} — bekletin`
+                            : `${c.product_name ?? 'Ürün'} → ${c.requested_quantity} adet talebi`}
                         </div>
                       ))}
                     </div>
@@ -361,8 +457,8 @@ export function KitchenScreenPage() {
                     {order.items.map(item => (
                       <li key={item.id}>
                         <div className="flex items-baseline gap-3">
-                          <span className="text-3xl font-black text-accent tabular-nums min-w-[3rem]">{item.quantity}×</span>
-                          <span className="text-2xl font-bold leading-tight break-words">{item.product_name}</span>
+                          <span className={`text-3xl font-black tabular-nums min-w-[3rem] ${cancelled ? 'text-ink-muted line-through' : 'text-accent'}`}>{item.quantity}×</span>
+                          <span className={`text-2xl font-bold leading-tight break-words ${cancelled ? 'text-ink-muted line-through' : ''}`}>{item.product_name}</span>
                         </div>
                         {item.note && item.note.trim() && (
                           <div className="mt-1.5 ml-[3.75rem] rounded-xl text-ink px-3 py-2 text-xl font-black break-words" style={{ background: 'var(--note-bg)', borderLeft: '5px solid var(--state-warn)' }}>
@@ -374,7 +470,7 @@ export function KitchenScreenPage() {
                   </ul>
 
                   <div className="p-3 pt-0">
-                    {preparing ? (
+                    {cancelled ? null : preparing ? (
                       <button onClick={() => advance(order)} disabled={busyIds.has(order.id)}
                         className="w-full h-16 rounded-2xl bg-state-ok text-page hover:opacity-90 active:opacity-80 text-2xl font-black flex items-center justify-center gap-2 disabled:opacity-50 spring-btn">
                         Hazır <Check size={30} strokeWidth={3} />

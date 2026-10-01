@@ -265,6 +265,16 @@ select option { color: #073f46; background: #fff; }
   to { transform: translateY(0); }
 }
 
+/* Mutfak: değişiklik bildirimi olan kart "Gördüm" denene kadar yanıp söner (--blink-color karttan gelir) */
+@keyframes kitchen-blink {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 7px var(--blink-color); }
+}
+.kitchen-blink { animation: kitchen-blink 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .kitchen-blink { animation: none; box-shadow: 0 0 0 7px var(--blink-color); }
+}
+
 @keyframes selectIn {
   from { opacity: 0; transform: translateY(-4px) scale(0.98); }
   to { opacity: 1; transform: none; }

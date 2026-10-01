@@ -8,7 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 
 export type ChangeRequest = {
   id: string;
-  kind: 'order_cancel' | 'item_decrease';
+  kind: 'order_cancel' | 'item_decrease' | 'items_cancel';
   order_id: string;
   order_item_id: string | null;
   table_name: string;
@@ -20,11 +20,13 @@ export type ChangeRequest = {
   reason_text: string | null;
   waiter_name: string;
   created_at: string;
+  /** items_cancel: iptali istenen kalemler */
+  items?: Array<{ order_item_id: string; product_name: string; quantity: number; price_int: number }> | null;
 };
 
 export const CHANGE_REQUEST_EVENT = 'atlasqr:change-request';
 
-const REASON_LABELS: Record<string, string> = {
+export const CANCEL_REASON_LABELS: Record<string, string> = {
   customer_cancelled: 'Müşteri vazgeçti',
   customer_left: 'Müşteri gitti',
   not_claimed: 'Hazır ama alıcı yok',
@@ -36,8 +38,15 @@ const REASON_LABELS: Record<string, string> = {
 
 /** "Ayşe · Müşteri vazgeçti — açıklama" / "Menemen 3 → 1 adet" */
 export function describeRequest(r: ChangeRequest): { title: string; detail: string } {
+  if (r.kind === 'items_cancel') {
+    const reason = r.reason_code ? CANCEL_REASON_LABELS[r.reason_code] ?? r.reason_code : '';
+    return {
+      title: `${r.table_name} · ürün iptali`,
+      detail: [(r.items ?? []).map(i => `${i.quantity}× ${i.product_name}`).join(', '), reason, r.reason_text].filter(Boolean).join(' — ')
+    };
+  }
   if (r.kind === 'order_cancel') {
-    const reason = r.reason_code ? REASON_LABELS[r.reason_code] ?? r.reason_code : '';
+    const reason = r.reason_code ? CANCEL_REASON_LABELS[r.reason_code] ?? r.reason_code : '';
     return {
       title: `${r.table_name} · sipariş iadesi`,
       detail: [reason, r.reason_text].filter(Boolean).join(' — ')

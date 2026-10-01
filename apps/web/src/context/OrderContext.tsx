@@ -3,6 +3,7 @@
 // - 'call_taken' SSE event handler eklendi
 //   Garson "İlgilendim" basınca admin'den anında siliniyor (60sn syncInterval beklenmeden)
 
+import type { CancellationEntry } from '../components/orders/CancelledItems';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -33,6 +34,8 @@ export type Order = {
   waiter_id?: string | null;
   waiter_name?: string | null;
   items: OrderItem[];
+  /** Mutfak başladıktan sonra iptal edilen kalemler (kim / neden) */
+  cancellations?: CancellationEntry[];
 };
 
 export type CancelReasonCode =
