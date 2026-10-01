@@ -6,9 +6,11 @@
 // Durum rozetleri diğer ekranlarla aynı: Bekliyor amber (--state-warn), Hazırlanıyor mavi (--state-info).
 // Değişiklik bildirimi (ekleme, adet, iptal, iptal talebi): kart yanıp söner, mutfak "Gördüm" deyince durur.
 // İptal edilen sipariş de "Gördüm" denene kadar ekranda kalır (üstü çizili).
+// Zil: tarayıcılar ekrana dokunulmadan ses çaldırmaz → zil kapalıyken ekranın üstünde büyük "dokun" şeridi;
+// ses bağlamı askıya alınırsa (ekran arka plana geçti) çalmadan önce yeniden açılmaya çalışılır.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowRight, BellRing, Check, ChefHat, Clock, Eye, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
+import { ArrowRight, BellOff, BellRing, Check, ChefHat, Clock, Eye, TriangleAlert, UtensilsCrossed, Volume2, WifiOff } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useThemedPage } from '../lib/theme';
 
@@ -66,28 +68,38 @@ function getAudio(): AudioContext | null {
   if (!audioCtx) audioCtx = new Ctor();
   return audioCtx;
 }
-function playNewOrderSound() {
+/** Ses bağlamı askıdaysa (arka plan, kilit) yeniden açıp çalar; izin yoksa sessizce vazgeçer */
+function withAudio(play: (ctx: AudioContext) => void) {
   const ctx = getAudio();
-  if (!ctx || ctx.state !== 'running') return;
-  [880, 1320].forEach((freq, i) => {
-    const t = ctx.currentTime + i * 0.2;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(t);
-    osc.stop(t + 0.3);
+  if (!ctx) return;
+  if (ctx.state === 'running') { play(ctx); return; }
+  ctx.resume().then(() => { if (ctx.state === 'running') play(ctx); }).catch(() => {});
+}
+
+/** Yeni sipariş zili: iki kez çalan, belirgin üç notalı "ding-dong" */
+function playNewOrderSound() {
+  withAudio(ctx => {
+    const notes = [988, 1319, 1568];
+    for (let r = 0; r < 2; r++) {
+      notes.forEach((freq, i) => {
+        const t = ctx.currentTime + r * 0.9 + i * 0.18;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.7, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.55);
+      });
+    }
   });
 }
 
 function playChangeSound() {
-  const ctx = getAudio();
-  if (!ctx || ctx.state !== 'running') return;
-  [660, 520, 660].forEach((freq, i) => {
+  withAudio(ctx => [660, 520, 660].forEach((freq, i) => {
     const t = ctx.currentTime + i * 0.16;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -99,7 +111,7 @@ function playChangeSound() {
     osc.connect(gain).connect(ctx.destination);
     osc.start(t);
     osc.stop(t + 0.16);
-  });
+  }));
 }
 
 function minutesSince(iso: string, now: number): number {
@@ -239,8 +251,29 @@ export function KitchenScreenPage() {
 
   function enableSound() {
     const ctx = getAudio();
-    ctx?.resume().then(() => setSoundOn(ctx.state === 'running')).catch(() => {});
+    if (!ctx) return;
+    ctx.resume().then(() => {
+      const on = ctx.state === 'running';
+      setSoundOn(on);
+      // Dokunuşla açıldığını duyur (kısa ses) — mutfak zilin çalıştığını bilsin
+      if (on) playChangeSound();
+    }).catch(() => {});
   }
+
+  // Ses bağlamı durumunu izle: arka planda askıya alınırsa şerit yeniden görünür
+  useEffect(() => {
+    const ctx = getAudio();
+    if (!ctx) return;
+    const sync = () => setSoundOn(ctx.state === 'running');
+    ctx.addEventListener('statechange', sync);
+    const onVisible = () => { if (document.visibilityState === 'visible') ctx.resume().catch(() => {}); };
+    document.addEventListener('visibilitychange', onVisible);
+    sync();
+    return () => {
+      ctx.removeEventListener('statechange', sync);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   /** Bekliyor → Hazırlanıyor (start) ya da Hazırlanıyor → Hazır (ready) */
   async function advance(order: KitchenOrder) {
@@ -368,6 +401,13 @@ export function KitchenScreenPage() {
           <ThemeToggle large size={20} />
         </div>
       </header>
+
+      {!soundOn && (
+        <button onClick={enableSound}
+          className="w-full px-4 py-4 bg-state-warn text-page text-xl font-black flex items-center justify-center gap-3 animate-pulse">
+          <BellOff size={26} /> Zil kapalı — yeni siparişte ses için ekrana bir kez dokunun
+        </button>
+      )}
 
       {notice && (
         <div className="mx-4 mt-3 rounded-2xl bg-state-danger text-page px-4 py-3 text-lg font-bold" role="alert">{notice}</div>
