@@ -1,4 +1,10 @@
 // apps/web/src/context/WaiterAuthContext.tsx
+// CHANGELOG v6 — Aynı tarayıcıda birden fazla personel:
+// - Her sekme kendi oturumunu sessionStorage'da tutar (F5'te o sekmenin personeli değişmez).
+// - Cihazdaki oturumlar ayrıca localStorage'da personel bazında saklanır: telefon sekmeyi kapatıp
+//   uygulama yeniden açılınca (sessionStorage boş) en son kullanılan oturum geri gelir (v5 davranışı korunur).
+// - Çıkış / 401 yalnızca o sekmenin personelini siler, diğerlerine dokunmaz.
+//
 // CHANGELOG v5 — Oturum telefonda kalıcı:
 // - Oturum localStorage'da (cihaz bazında) tutulur. Önceden sessionStorage'daydı: telefon arka plandaki
 //   sekmeyi kapattığında (ekran kilidi, WhatsApp'a geçiş…) ya da uygulama yeni sekmede açıldığında
@@ -14,7 +20,10 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { WaiterSelf, exchangeToken, getProfile, logoutTab, type WaiterAuthFailure } from '../api/waiterPublicApi';
 
-const STORAGE_KEY = 'atlasqr_waiter_session';
+/** Bu sekmenin oturumu (sessionStorage) — v5'te aynı anahtar localStorage'daki tek kayıttı */
+const TAB_KEY = 'atlasqr_waiter_session';
+/** Cihazdaki oturumlar, personel id → oturum (localStorage) */
+const DEVICE_KEY = 'atlasqr_waiter_sessions';
 /** Oturumu kapatan sunucu yanıtı (herhangi bir sayfadaki istekten) */
 export const WAITER_UNAUTHORIZED_EVENT = 'atlasqr:waiter-unauthorized';
 
@@ -53,22 +62,59 @@ function urlHasWaiterToken(): boolean {
   return /^\/g\/[^\/]+/.test(window.location.pathname);
 }
 
-// localStorage erişimi gizli sekmede / kısıtlı tarayıcıda hata verebilir
+// Depolama erişimi gizli sekmede / kısıtlı tarayıcıda hata verebilir → her erişim korumalı
+function readDeviceMap(): Record<string, StoredSession> {
+  let map: Record<string, StoredSession> = {};
+  try {
+    const raw = localStorage.getItem(DEVICE_KEY);
+    if (raw) map = JSON.parse(raw) ?? {};
+  } catch { /* yoksay */ }
+  // v5'ten geçiş: localStorage'daki tek kayıt cihaz listesine alınır
+  try {
+    const legacy = localStorage.getItem(TAB_KEY);
+    if (legacy) {
+      const s = JSON.parse(legacy) as StoredSession;
+      if (s?.waiter?.id && !map[s.waiter.id]) map[s.waiter.id] = s;
+      localStorage.removeItem(TAB_KEY);
+      localStorage.setItem(DEVICE_KEY, JSON.stringify(map));
+    }
+  } catch { /* yoksay */ }
+  return map;
+}
+function writeDeviceMap(map: Record<string, StoredSession>) {
+  try { localStorage.setItem(DEVICE_KEY, JSON.stringify(map)); } catch { /* yoksay */ }
+}
+
+/** Önce bu sekmenin oturumu; yoksa (yeni sekme / telefon sekmeyi kapattı) cihazdaki en son oturum */
 function readStored(): StoredSession | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY); // eski sürümden geçiş
-    return raw ? (JSON.parse(raw) as StoredSession) : null;
-  } catch {
-    return null;
-  }
+    const raw = sessionStorage.getItem(TAB_KEY);
+    if (raw) return JSON.parse(raw) as StoredSession;
+  } catch { /* yoksay */ }
+  const latest = Object.values(readDeviceMap())
+    .filter(s => s?.token && s?.tab_id)
+    .sort((a, b) => (b.stored_at ?? '').localeCompare(a.stored_at ?? ''))[0];
+  return latest ?? null;
 }
 function writeStored(session: StoredSession) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); } catch { /* yoksay */ }
-  try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* yoksay */ }
+  try { sessionStorage.setItem(TAB_KEY, JSON.stringify(session)); } catch { /* yoksay */ }
+  const map = readDeviceMap();
+  map[session.waiter.id] = session;
+  writeDeviceMap(map);
 }
+/** Yalnızca bu sekmenin personelini siler (aynı tarayıcıdaki diğer personele dokunmaz) */
 function clearStored() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* yoksay */ }
-  try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* yoksay */ }
+  let current: StoredSession | null = null;
+  try {
+    const raw = sessionStorage.getItem(TAB_KEY);
+    current = raw ? (JSON.parse(raw) as StoredSession) : null;
+    sessionStorage.removeItem(TAB_KEY);
+  } catch { /* yoksay */ }
+  if (current?.waiter?.id) {
+    const map = readDeviceMap();
+    delete map[current.waiter.id];
+    writeDeviceMap(map);
+  }
 }
 
 export function WaiterAuthProvider({ children }: { children: ReactNode }) {
@@ -100,6 +146,8 @@ export function WaiterAuthProvider({ children }: { children: ReactNode }) {
         clearStored();
         return;
       }
+      // Cihaz listesinden geldiyse bu sekmeye sahiplen (sonraki F5'te aynı personel)
+      try { sessionStorage.setItem(TAB_KEY, JSON.stringify(stored)); } catch { /* yoksay */ }
 
       // exchangeToken: token doğrular + aynı tab_id'yi DB'ye yeniden yazar
       const result = await exchangeToken(stored.token, stored.tab_id);

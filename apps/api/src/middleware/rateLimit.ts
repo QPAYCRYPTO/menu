@@ -8,6 +8,8 @@ type SlidingWindowOptions = {
   windowMs: number;
   includeEmail?: boolean;
   includeTableId?: boolean;
+  /** Personel oturum yenileme: IP + sekme (aynı Wi-Fi'deki personel birbirinin hakkını yemesin) */
+  includeTabId?: boolean;
 };
 
 function createSlidingWindowRateLimiter(options: SlidingWindowOptions) {
@@ -17,8 +19,11 @@ function createSlidingWindowRateLimiter(options: SlidingWindowOptions) {
     const now = Date.now();
     const minScore = now - options.windowMs;
     const tableId = options.includeTableId ? String(req.body?.table_id ?? '').slice(0, 64) : '';
+    const tabId = options.includeTabId ? String(req.body?.tab_id ?? '').slice(0, 64) : '';
     const key = options.includeTableId
       ? `${options.keyPrefix}:${ip}:${tableId}`
+      : options.includeTabId
+      ? `${options.keyPrefix}:${ip}:${tabId}`
       : `${options.keyPrefix}:${ip}:${email}`;
 
     await redis.zremrangebyscore(key, 0, minScore);
@@ -68,6 +73,22 @@ export const publicOrderRateLimit = createSlidingWindowRateLimiter({
   maxRequests: 10,
   windowMs: 60_000,
   includeTableId: true
+});
+
+// Personel girişi / oturum yenileme: müşteri menüsüyle aynı kovayı paylaşmaz.
+// Aynı kafede herkes aynı IP'den (Wi-Fi/NAT) gelir; menü trafiği personeli oturumdan atmamalı.
+export const waiterSessionRateLimit = createSlidingWindowRateLimiter({
+  keyPrefix: 'rl:waiter:session',
+  maxRequests: 30,
+  windowMs: 60_000,
+  includeTabId: true
+});
+
+export const waiterLoginRateLimit = createSlidingWindowRateLimiter({
+  keyPrefix: 'rl:waiter:login',
+  maxRequests: 10,
+  windowMs: 60_000,
+  includeEmail: true
 });
 
 export const publicCallRateLimit = createSlidingWindowRateLimiter({

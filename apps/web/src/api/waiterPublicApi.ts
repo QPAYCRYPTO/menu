@@ -174,6 +174,8 @@ export type WaiterAuthFailure = {
 export type WaiterAuthResponse = WaiterAuthSuccess | WaiterAuthFailure;
 
 async function handleAuthResponse(res: Response): Promise<WaiterAuthResponse> {
+  // Yoğunluk sınırı (429) ya da sunucu hatası oturumu geçersiz kılmaz: geçici sayılır, oturum silinmez
+  if (res.status === 429 || res.status >= 500) return { ok: false, reason: 'network_error' };
   try {
     const data = await res.json();
     if (res.ok && data.ok) {

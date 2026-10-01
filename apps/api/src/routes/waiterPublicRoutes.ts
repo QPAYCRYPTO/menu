@@ -11,7 +11,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { PoolClient } from 'pg';
 import { pool } from '../db/postgres.js';
-import { publicMenuRateLimit } from '../middleware/rateLimit.js';
+import { waiterLoginRateLimit, waiterSessionRateLimit } from '../middleware/rateLimit.js';
 import { requireWaiterAuth } from '../middleware/waiterAuth.js';
 import { APP_ERROR_CODES, AppError } from '../errors/AppError.js';
 import {
@@ -76,7 +76,7 @@ const emailBodySchema = z.object({
   password: z.string().min(1).max(100)
 });
 
-waiterPublicRoutes.post('/auth', publicMenuRateLimit, async (req, res) => {
+waiterPublicRoutes.post('/auth', waiterSessionRateLimit, async (req, res) => {
   const parsed = tokenBodySchema.safeParse(req.body);
   if (!parsed.success) {
     throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
@@ -101,7 +101,7 @@ waiterPublicRoutes.post('/auth', publicMenuRateLimit, async (req, res) => {
   });
 });
 
-waiterPublicRoutes.post('/login', publicMenuRateLimit, async (req, res) => {
+waiterPublicRoutes.post('/login', waiterLoginRateLimit, async (req, res) => {
   const parsed = emailBodySchema.safeParse(req.body);
   if (!parsed.success) {
     throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
@@ -187,7 +187,7 @@ const exchangeBodySchema = z.object({
   tab_id: z.string().uuid()
 });
 
-waiterPublicRoutes.post('/exchange', publicMenuRateLimit, async (req, res) => {
+waiterPublicRoutes.post('/exchange', waiterSessionRateLimit, async (req, res) => {
   const parsed = exchangeBodySchema.safeParse(req.body);
   if (!parsed.success) {
     throw new AppError('Geçersiz parametre.', 400, APP_ERROR_CODES.BAD_REQUEST);
