@@ -3,7 +3,7 @@
 # Railway'de "Wait for CI" açıkken bu kontroller geçmeden kurulum başlamaz.
 #
 #   1) Tip kontrolü (api + web + shared)
-#   2) API testleri (vitest)
+#   2) API ve web testleri (vitest)
 #   3) Web derlemesi
 #   4) Veritabanı: bütün migration'lar boş bir Postgres'te baştan çalıştırılır
 #      (bozuk / sağlayıcıya özgü bir migration canlıya gitmeden yakalanır)
@@ -82,6 +82,9 @@ jobs:
 
       - name: API testleri
         run: pnpm -C apps/api test
+
+      - name: Web testleri
+        run: pnpm -C apps/web test
 
       - name: Web derlemesi
         run: pnpm -C apps/web build

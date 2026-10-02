@@ -18,6 +18,7 @@ import { orderStatusStyle } from '../lib/orderStatus';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
 import { OpenOrdersDecisionPanel } from '../components/payment/OpenOrdersDecisionPanel';
+import { parseMoney, splitShare, toMoneyInput } from '../lib/money';
 import {
   closeTable, createDiscount, createPayment, getSessionSummary, voidDiscount, voidPayment,
   type LedgerDiscount, type LedgerMethod, type LedgerPayment, type OpenOrderDecision, type OpenOrderRequiringDecision,
@@ -353,20 +354,6 @@ function EmptyTablePanel({ entry, now, onBack, onAcknowledge }: { entry: Entry; 
 }
 
 // ─── PARA GİRİŞİ ─────────────────────────────────────────────────────────────
-/** "150,50" / "150.5" / "1.250,00" → kuruş (geçersizse null) */
-function parseMoney(input: string): number | null {
-  let t = input.replace(/\s|tl/gi, '');
-  if (!t) return null;
-  t = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.round(n * 100);
-}
-
-function toMoneyInput(int: number): string {
-  return (int / 100).toFixed(2).replace('.', ',');
-}
-
 const METHOD_META: Record<LedgerMethod, { label: string; icon: LucideIcon }> = {
   cash: { label: 'Nakit', icon: Banknote },
   card: { label: 'Kart', icon: CreditCard },
@@ -624,10 +611,11 @@ function BillPanel({ sessionId, entry, token, now, refreshSignal, onBack, onToas
   }
 
   function startSplit(n: number) {
-    if (!Number.isInteger(n) || n < 2 || n > 50 || remaining <= 0) return;
+    const share = splitShare(remaining, n);
+    if (share == null) return;
     setSelectedItems(new Set());
     setAmountStr('');
-    setSplit({ n, share: Math.ceil(remaining / n), paid: 0 });
+    setSplit({ n, share, paid: 0 });
     setSplitPicker(false);
     setCustomSplit('');
   }
