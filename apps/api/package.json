@@ -15,7 +15,8 @@
     "migrate:redo": "node-pg-migrate redo -m migrations --migration-file-language sql",
     "create-business-user": "tsx src/scripts/createBusinessUser.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "superadmin-sql": "tsx src/scripts/superadminSql.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
