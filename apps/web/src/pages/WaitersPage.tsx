@@ -30,6 +30,7 @@ import {
   Ban, Check, CircleCheck, Clock, Copy, KeyRound, Mail, MessageCircle, Pencil, Phone, QrCode, Trash2, TriangleAlert, UserPlus, Users, X, type LucideIcon
 } from 'lucide-react';
 import { ConfirmModal, type ConfirmState } from '../components/ConfirmModal';
+import { LocalQrImage } from '../components/LocalQrImage';
 import { Select } from '../components/Select';
 
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'https://www.atlasqrmenu.com';
@@ -280,11 +281,6 @@ export function WaitersPage() {
 
   function waiterLoginUrl(token: string): string {
     return `${PUBLIC_BASE_URL}/g/${encodeURIComponent(token)}`;
-  }
-
-  function qrImageUrl(token: string): string {
-    const url = waiterLoginUrl(token);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
   }
 
   function statusBadge(status: WaiterStatus) {
@@ -661,7 +657,7 @@ export function WaitersPage() {
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-white rounded-2xl p-4 flex items-center justify-center shadow-lg">
-                <img src={qrImageUrl(qrResult.token)} alt="QR kod" style={{ maxWidth: '100%', height: 'auto' }} />
+                <LocalQrImage value={waiterLoginUrl(qrResult.token)} />
               </div>
 
               <div className="p-3 rounded-2xl" style={{ background: 'var(--state-warn-bg)', border: '1px solid var(--state-warn)' }}>
