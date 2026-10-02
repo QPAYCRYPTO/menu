@@ -1,0 +1,87 @@
+# AtlasQR — otomatik kontroller
+# develop (deneme sitesi) ve main (canlı) dallarına her gönderimde ve her PR'da çalışır.
+# Railway'de "Wait for CI" açıkken bu kontroller geçmeden kurulum başlamaz.
+#
+#   1) Tip kontrolü (api + web + shared)
+#   2) API testleri (vitest)
+#   3) Web derlemesi
+#   4) Veritabanı: bütün migration'lar boş bir Postgres'te baştan çalıştırılır
+#      (bozuk / sağlayıcıya özgü bir migration canlıya gitmeden yakalanır)
+
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Kontroller
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci_pw
+          POSTGRES_DB: qrmenu_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d qrmenu_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    # Test ortamı için sahte değerler (gerçek sır içermez)
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://ci:ci_pw@localhost:5432/qrmenu_ci
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci_jwt_secret_not_real
+      SUPER_ADMIN_SECRET: ci_super_admin_secret
+      APP_URL: http://localhost:5173
+      PUBLIC_BASE_URL: http://localhost:5173
+      WEB_ORIGIN: http://localhost:5173
+      S3_ENDPOINT: http://localhost:9000
+      S3_BUCKET: ci
+      S3_KEY: ci
+      S3_SECRET: ci
+      MAIL_PROVIDER: console
+      VITE_API_BASE_URL: http://localhost:3000/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Bağımlılıklar
+        run: pnpm install --frozen-lockfile
+
+      - name: Tip kontrolü
+        run: pnpm -r typecheck
+
+      - name: Veritabanı — bütün migration'lar (boş Postgres)
+        run: pnpm -C apps/api migrate:up
+
+      - name: API testleri
+        run: pnpm -C apps/api test
+
+      - name: Web derlemesi
+        run: pnpm -C apps/web build
