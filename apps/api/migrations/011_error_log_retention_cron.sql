@@ -16,36 +16,42 @@
 --         job KALICIDIR — DB'de yaşar, her gece otomatik tetiklenir.
 -- ================================================================
 
--- pg_cron extension'ının yüklü olduğunu garantile
--- (Supabase Dashboard → Database → Extensions'tan zaten enable edildi,
---  ama defansif: yoksa hata vermesin)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- Eğer aynı isimde eski bir job varsa önce kaldır (idempotent migration)
--- Tekrar deploy edilirse veya retention politikası değişirse temiz başlangıç
-DO $$
+-- pg_cron yalnızca bazı sağlayıcılarda var (Supabase evet; Railway Postgres / lokal Docker hayır).
+-- Eklenti yoksa zamanlayıcı atlanır, migration hata vermez (deneme ortamı ve lokal test açılabilsin).
+-- Canlı (Supabase) bu migration'ı zaten çalıştırdı; orada davranış değişmez.
+DO $do$
 BEGIN
-  PERFORM cron.unschedule('cleanup-error-log')
-  WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup-error-log');
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Job yoksa hata fırlatır, görmezden gel
-    NULL;
-END $$;
+  IF NOT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_cron') THEN
+    RAISE NOTICE 'pg_cron yok — error_log temizleme zamanlayıcısı atlandı';
+    RETURN;
+  END IF;
 
--- Yeni cron job: her gün UTC 03:00'te çalışır
-SELECT cron.schedule(
-  'cleanup-error-log',                  -- job adı (unique)
-  '0 3 * * *',                          -- cron expression: her gün saat 03:00 UTC
-  $$
-    DELETE FROM error_log
-    WHERE
-      (severity = 'LOW'      AND last_seen_at < NOW() - INTERVAL '7 days')
-      OR (severity = 'MEDIUM'   AND last_seen_at < NOW() - INTERVAL '14 days')
-      OR (severity = 'HIGH'     AND last_seen_at < NOW() - INTERVAL '30 days')
-      OR (severity = 'CRITICAL' AND last_seen_at < NOW() - INTERVAL '90 days');
-  $$
-);
+  CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+  -- Aynı isimde eski bir job varsa önce kaldır (idempotent migration)
+  BEGIN
+    PERFORM cron.unschedule('cleanup-error-log')
+    WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'cleanup-error-log');
+  EXCEPTION
+    WHEN OTHERS THEN
+      NULL;
+  END;
+
+  -- Yeni cron job: her gün UTC 03:00'te çalışır
+  PERFORM cron.schedule(
+    'cleanup-error-log',
+    '0 3 * * *',
+    $job$
+      DELETE FROM error_log
+      WHERE
+        (severity = 'LOW'      AND last_seen_at < NOW() - INTERVAL '7 days')
+        OR (severity = 'MEDIUM'   AND last_seen_at < NOW() - INTERVAL '14 days')
+        OR (severity = 'HIGH'     AND last_seen_at < NOW() - INTERVAL '30 days')
+        OR (severity = 'CRITICAL' AND last_seen_at < NOW() - INTERVAL '90 days');
+    $job$
+  );
+END
+$do$;
 
 -- Doğrulama sorgusu (manuel kontrol için, çalıştırma sırasında output verir):
 -- SELECT jobid, schedule, command, jobname, active FROM cron.job WHERE jobname = 'cleanup-error-log';
