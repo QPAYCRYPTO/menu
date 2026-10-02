@@ -116,7 +116,7 @@ export function OwnerManagementModal({ business, accessToken, onClose, onOwnerCo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 ui-scrim fade-enter">
-      <div className="ui-card w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col text-ink" style={{ maxHeight: '85vh' }}>
+      <div className="ui-card w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col text-ink sheet-max-85">
 
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-line">

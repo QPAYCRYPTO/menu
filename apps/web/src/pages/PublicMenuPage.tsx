@@ -740,7 +740,7 @@ export function PublicMenuPage() {
       {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center ui-scrim fade-enter"
           onClick={() => setSelectedProduct(null)}>
-          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] overflow-hidden border border-line"
+          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] overflow-x-hidden overflow-y-auto sheet-max-90 border border-line"
             onClick={e => e.stopPropagation()}>
             {selectedProduct.image_url && (
               <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
@@ -777,12 +777,11 @@ export function PublicMenuPage() {
       {cartOpen && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center ui-scrim fade-enter"
           onClick={() => setCartOpen(false)}>
-          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] flex flex-col border border-line"
-            style={{ maxHeight: '90vh' }}
+          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] flex flex-col overflow-hidden sheet-max-90 border border-line"
             onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 md:hidden" />
+            <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 md:hidden flex-shrink-0" />
 
-            <div className="px-5 pt-3 md:pt-5 pb-3 flex items-center justify-between border-b border-line">
+            <div className="px-5 pt-3 md:pt-5 pb-3 flex items-center justify-between border-b border-line flex-shrink-0">
               <div>
                 <h3 className="font-serif font-bold text-xl leading-tight">Sipariş Sepetiniz</h3>
                 {tableName && <p className="text-[11px] text-ink-muted">{tableName} • Anında mutfak iletimi</p>}
@@ -793,7 +792,7 @@ export function PublicMenuPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3">
               {cart.length === 0 ? (
                 <div className="text-center py-10 text-ink-muted">
                   <ShoppingBasket size={30} className="mb-2 text-accent inline-block" />
@@ -880,7 +879,7 @@ export function PublicMenuPage() {
             </div>
 
             {cart.length > 0 && (
-              <div className="px-5 pt-3 pb-6 border-t border-line">
+              <div className="px-5 pt-3 sheet-footer-safe border-t border-line flex-shrink-0">
                 <div className="flex justify-between items-center mb-3">
                   <span className="font-bold text-ink-muted text-sm">Toplam Tutar</span>
                   <span className="font-serif font-bold text-2xl">{formatPrice(cartTotal)}</span>
@@ -903,8 +902,7 @@ export function PublicMenuPage() {
         return (
         <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center ui-scrim fade-enter"
           onClick={closeCallSheet}>
-          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] flex flex-col border border-line"
-            style={{ maxHeight: '90vh' }}
+          <div className="bg-surface text-ink sheet-enter w-full max-w-[480px] rounded-t-[32px] md:rounded-[28px] flex flex-col overflow-hidden sheet-max-90 border border-line"
             onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 md:hidden" />
 
@@ -930,7 +928,7 @@ export function PublicMenuPage() {
 
             {showCallSuccess && sentType && lastCall ? (
               /* Gönderim sonrası: Garsonunuz haberdar edildi */
-              <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6 flex flex-col items-center text-center fade-enter">
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-6 flex flex-col items-center text-center fade-enter">
                 <div className="relative flex items-center justify-center my-4">
                   <div className="absolute w-24 h-24 rounded-full animate-ping bg-[color-mix(in_srgb,var(--biz)_18%,transparent)]"
                     style={{ animationDuration: '2.4s' }} />
@@ -959,7 +957,7 @@ export function PublicMenuPage() {
               </div>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto px-4 pb-4">
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
                   <div className="grid grid-cols-3 gap-2.5">
                     {CALL_TYPES.map(ct => {
                       const isSelected = selectedCallType === ct.code;
@@ -1008,7 +1006,7 @@ export function PublicMenuPage() {
                   )}
                 </div>
 
-                <div className="px-5 pt-3 pb-6 border-t border-line">
+                <div className="px-5 pt-3 sheet-footer-safe border-t border-line flex-shrink-0">
                   <button onClick={sendCall}
                     disabled={!canSendCall || callLoading}
                     className={`w-full py-3.5 rounded-[22px] text-sm font-bold flex items-center justify-center gap-2 spring-btn border disabled:cursor-not-allowed ${

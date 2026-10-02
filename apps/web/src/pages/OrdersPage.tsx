@@ -252,7 +252,7 @@ function CancelModal({ order, onClose, onConfirm }: CancelModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 ui-scrim fade-enter"
       onClick={onClose}>
-      <div className="bg-surface border border-line sheet-enter text-ink rounded-t-[32px] sm:rounded-3xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+      <div className="bg-surface border border-line sheet-enter text-ink rounded-t-[32px] sm:rounded-3xl w-full max-w-md sheet-max-90 overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}>
         <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3 sm:hidden" />
         <div className="px-5 py-4 border-b border-line">

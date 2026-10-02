@@ -428,7 +428,7 @@ export function SuperAdminPage() {
       {/* YENİ İŞLETME MODAL — mobile uyumlu */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 ui-scrim fade-enter">
-          <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden max-h-[95vh] flex flex-col">
+          <div className="ui-card w-full max-w-lg rounded-3xl overflow-hidden sheet-max-95 flex flex-col">
             <div className="px-5 md:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-line">
               <h2 className="font-serif font-bold text-lg text-ink">Yeni İşletme Ekle</h2>
               <button onClick={() => { setShowNewModal(false); setFieldErrors({}); }}

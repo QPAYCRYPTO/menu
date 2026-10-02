@@ -457,7 +457,7 @@ export function WaiterMenuPage() {
       {cartOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center ui-scrim fade-enter"
           onClick={() => setCartOpen(false)}>
-          <div className="bg-surface sheet-enter w-full rounded-t-[32px] max-h-[90vh] flex flex-col border border-line text-ink"
+          <div className="bg-surface sheet-enter w-full rounded-t-[32px] sheet-max-90 flex flex-col overflow-hidden border border-line text-ink"
             style={{ maxWidth: 600 }}
             onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3" />
@@ -472,7 +472,7 @@ export function WaiterMenuPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3">
               {cart.length === 0 ? (
                 <p className="text-center py-12 text-sm text-ink-muted">Sepet boş</p>
               ) : (
@@ -587,7 +587,7 @@ export function WaiterMenuPage() {
             </div>
 
             {cart.length > 0 && (
-              <div className="px-5 pt-3 pb-6 border-t border-line">
+              <div className="px-5 pt-3 sheet-footer-safe border-t border-line flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-bold text-ink-muted">Toplam</span>
                   <span className="font-serif text-2xl font-bold">

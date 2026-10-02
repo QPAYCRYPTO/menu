@@ -275,6 +275,15 @@ select option { color: #073f46; background: #fff; }
   .kitchen-blink { animation: none; box-shadow: 0 0 0 7px var(--blink-color); }
 }
 
+/* Alttan açılan pencereler: telefonda adres/gezinme çubuğu hariç GÖRÜNEN yüksekliğe göre sınırla (dvh);
+   dvh'yi bilmeyen eski tarayıcıda vh yedek. İçerideki kaydırılan gövde min-h-0 olmalı ki alt eylem şeridi
+   (Siparişi Gönder vb.) ekranın dışına itilmesin. */
+.sheet-max-85 { max-height: 85vh; max-height: 85dvh; }
+.sheet-max-90 { max-height: 90vh; max-height: 90dvh; }
+.sheet-max-95 { max-height: 95vh; max-height: 95dvh; }
+/* Pencerenin alt eylem şeridi: iPhone ev çubuğunun üstünde kalsın */
+.sheet-footer-safe { padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem)); }
+
 @keyframes selectIn {
   from { opacity: 0; transform: translateY(-4px) scale(0.98); }
   to { opacity: 1; transform: none; }

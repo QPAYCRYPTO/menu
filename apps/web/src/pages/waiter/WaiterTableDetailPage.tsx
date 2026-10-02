@@ -460,8 +460,7 @@ export function WaiterTableDetailPage() {
 
       {cancelModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center ui-scrim fade-enter">
-          <div className="bg-surface sheet-enter w-full max-w-[520px] rounded-t-[32px] flex flex-col border border-line text-ink"
-            style={{ maxHeight: '90vh' }}>
+          <div className="bg-surface sheet-enter w-full max-w-[520px] rounded-t-[32px] flex flex-col overflow-hidden sheet-max-90 border border-line text-ink">
             <div className="w-10 h-1 bg-line rounded-full mx-auto mt-3" />
             <div className="px-5 pt-3 pb-3 border-b border-line">
               <h3 className="font-serif font-bold text-lg flex items-center gap-2" style={{ color: 'var(--state-danger)' }}>
@@ -471,7 +470,7 @@ export function WaiterTableDetailPage() {
                 {CANCEL_TEXT[cancelModal.mode].hint}
               </p>
             </div>
-            <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+            <div className="p-5 space-y-3 flex-1 min-h-0 overflow-y-auto">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">İptal edilecek ürünler</span>
@@ -557,7 +556,7 @@ export function WaiterTableDetailPage() {
                 </div>
               )}
             </div>
-            <div className="px-5 pt-3 pb-6 flex gap-2 border-t border-line">
+            <div className="px-5 pt-3 sheet-footer-safe flex gap-2 border-t border-line flex-shrink-0">
               <button onClick={() => setCancelModal(null)}
                 disabled={cancelling}
                 className="btn-outline flex-1 py-3 rounded-full text-sm font-bold spring-btn disabled:opacity-50">

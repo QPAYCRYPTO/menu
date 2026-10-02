@@ -437,7 +437,7 @@ function OrderDetailModal({ order, now, lateAfter, onClose }: { order: Order; no
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={`${order.table_name} sipariş detayı`}>
       <div className="absolute inset-0 ui-scrim fade-enter" onClick={onClose} />
-      <div className="relative ui-card w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 md:p-6 sheet-enter max-h-[85vh] overflow-y-auto">
+      <div className="relative ui-card w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 md:p-6 sheet-enter sheet-max-85 overflow-y-auto">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
             <h3 className="font-serif font-bold text-2xl">{order.table_name}</h3>

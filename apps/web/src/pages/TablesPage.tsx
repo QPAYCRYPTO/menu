@@ -317,7 +317,7 @@ export function TablesPage() {
       {detailOpen && (
         <div className="fade-enter" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--scrim)', padding: 16 }}
           onClick={() => { setDetailOpen(null); setDetailData(null); }}>
-          <div className="ui-card rounded-3xl text-ink" style={{ maxWidth: 560, width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          <div className="ui-card rounded-3xl text-ink sheet-max-85" style={{ maxWidth: 560, width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}>
             <div className="border-b border-line" style={{ padding: '20px 24px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 className="font-serif text-ink flex items-center gap-2" style={{ fontWeight: 700, fontSize: 20 }}>

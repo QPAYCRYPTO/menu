@@ -492,7 +492,7 @@ export function ErrorLogPage() {
       {/* DETAY MODAL */}
       {detailRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 ui-scrim fade-enter">
-          <div className="ui-card w-full max-w-2xl rounded-3xl overflow-hidden max-h-[95vh] flex flex-col">
+          <div className="ui-card w-full max-w-2xl rounded-3xl overflow-hidden sheet-max-95 flex flex-col">
             <div className="px-5 md:px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-line">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0"
