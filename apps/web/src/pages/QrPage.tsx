@@ -3,7 +3,7 @@
 
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { useEffect, useState } from 'react';
-import { apiRequest } from '../api/client';
+import { apiRequest, authFetch } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
 import { Armchair, Copy, Download, QrCode, X } from 'lucide-react';
@@ -44,7 +44,7 @@ export function QrPage() {
       setPublicLink(`${PUBLIC_BASE_URL}/m/${business.slug}`);
       setTables(tablesData.filter(t => t.is_active));
 
-      const response = await fetch(`${API_BASE_URL}/admin/qr`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const response = await authFetch(`${API_BASE_URL}/admin/qr`, { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!response.ok) throw new Error('QR görseli alınamadı.');
       const blob = await response.blob();
       objectUrl = URL.createObjectURL(blob);
@@ -65,7 +65,7 @@ export function QrPage() {
     setTableQrSrc('');
     try {
       const tableLink = `${PUBLIC_BASE_URL}/m/${slug}?masa=${table.id}`;
-      const response = await fetch(
+      const response = await authFetch(
         `${API_BASE_URL}/admin/qr?content=${encodeURIComponent(tableLink)}&table_id=${table.id}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );

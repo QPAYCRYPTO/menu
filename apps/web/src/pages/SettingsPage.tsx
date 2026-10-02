@@ -11,7 +11,7 @@
 import type { BusinessSettingsResponse } from '@menu/shared';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { apiRequest } from '../api/client';
+import { apiRequest, authFetch } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { ThemeColorPicker } from '../components/ThemeColorPicker';
@@ -197,7 +197,7 @@ export function SettingsPage() {
   async function uploadLogo(file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`${API_BASE_URL}/admin/upload/logo`, {
+    const response = await authFetch(`${API_BASE_URL}/admin/upload/logo`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData

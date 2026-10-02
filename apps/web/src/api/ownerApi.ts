@@ -1,6 +1,8 @@
 // apps/web/src/api/ownerApi.ts
 // Owner (patron) paneli için API çağrıları
 
+import { authFetch } from './client';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 // ─────────────────────────────────────────────────────────────
@@ -68,7 +70,7 @@ export type ReportOverview = {
 // ─────────────────────────────────────────────────────────────
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.message ?? 'Bir hata oluştu.');
   }
@@ -87,7 +89,7 @@ export async function fetchReportOverview(
   to: string
 ): Promise<ReportOverview> {
   const url = `${API_BASE_URL}/owner/reports/overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-  const res = await fetch(url, {
+  const res = await authFetch(url, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return handleResponse<ReportOverview>(res);

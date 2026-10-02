@@ -1,6 +1,8 @@
 // apps/web/src/api/waiterAdminApi.ts
 // Admin tarafı garson yönetim API çağrıları — v2
 
+import { authFetch } from './client';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 export type WaiterStatus = 'active' | 'on_leave' | 'inactive';
@@ -78,7 +80,7 @@ function headers(token: string) {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.message ?? data.error ?? 'Bir hata oluştu.');
   }
@@ -90,7 +92,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ─────────────────────────────────────────────────────────────
 
 export async function listWaiters(token: string): Promise<Waiter[]> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters`, { headers: headers(token) });
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters`, { headers: headers(token) });
   return handleResponse<Waiter[]>(res);
 }
 
@@ -105,7 +107,7 @@ export async function createWaiter(
     permissions?: Partial<WaiterPermissions>;
   }
 ): Promise<Waiter> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters`, {
     method: 'POST',
     headers: headers(token),
     body: JSON.stringify(input)
@@ -124,7 +126,7 @@ export async function updateWaiter(
     permissions?: Partial<WaiterPermissions>;
   }
 ): Promise<Waiter> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/${waiterId}`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/${waiterId}`, {
     method: 'PATCH',
     headers: headers(token),
     body: JSON.stringify(input)
@@ -137,7 +139,7 @@ export async function setWaiterPassword(
   waiterId: string,
   password: string | null
 ): Promise<{ ok: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/${waiterId}/password`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/${waiterId}/password`, {
     method: 'PUT',
     headers: headers(token),
     body: JSON.stringify({ password })
@@ -150,7 +152,7 @@ export async function setWaiterStatus(
   waiterId: string,
   status: WaiterStatus
 ): Promise<{ ok: boolean; status: WaiterStatus }> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/${waiterId}/status`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/${waiterId}/status`, {
     method: 'PUT',
     headers: headers(token),
     body: JSON.stringify({ status })
@@ -159,7 +161,7 @@ export async function setWaiterStatus(
 }
 
 export async function deleteWaiter(token: string, waiterId: string): Promise<{ ok: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/${waiterId}`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/${waiterId}`, {
     method: 'DELETE',
     headers: headers(token)
   });
@@ -175,7 +177,7 @@ export async function generateWaiterToken(
   waiterId: string,
   hoursValid: number
 ): Promise<WaiterTokenResponse> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/${waiterId}/token`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/${waiterId}/token`, {
     method: 'POST',
     headers: headers(token),
     body: JSON.stringify({ hours_valid: hoursValid })
@@ -184,14 +186,14 @@ export async function generateWaiterToken(
 }
 
 export async function listWaiterSessions(token: string, waiterId: string): Promise<WaiterSession[]> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/${waiterId}/sessions`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/${waiterId}/sessions`, {
     headers: headers(token)
   });
   return handleResponse<WaiterSession[]>(res);
 }
 
 export async function revokeWaiterSession(token: string, sessionId: string): Promise<{ ok: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/admin/waiters/sessions/${sessionId}/revoke`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/waiters/sessions/${sessionId}/revoke`, {
     method: 'POST',
     headers: headers(token)
   });

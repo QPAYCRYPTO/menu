@@ -4,7 +4,7 @@
 import type { CategoryResponse, ProductResponse, UploadResponse } from '@menu/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { apiRequest } from '../api/client';
+import { apiRequest, authFetch } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { Toast, showToast as showToastHelper, type ToastState } from '../components/Toast';
@@ -98,7 +98,7 @@ export function ProductsPage() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/upload`, {
+      const response = await authFetch(`${API_BASE_URL}/admin/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData

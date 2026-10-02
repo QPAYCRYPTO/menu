@@ -48,6 +48,21 @@ async function refreshAccessToken(): Promise<string | null> {
   return data.access_token;
 }
 
+/**
+ * apiRequest'e geçmemiş (doğrudan fetch kullanan) admin istemcileri için: isteği atar, 401 gelirse
+ * oturumu bir kez yeniler ve yeni anahtarla tekrar dener. Kısa ömürlü erişim anahtarı (15 dk) dolunca
+ * süper admin / personel / kasa / sahip ekranlarının "Bir hata oluştu" vermesini önler.
+ */
+export async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const response = await fetch(url, init);
+  if (response.status !== 401) return response;
+  const newToken = await refreshAccessToken();
+  if (!newToken) return response;
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${newToken}`);
+  return fetch(url, { ...init, headers });
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',

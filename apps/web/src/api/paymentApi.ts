@@ -1,6 +1,8 @@
 // apps/web/src/api/paymentApi.ts
 // Ödeme ekranı için typed API client — sadece admin kullanır
 
+import { authFetch } from './client';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +75,7 @@ function headers(token: string) {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message ?? 'Bir hata oluştu.');
   return data as T;
 }
@@ -84,7 +86,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 // Adisyon detayını getir
 export async function getSessionBill(token: string, sessionId: string): Promise<BillSummary> {
-  const res = await fetch(`${API_BASE_URL}/admin/payment/session/${sessionId}`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/payment/session/${sessionId}`, {
     headers: headers(token)
   });
   return handleResponse<BillSummary>(res);
@@ -97,7 +99,7 @@ export async function payItems(
   itemIds: string[],
   paymentMethod: PaymentMethod = 'cash'
 ): Promise<PayItemsResult> {
-  const res = await fetch(`${API_BASE_URL}/admin/payment/pay-items`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/payment/pay-items`, {
     method: 'POST',
     headers: headers(token),
     body: JSON.stringify({ session_id: sessionId, item_ids: itemIds, payment_method: paymentMethod })
@@ -112,7 +114,7 @@ export async function closeTable(
   forceClose = false,
   openOrderDecisions: { order_id: string; decision: OpenOrderDecision }[] = []
 ): Promise<CloseTableResult> {
-  const res = await fetch(`${API_BASE_URL}/admin/payment/close-table`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/payment/close-table`, {
     method: 'POST',
     headers: headers(token),
     body: JSON.stringify({ session_id: sessionId, force_close: forceClose, open_order_decisions: openOrderDecisions })
@@ -137,7 +139,7 @@ export async function getNewOrdersSince(
   sessionId: string,
   since: string
 ): Promise<NewOrdersResult> {
-  const res = await fetch(
+  const res = await authFetch(
     `${API_BASE_URL}/admin/payment/new-orders/${sessionId}?since=${encodeURIComponent(since)}`,
     { headers: headers(token) }
   );
@@ -191,19 +193,19 @@ export type SessionSummary = {
 };
 
 export async function getSessionSummary(token: string, sessionId: string): Promise<SessionSummary> {
-  const res = await fetch(`${API_BASE_URL}/admin/sessions/${sessionId}/summary`, { headers: headers(token) });
+  const res = await authFetch(`${API_BASE_URL}/admin/sessions/${sessionId}/summary`, { headers: headers(token) });
   return handleResponse<SessionSummary>(res);
 }
 
 export async function createPayment(token: string, body: {
   session_id: string; method: LedgerMethod; amount_int?: number; item_ids?: string[]; note?: string;
 }): Promise<{ payment: LedgerPayment; ledger: { remaining_int: number } }> {
-  const res = await fetch(`${API_BASE_URL}/admin/payments`, { method: 'POST', headers: headers(token), body: JSON.stringify(body) });
+  const res = await authFetch(`${API_BASE_URL}/admin/payments`, { method: 'POST', headers: headers(token), body: JSON.stringify(body) });
   return handleResponse(res);
 }
 
 export async function voidPayment(token: string, paymentId: string, reason: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/admin/payments/${paymentId}`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/payments/${paymentId}`, {
     method: 'DELETE', headers: headers(token), body: JSON.stringify({ reason })
   });
   await handleResponse(res);
@@ -213,18 +215,18 @@ export async function createDiscount(token: string, body: {
   session_id: string; type: 'discount' | 'complimentary'; applies_to: 'session' | 'item';
   amount_int?: number; percent?: number; order_item_id?: string; note?: string;
 }): Promise<{ discount: LedgerDiscount }> {
-  const res = await fetch(`${API_BASE_URL}/admin/discounts`, { method: 'POST', headers: headers(token), body: JSON.stringify(body) });
+  const res = await authFetch(`${API_BASE_URL}/admin/discounts`, { method: 'POST', headers: headers(token), body: JSON.stringify(body) });
   return handleResponse(res);
 }
 
 export async function voidDiscount(token: string, discountId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/admin/discounts/${discountId}`, { method: 'DELETE', headers: headers(token) });
+  const res = await authFetch(`${API_BASE_URL}/admin/discounts/${discountId}`, { method: 'DELETE', headers: headers(token) });
   await handleResponse(res);
 }
 
 // Müşteri adisyon görüntüleme toggle
 export async function setCustomerBillView(token: string, enabled: boolean): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/admin/payment/customer-bill-view`, {
+  const res = await authFetch(`${API_BASE_URL}/admin/payment/customer-bill-view`, {
     method: 'PATCH',
     headers: headers(token),
     body: JSON.stringify({ enabled })

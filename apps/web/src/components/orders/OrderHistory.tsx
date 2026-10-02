@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Download, FileSpreadsheet, LoaderCircle, Search, X
 } from 'lucide-react';
-import { apiRequest } from '../../api/client';
+import { apiRequest, authFetch } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { orderStatusStyle } from '../../lib/orderStatus';
 import { CancelledItems, type CancellationEntry } from './CancelledItems';
@@ -189,7 +189,7 @@ export function OrderHistory({ refreshKey }: { refreshKey: number }) {
       const p = new URLSearchParams(query);
       p.set('mode', mode);
       p.set('label', filterLabel);
-      const res = await fetch(`${API_BASE_URL}/admin/orders/history/export?${p.toString()}`, {
+      const res = await authFetch(`${API_BASE_URL}/admin/orders/history/export?${p.toString()}`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       if (!res.ok) {

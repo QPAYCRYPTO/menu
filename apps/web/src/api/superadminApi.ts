@@ -2,6 +2,8 @@
 // Super admin tarafının tüm API çağrıları burada toplanır.
 // UI bileşenleri bu dosyadaki fonksiyonları kullanır.
 
+import { authFetch } from './client';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.atlasqrmenu.com/api';
 
 export type Business = {
@@ -34,7 +36,7 @@ function headers(token: string) {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.message ?? 'Bir hata oluştu.');
   }
@@ -46,7 +48,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ─────────────────────────────────────────────────────────────
 
 export async function listBusinesses(token: string): Promise<Business[]> {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses`, {
     headers: headers(token)
   });
   return handleResponse<Business[]>(res);
@@ -56,7 +58,7 @@ export async function createBusiness(
   token: string,
   payload: { business_name: string; slug: string; email: string; password: string }
 ) {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses`, {
     method: 'POST',
     headers: headers(token),
     body: JSON.stringify(payload)
@@ -65,7 +67,7 @@ export async function createBusiness(
 }
 
 export async function toggleBusinessActive(token: string, businessId: string, isActive: boolean) {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses/${businessId}`, {
     method: 'PUT',
     headers: headers(token),
     body: JSON.stringify({ is_active: isActive })
@@ -74,7 +76,7 @@ export async function toggleBusinessActive(token: string, businessId: string, is
 }
 
 export async function resetAdminPassword(token: string, businessId: string, newPassword: string) {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/reset-password`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/reset-password`, {
     method: 'PUT',
     headers: headers(token),
     body: JSON.stringify({ new_password: newPassword })
@@ -87,7 +89,7 @@ export async function resetAdminPassword(token: string, businessId: string, newP
 // ─────────────────────────────────────────────────────────────
 
 export async function listOwners(token: string, businessId: string): Promise<Owner[]> {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/owners`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/owners`, {
     headers: headers(token)
   });
   return handleResponse<Owner[]>(res);
@@ -98,7 +100,7 @@ export async function createOwner(
   businessId: string,
   payload: { email: string; password: string }
 ): Promise<Owner> {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/owners`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/owners`, {
     method: 'POST',
     headers: headers(token),
     body: JSON.stringify(payload)
@@ -112,7 +114,7 @@ export async function toggleOwnerActive(
   userId: string,
   isActive: boolean
 ): Promise<Owner> {
-  const res = await fetch(
+  const res = await authFetch(
     `${API_BASE_URL}/superadmin/businesses/${businessId}/owners/${userId}`,
     {
       method: 'PUT',
@@ -124,7 +126,7 @@ export async function toggleOwnerActive(
 }
 
 export async function deleteOwner(token: string, businessId: string, userId: string) {
-  const res = await fetch(
+  const res = await authFetch(
     `${API_BASE_URL}/superadmin/businesses/${businessId}/owners/${userId}`,
     {
       method: 'DELETE',
@@ -140,7 +142,7 @@ export async function resetOwnerPassword(
   userId: string,
   newPassword: string
 ) {
-  const res = await fetch(
+  const res = await authFetch(
     `${API_BASE_URL}/superadmin/businesses/${businessId}/owners/${userId}/reset-password`,
     {
       method: 'PUT',
@@ -160,7 +162,7 @@ export async function toggleWaiterModule(
   businessId: string,
   enabled: boolean
 ): Promise<{ ok: boolean; enabled: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/waiter-module`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/waiter-module`, {
     method: 'PATCH',
     headers: headers(token),
     body: JSON.stringify({ enabled })
@@ -177,7 +179,7 @@ export async function toggleKitchenModule(
   businessId: string,
   enabled: boolean
 ): Promise<{ ok: boolean; enabled: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/kitchen-module`, {
+  const res = await authFetch(`${API_BASE_URL}/superadmin/businesses/${businessId}/kitchen-module`, {
     method: 'PATCH',
     headers: headers(token),
     body: JSON.stringify({ enabled })
