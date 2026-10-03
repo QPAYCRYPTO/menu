@@ -8,7 +8,7 @@ import { pool } from '../db/postgres.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { subscriber, ORDER_CHANNEL, publishOrder, subscribeChannel, unsubscribeChannel } from '../db/redisPubSub.js';
 import { incrementSessionTotal, decrementSessionTotal } from '../services/sessionService.js';
-import { buildHistoryWorkbook, getHistoryOptions, getOrderHistory } from '../services/orderHistoryService.js';
+import { buildHistoryWorkbook, getHistoryOptions, getHistorySessionDetail, getOrderHistory } from '../services/orderHistoryService.js';
 import { listCancellations, recordWholeOrderCancellation } from '../services/itemCancellationService.js';
 
 const updateOrderSchema = z.object({
@@ -85,14 +85,15 @@ orderRoutes.get('/stream', (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// Geçmiş: filtreli liste + özet (+ filtre seçenekleri) ve Excel çıktısı
+// Geçmiş (masa bazlı — kapanan hesaplar): filtreli liste + özet (+ filtre seçenekleri), detay ve Excel
 //   GET /api/admin/orders/history?from&to&status&table_id&waiter_id&q&page&page_size
-//   GET /api/admin/orders/history/export?…&mode=orders|items&label=…  → .xlsx
+//   GET /api/admin/orders/history/sessions/:id  → hesabın siparişleri, ödemeleri, indirimleri
+//   GET /api/admin/orders/history/export?…&mode=tables|items&label=…  → .xlsx
 // ─────────────────────────────────────────────────────────────
 const historyQuerySchema = z.object({
   from: z.string().datetime({ offset: true }),
   to: z.string().datetime({ offset: true }),
-  status: z.enum(['all', 'delivered', 'cancelled', 'refunded']).default('all'),
+  status: z.enum(['all', 'cancelled', 'refunded', 'discounted']).default('all'),
   table_id: z.string().uuid().optional(),
   waiter_id: z.union([z.string().uuid(), z.literal('customer')]).optional(),
   q: z.string().trim().max(60).optional(),
@@ -127,6 +128,18 @@ orderRoutes.get('/history', async (req, res) => {
   res.status(200).json({ ...data, page: parsed.page, page_size: parsed.pageSize, options });
 });
 
+orderRoutes.get('/history/sessions/:id', async (req, res) => {
+  const businessId = req.ctx!.businessId!;
+  const id = z.string().uuid().safeParse(req.params.id);
+  if (!id.success) {
+    res.status(400).json({ message: 'Geçersiz hesap.' });
+    return;
+  }
+  const detail = await getHistorySessionDetail(businessId, id.data);
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(detail);
+});
+
 orderRoutes.get('/history/export', async (req, res) => {
   const businessId = req.ctx!.businessId!;
   const parsed = parseHistoryQuery(req.query);
@@ -134,13 +147,13 @@ orderRoutes.get('/history/export', async (req, res) => {
     res.status(400).json({ message: parsed.error });
     return;
   }
-  const mode = req.query.mode === 'items' ? 'items' : 'orders';
+  const mode = req.query.mode === 'items' ? 'items' : 'tables';
   const label = typeof req.query.label === 'string' ? req.query.label.slice(0, 200) : '';
   const biz = await pool.query(`SELECT name FROM businesses WHERE id = $1`, [businessId]);
   const { buffer } = await buildHistoryWorkbook(businessId, biz.rows[0]?.name ?? '', parsed.filters, mode, label);
   const day = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
   const toDay = day(new Date(new Date(parsed.filters.to).getTime() - 1).toISOString());
-  const fileName = `siparisler_${mode === 'items' ? 'urunler_' : ''}${day(parsed.filters.from)}_${toDay}.xlsx`;
+  const fileName = `gecmis_${mode === 'items' ? 'urunler' : 'masalar'}_${day(parsed.filters.from)}_${toDay}.xlsx`;
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
   res.setHeader('Cache-Control', 'no-store');

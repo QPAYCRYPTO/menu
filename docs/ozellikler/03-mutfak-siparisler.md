@@ -704,6 +704,13 @@
 3. Given Aktif görünüm, When Yenile, Then `GET /admin/orders` + `GET /admin/change-requests` çağrılır ve "Liste güncellendi." toast'ı çıkar. Düğme 300 ms boyunca pasif kalır.
 4. Given 2 pending sipariş + 1 pending çağrı, Then "3 yeni" (mevcut davranış; karar testi).
 
+> **Güncelleme (2026-10-03): Geçmiş artık MASA BAZLI.** Bir satır = hesabı kapatılmış bir masa
+> (`table_sessions.status='closed'`); o masadaki bütün siparişler tek satırda. No = günün kaçıncı kapanan
+> hesabı (kapanış saatine göre), tutar = net (brüt − indirim − ikram). Durum filtresi: Tüm hesaplar /
+> İptal olanlar / İade olanlar / İndirim-ikram olanlar. Detay `GET /api/admin/orders/history/sessions/:id`
+> ile yüklenir (yenilen/içilenler, hesap, ödemeler, iptal/iade, sipariş akışı). Excel: masa bazlı / ürün bazlı
+> (`mode=tables|items`). Açık masalar listede yoktur. SİP-013–018'deki satır numaraları bu değişiklikten öncedir.
+
 ### SİP-013 — Geçmiş: tarih ön ayarları ve özel aralık
 **Ne yapar:** Ön ayarlar: Bugün, Dün, Son 7 gün, Bu ay, Özel. Özel aralıkta başlangıç bitişten sonra olamaz ve gelecek tarih seçilemez. Aralık `[from, to)` şeklinde, tarayıcının yerel saatine göre hesaplanır.
 
